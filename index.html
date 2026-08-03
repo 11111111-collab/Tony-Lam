@@ -263,12 +263,11 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .sug{border-top:1px solid var(--line);padding-top:9px}
 .sug-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
 .sug-label{font-size:10.5px;letter-spacing:.16em;color:var(--dim)}
-.neck-slot{max-height:0;opacity:0;overflow:hidden;transform:translateY(20px);
+/* 指板總覽直接出現，不做展開動畫：撐開 max-height 會讓指板被上下拉扯 */
+.neck-slot{max-height:0;overflow:hidden;
   display:flex;flex-direction:column;min-height:0;
-  transition:max-height .34s cubic-bezier(.22,.85,.3,1),opacity .2s ease,
-    transform .34s cubic-bezier(.22,.85,.3,1),margin-top .34s cubic-bezier(.22,.85,.3,1);
   margin-top:0;pointer-events:none}
-.dock.open .neck-slot{max-height:min(52vh,400px);opacity:1;transform:none;margin-top:9px;pointer-events:auto}
+.dock.open .neck-slot{max-height:min(52vh,400px);margin-top:9px;pointer-events:auto}
 .sug-row{display:flex;gap:7px;flex-wrap:wrap}
 .sug-chip{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
   background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;transition:.12s}
@@ -572,7 +571,6 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 @media (prefers-reduced-motion:reduce){
   [data-reveal]{opacity:1;transform:none;transition:none}
   .lp-scroll,.lp-str.live .lp-str-line{animation:none}
-  .neck-slot{transition:none}
 }
 
 
