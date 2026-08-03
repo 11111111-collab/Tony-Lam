@@ -2,7 +2,8 @@
 <!--
   Chord Lab
   音源授權 / Sample credits:
-  - 吉他（原聲・電）、鋼琴、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 原聲鋼弦吉他、鋼琴、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 取樣吉他（四段力度）：11111111-collab/-1111
   - 原聲套鼓：Tonejs/audio (drum-samples/acoustic-kit)
   - Tone.js — MIT
   以 CC-BY 授權的素材需要標示出處，公開發布時請保留這段註解，或在網站的任一處（關於頁、頁尾等）標註。
@@ -243,17 +244,6 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .cprop-keys{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim);margin-top:2px}
 .cprop-keys kbd{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--panel2);
   border:1px solid var(--line);border-radius:4px;padding:1px 4px;line-height:1.4}
-.amp-panel{display:flex;flex-direction:column;gap:5px;padding:8px 9px;margin-top:2px;
-  border:1px solid var(--brass2);border-radius:8px;background:#0E1014}
-.amp-row{display:flex;align-items:center;gap:7px}
-.amp-row > span{font-size:9.5px;color:var(--dim);width:52px;flex-shrink:0;letter-spacing:.08em}
-.amp-row > i{font-family:var(--mono);font-size:9px;font-style:normal;color:var(--brass);
-  width:38px;text-align:right;flex-shrink:0}
-.amp-row input[type=range]{flex:1;min-width:0}
-.lbl-btn{margin-left:6px;font-size:9px;padding:1px 6px;border-radius:99px;
-  border:1px solid var(--line);color:var(--dim)}
-.lbl-btn:hover{border-color:var(--brass2);color:var(--txt)}
-.lbl-btn.on{border-color:var(--brass);color:var(--brass)}
 .mute-row{display:flex;gap:5px}
 .mute-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;
   border:1px solid var(--line);background:var(--panel2);font-size:11px;color:var(--txt);transition:.12s}
@@ -989,124 +979,9 @@ window.__CHORDLAB__ = function(){
     return notes;
   }
   const midiToName = (m) => SHARP_NAMES[m % 12] + (Math.floor(m / 12) - 1);
-  const AMP_HEADS = {
-    clean: { n: "\u900f\u4eae\u53f0\u5f0f", s: "\u55ae\u7d1a\u524d\u7d1a\uff0c\u982d\u5ea6\u5927\u3001\u4e0d\u6613\u7834",
-      stages: 1, bias: 1, drive: 1.6, tone: [95, 520, 3200], pres: 1.5, sag: 0 },
-    chime: { n: "\u82f1\u5f0f Chime", s: "\u4e2d\u9ad8\u9838\u4eae\uff0c\u63a8\u5927\u6642\u5e36\u9846\u7c92",
-      stages: 2, bias: 1.18, drive: 2.1, tone: [110, 700, 3800], pres: 3, sag: 0.15 },
-    tweed: { n: "\u7f8e\u5f0f Tweed", s: "\u4e2d\u9838\u80a5\u539a\uff0c\u81ea\u7136\u58d3\u7e2e",
-      stages: 2, bias: 1.32, drive: 2.6, tone: [120, 480, 2600], pres: 0.5, sag: 0.35 },
-    crunch: { n: "\u5927\u5730\u7345 Crunch", s: "\u4e2d\u9838\u7a81\u51fa\uff0c\u7d93\u5178\u6416\u6efe",
-      stages: 3, bias: 1.28, drive: 3.2, tone: [130, 620, 3400], pres: 2.5, sag: 0.25 },
-    hifi: { n: "\u73fe\u4ee3\u9ad8\u6e05", s: "\u7dca\u5be6\u4f4e\u9838\uff0c\u984f\u8272\u5c11",
-      stages: 2, bias: 1.05, drive: 1.9, tone: [90, 900, 4200], pres: 2, sag: 0.05 }
-  };
-  const CABS = {
-    none: { n: "\u4e0d\u7528\u7bb1\u9ad4", s: "\u76f4\u63a5\u8f38\u51fa", off: true },
-    combo112: { n: "1x12 \u958b\u80cc Combo", s: "\u8f15\u5feb\uff0c\u4f4e\u9838\u5c11",
-      lowF: 95, lowQ: 0.8, hiF: 5200, peaks: [[220, 2.5, 1.4], [1900, 3, 2.2], [3600, -3, 1.6]],
-      taps: [[0.9, -0.42], [2.1, 0.26], [4.4, -0.14]], decay: 0.012 },
-    combo212: { n: "2x12 \u534a\u5c01\u80cc", s: "\u5747\u8861\uff0c\u4e2d\u9838\u6709\u8089",
-      lowF: 85, lowQ: 1, hiF: 4800, peaks: [[160, 3.5, 1.2], [1500, 2.5, 2], [3900, -4, 1.5]],
-      taps: [[1.2, -0.38], [2.8, 0.3], [5.6, -0.18], [8.1, 0.1]], decay: 0.018 },
-    stack412: { n: "4x12 \u5c01\u80cc\u97f3\u7bb1", s: "\u4f4e\u9838\u91cf\u5927\uff0c\u63a8\u529b\u8db3",
-      lowF: 72, lowQ: 1.3, hiF: 4300, peaks: [[105, 5, 1.1], [1300, 2, 1.8], [4000, -5.5, 1.4]],
-      taps: [[1.6, -0.4], [3.4, 0.32], [6.9, -0.2], [10.2, 0.12], [14, -0.07]], decay: 0.026 },
-    jazz15: { n: "1x15 \u7235\u58eb\u7bb1", s: "\u5713\u6da6\uff0c\u9ad8\u9838\u65e9\u6ede",
-      lowF: 68, lowQ: 0.9, hiF: 3200, peaks: [[130, 4, 1.1], [900, 2, 1.6], [2600, -4, 1.3]],
-      taps: [[1.4, -0.3], [3.1, 0.22], [6.2, -0.12]], decay: 0.02 }
-  };
-  const MICS = {
-    dyn57: { n: "\u52d5\u5708\u8fd1\u9ea5", s: "\u4e2d\u9ad8\u9838\u63a8\u524d\uff0c\u6700\u5e38\u898b", tilt: 3.5, tiltF: 2800, body: 0 },
-    dyn421: { n: "\u52d5\u5708\u5927\u632f\u819c", s: "\u4f4e\u9838\u591a\u4e00\u9ede", tilt: 1, tiltF: 2400, body: 3 },
-    cond: { n: "\u96fb\u5bb9\u9ea5", s: "\u7d30\u7bc0\u591a\uff0c\u9ad8\u9838\u5f00", tilt: 5, tiltF: 6000, body: -1 },
-    ribbon: { n: "\u5e36\u72c0\u9ea5", s: "\u67d4\u548c\uff0c\u9ad8\u9838\u6536", tilt: -4, tiltF: 4500, body: 2 }
-  };
-  function ampCurve(stages, bias, drive, n) {
-    const c = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      let y = i / (n - 1) * 2 - 1;
-      const per = Math.pow(Math.max(1.02, drive), 1 / Math.max(1, stages));
-      for (let st = 0; st < stages; st++) {
-        const b = y < 0 ? bias : 2 - bias;
-        y = Math.tanh(y * b * per) / Math.tanh(b * per);
-      }
-      c[i] = y * 0.92;
-    }
-    return c;
-  }
-  async function makeCabIR(cabKey, micKey, pos, dist) {
-    const cab = CABS[cabKey];
-    if (!cab || cab.off) return null;
-    const mic = MICS[micKey] || MICS.dyn57;
-    const sr = Tone.context.sampleRate;
-    const len = Math.max(256, Math.floor(sr * 0.09));
-    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    const off = new OAC(1, len, sr);
-    const buf = off.createBuffer(1, len, sr);
-    const d = buf.getChannelData(0);
-    d[0] = 1;
-    const edge = Math.max(0, Math.min(1, pos == null ? 0.35 : pos));
-    cab.taps.forEach(([ms, g], ti) => {
-      const idx = Math.round(ms / 1e3 * sr);
-      if (idx > 0 && idx < len) d[idx] += g * (1 - edge * 0.35) * (ti % 2 ? 1 : 1);
-    });
-    const dl = Math.round(Math.max(0, dist || 0) / 1e3 * sr);
-    if (dl > 1 && dl < len) d[dl] += 0.3;
-    for (let i = 1; i < len; i++) {
-      d[i] += (Math.random() * 2 - 1) * 0.06 * Math.exp(-i / (sr * cab.decay));
-    }
-    const src = off.createBufferSource();
-    src.buffer = buf;
-    const hp = off.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = cab.lowF;
-    hp.Q.value = cab.lowQ;
-    let head = hp;
-    cab.peaks.forEach(([f, g, q]) => {
-      const pk = off.createBiquadFilter();
-      pk.type = "peaking";
-      pk.frequency.value = f;
-      pk.gain.value = g;
-      pk.Q.value = q;
-      head.connect(pk);
-      head = pk;
-    });
-    const tilt = off.createBiquadFilter();
-    tilt.type = "highshelf";
-    tilt.frequency.value = mic.tiltF;
-    tilt.gain.value = mic.tilt - edge * 6;
-    head.connect(tilt);
-    const body = off.createBiquadFilter();
-    body.type = "peaking";
-    body.frequency.value = 200;
-    body.gain.value = mic.body;
-    body.Q.value = 1;
-    tilt.connect(body);
-    const lp = off.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = cab.hiF;
-    lp.Q.value = 0.7;
-    body.connect(lp);
-    lp.connect(off.destination);
-    src.connect(hp);
-    src.start(0);
-    const rendered = await off.startRendering();
-    const ch = rendered.getChannelData(0);
-    let peak = 0;
-    for (let i = 0; i < ch.length; i++) peak = Math.max(peak, Math.abs(ch[i]));
-    if (peak > 0) for (let i = 0; i < ch.length; i++) ch[i] /= peak * 1.6;
-    return rendered;
-  }
   const TONES = {
     acoustic: { n: "原聲鋼弦", s: "木吉他，乾淨自然", src: "acoustic" },
-    clean: { n: "清音 Clean", s: "透亮、不失真", src: "electric", pre: 1, low: 2, mid: 0, high: 2.5, pres: 2, cut: 7000, hp: 80, thr: -18, rat: 3, rev: 0.16, cho: 0 },
-    jazzbox: { n: "爵士箱琴", s: "厚暖，高頻收掉", src: "electric", pre: 0.9, low: 4, mid: 1.5, high: -8, pres: -4, cut: 2600, hp: 70, thr: -20, rat: 4, rev: 0.14, cho: 0 },
-    neosoul: { n: "Neo Soul", s: "柔和清音＋合唱", src: "electric", pre: 1.15, low: 2.5, mid: -1, high: 1, pres: 0, cut: 5200, hp: 75, thr: -22, rat: 5, rev: 0.2, cho: 0.4 },
-    rnb: { n: "R&B 溫暖", s: "圓潤、微壓縮", src: "electric", pre: 1.05, low: 3, mid: 0.5, high: -1, pres: -1, cut: 4200, hp: 75, thr: -24, rat: 6, rev: 0.18, cho: 0.15 },
-    funk: { n: "放克切音", s: "明亮、緊、彈性強", src: "electric", pre: 1.25, low: -2, mid: 3, high: 4, pres: 3, cut: 7500, hp: 130, thr: -26, rat: 8, rev: 0.08, cho: 0 },
-    blues: { n: "藍調 Crunch", s: "輕破音，中頻突出", src: "electric", pre: 2.4, low: 1.5, mid: 4, high: 1, pres: 2, cut: 5000, hp: 90, thr: -16, rat: 3, rev: 0.15, cho: 0 },
-
+    studio: { n: "取樣吉他", s: "四段力度真實取樣", src: "layered", gain: -3 }
   };
   const STRUM_PATTERNS = {
     arp: {
@@ -1202,59 +1077,59 @@ window.__CHORDLAB__ = function(){
     { id: "t006", name: "王道進行", sub: "IVM7–V7–iii7–vi ・ 日系副歌的標配", genre: "pop", style: "J-Pop", mode: "major", bpm: 92, strum: "roll", drum: "pop16", bass: "root", tone: "acoustic", chords: [{ d: 3, q: "maj7" }, { d: 4, q: "dom7" }, { d: 2, q: "min7" }, { d: 5 }] },
     { id: "t008", name: "卡農進行", sub: "I–V–vi–iii–IV–I–IV–V ・ 最會催淚的長句", genre: "pop", style: "J-Pop", mode: "major", bpm: 84, strum: "arp", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 2 }, { d: 3 }, { d: 0 }, { d: 3 }, { d: 4 }] },
     { id: "t009", name: "4536251", sub: "IV–V–iii–vi–ii–V–I ・ 萬用長句", genre: "pop", style: "J-Pop", mode: "major", bpm: 88, strum: "roll", drum: "pop16", bass: "root", tone: "acoustic", chords: [{ d: 3 }, { d: 4 }, { d: 2 }, { d: 5 }, { d: 1 }, { d: 4 }, { d: 0 }] },
-    { id: "t010", name: "丸之內進行", sub: "IVM7–III7–vi7–I7 ・ 都會爵士味", genre: "pop", style: "J-Pop", mode: "major", bpm: 96, strum: "roll", drum: "neo", bass: "walk", tone: "jazzbox", chords: [{ d: 3, q: "maj7" }, { pc: 4, q: "dom7" }, { d: 5, q: "min7" }, { d: 0, q: "dom7" }] },
+    { id: "t010", name: "丸之內進行", sub: "IVM7–III7–vi7–I7 ・ 都會爵士味", genre: "pop", style: "J-Pop", mode: "major", bpm: 96, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 3, q: "maj7" }, { pc: 4, q: "dom7" }, { d: 5, q: "min7" }, { d: 0, q: "dom7" }] },
     { id: "t011", name: "純情進行", sub: "卡農的下行低音變體", genre: "pop", style: "J-Pop", mode: "major", bpm: 80, strum: "arp", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 2 }, { d: 3 }, { d: 0 }, { d: 1 }, { d: 4 }] },
-    { id: "t012", name: "4156 進行", sub: "IV–I–V–vi ・ 哀愁的浮遊感", genre: "pop", style: "J-Pop", mode: "major", bpm: 94, strum: "roll", drum: "pop16", bass: "root", tone: "clean", chords: [{ d: 3 }, { d: 0 }, { d: 4 }, { d: 5 }] },
-    { id: "t015", name: "都會 R&B 味", sub: "ii7–V7–IM7–vi7 ・ 順滑不刺耳", genre: "pop", style: "K-Pop", mode: "major", bpm: 102, strum: "roll", drum: "neo", bass: "walk", tone: "rnb", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }, { d: 5, q: "min7" }] },
+    { id: "t012", name: "4156 進行", sub: "IV–I–V–vi ・ 哀愁的浮遊感", genre: "pop", style: "J-Pop", mode: "major", bpm: 94, strum: "roll", drum: "pop16", bass: "root", tone: "studio", chords: [{ d: 3 }, { d: 0 }, { d: 4 }, { d: 5 }] },
+    { id: "t015", name: "都會 R&B 味", sub: "ii7–V7–IM7–vi7 ・ 順滑不刺耳", genre: "pop", style: "K-Pop", mode: "major", bpm: 102, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }, { d: 5, q: "min7" }] },
     { id: "t018", name: "民謠敘事", sub: "I–iii–IV–V ・ 娓娓道來", genre: "pop", style: "華語", mode: "major", bpm: 88, strum: "travis", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 2 }, { d: 3 }, { d: 4 }] },
-    { id: "t019", name: "都會夜景", sub: "IM7–vi7–ii7–V7 ・ 鬆軟的四循環", genre: "pop", style: "City Pop", mode: "major", bpm: 104, strum: "roll", drum: "neo", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
-    { id: "t020", name: "海岸公路", sub: "IIIM7–VI7–ii7–V7 ・ 明亮的轉調感", genre: "pop", style: "City Pop", mode: "major", bpm: 108, strum: "roll", drum: "neo", bass: "walk", tone: "clean", chords: [{ pc: 4, q: "maj7" }, { pc: 9, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
-    { id: "t032", name: "掛留漂浮", sub: "Isus2–IV–vi–V ・ 不把話說滿", genre: "rock", style: "另類獨立", mode: "major", bpm: 108, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "sus2" }, { d: 3 }, { d: 5 }, { d: 4 }] },
-    { id: "t033", name: "大小調交替", sub: "I–iv–I–♭VI ・ 借用小調製造陰影", genre: "rock", style: "另類獨立", mode: "major", bpm: 96, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0 }, { pc: 5, q: "min" }, { d: 0 }, { pc: 8, q: "maj" }] },
-    { id: "t034", name: "九和弦鋪陳", sub: "IM7–IIIm7–IVM7–V ・ 織體優先", genre: "rock", style: "另類獨立", mode: "major", bpm: 100, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "maj7" }, { d: 2, q: "min7" }, { d: 3, q: "maj7" }, { d: 4 }] },
-    { id: "t039", name: "長線鋪陳", sub: "I–iii–IV ・ 慢慢堆疊", genre: "rock", style: "後搖", mode: "major", bpm: 72, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, bars: 2 }, { d: 2, bars: 2 }, { d: 3, bars: 2 }] },
-    { id: "t040", name: "調式漂浮", sub: "IM7–♭VIIM7 ・ 兩個和弦就夠", genre: "rock", style: "後搖", mode: "major", bpm: 68, strum: "roll", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 10, q: "maj7", bars: 2 }] },
-    { id: "t041", name: "多利安循環", sub: "i–IV ・ 亮起來的小調", genre: "rock", style: "迷幻", mode: "minor", bpm: 104, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "min7", bars: 2 }, { pc: 5, q: "dom7", bars: 2 }] },
-    { id: "t042", name: "半音下行", sub: "i–♭VII–♭VI–V7 ・ 催眠式下行", genre: "rock", style: "迷幻", mode: "minor", bpm: 96, strum: "arp", drum: "rock", bass: "root", tone: "blues", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 7, q: "dom7" }] },
-    { id: "t054", name: "慢速十二小節", sub: "6/8 感的抒情藍調", genre: "blues", style: "慢藍調", mode: "major", bpm: 62, strum: "roll", drum: "shuffle", bass: "walk", tone: "blues", swing: 0.6, chords: [{ d: 0, q: "dom7", bars: 4 }, { d: 3, q: "dom7", bars: 2 }, { d: 0, q: "dom7", bars: 2 }, { d: 4, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 4, q: "dom7" }] },
-    { id: "t056", name: "爵士化十二小節", sub: "加入 ii–V 與經過減和弦", genre: "blues", style: "爵士藍調", mode: "major", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 0, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 0, q: "dom7" }, { d: 3, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 2, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "dom7" }, { d: 4, q: "dom7" }] },
-    { id: "t057", name: "二五一", sub: "ii7–V7–IM7 ・ 爵士的基本句", genre: "jazz", style: "標準曲", mode: "major", bpm: 128, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
-    { id: "t058", name: "小調二五一", sub: "iiø–V7–i ・ 小調的解決", genre: "jazz", style: "標準曲", mode: "minor", bpm: 120, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7", bars: 2 }] },
-    { id: "t059", name: "逆循環", sub: "IM7–vi7–ii7–V7 ・ 轉不完的圓", genre: "jazz", style: "標準曲", mode: "major", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
-    { id: "t060", name: "節奏變奏 A 段", sub: "I–VI7–ii–V ・ 兩拍一換", genre: "jazz", style: "標準曲", mode: "major", bpm: 168, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 0, q: "maj7" }, { pc: 9, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }, { d: 0, q: "dom7" }, { d: 3, q: "maj7" }, { pc: 6, q: "dim7" }] },
-    { id: "t061", name: "半音下行二五", sub: "連續 ii–V 半音位移", genre: "jazz", style: "Bebop", mode: "major", bpm: 176, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { pc: 1, q: "min7" }, { pc: 6, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
-    { id: "t062", name: "三全音代理", sub: "ii7–♭II7–IM7 ・ 換一個屬和弦", genre: "jazz", style: "Bebop", mode: "major", bpm: 160, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "min7" }, { pc: 1, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
-    { id: "t063", name: "多利安兩和弦", sub: "i7–IV7 ・ 調式爵士的留白", genre: "jazz", style: "Modal", mode: "minor", bpm: 128, strum: "jazzcomp", drum: "swing", bass: "walk", tone: "jazzbox", swing: 0.58, chords: [{ d: 0, q: "min7", bars: 4 }, { pc: 5, q: "dom7", bars: 4 }] },
-    { id: "t064", name: "四度堆疊移動", sub: "i7–♭iii7 ・ 大距離平移", genre: "jazz", style: "Modal", mode: "minor", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walk", tone: "jazzbox", swing: 0.58, chords: [{ d: 0, q: "min7", bars: 4 }, { pc: 3, q: "min7", bars: 4 }] },
-    { id: "t065", name: "大樂團段落", sub: "IM7–♭III7–ii7–V7 ・ 亮麗的推進", genre: "jazz", style: "Swing", mode: "major", bpm: 152, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.62, chords: [{ d: 0, q: "maj7" }, { pc: 3, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
-    { id: "t066", name: "爵士三拍感", sub: "i–iiø–V7–i ・ 三拍的小調", genre: "jazz", style: "圓舞曲", mode: "minor", bpm: 140, strum: "arp", drum: "swing", bass: "walk", tone: "jazzbox", swing: 0.58, chords: [{ d: 0, q: "min7" }, { d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7" }] },
-    { id: "t073", name: "教會味進行", sub: "I–iii–IV–iv ・ 帶點福音", genre: "rnb", style: "經典靈魂", mode: "major", bpm: 84, strum: "roll", drum: "neo", bass: "root", tone: "rnb", chords: [{ d: 0 }, { d: 2 }, { d: 3 }, { pc: 5, q: "min" }] },
-    { id: "t074", name: "六級起頭", sub: "vi7–ii7–V7–IM7 ・ 溫暖的循環", genre: "rnb", style: "經典靈魂", mode: "major", bpm: 88, strum: "roll", drum: "neo", bass: "walk", tone: "rnb", chords: [{ d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }] },
-    { id: "t075", name: "慢板四循環", sub: "IM7–iii7–vi7–IV ・ 順到底", genre: "rnb", style: "90s R&B", mode: "major", bpm: 72, strum: "roll", drum: "halftime", bass: "root", tone: "rnb", chords: [{ d: 0, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }, { d: 3 }] },
-    { id: "t076", name: "New Jack 律動", sub: "ii7–V7–iii7–vi7 ・ 有推力的四循環", genre: "rnb", style: "90s R&B", mode: "major", bpm: 96, strum: "roll", drum: "neo", bass: "walk", tone: "rnb", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }] },
-    { id: "t077", name: "延伸和聲", sub: "IM7–IVM7 ・ 兩個大七和弦來回", genre: "rnb", style: "現代 R&B", mode: "major", bpm: 78, strum: "roll", drum: "halftime", bass: "root", tone: "rnb", chords: [{ d: 0, q: "maj7", bars: 2 }, { d: 3, q: "maj7", bars: 2 }] },
-    { id: "t078", name: "小調都會", sub: "i7–♭VIM7–♭VIIM7 ・ 冷冽", genre: "rnb", style: "現代 R&B", mode: "minor", bpm: 82, strum: "roll", drum: "halftime", bass: "root", tone: "rnb", chords: [{ d: 0, q: "min7" }, { pc: 8, q: "maj7" }, { pc: 10, q: "maj7" }, { d: 0, q: "min7" }] },
-    { id: "t079", name: "九和弦漂浮", sub: "IM9–ii9 ・ 慵懶的來回", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 76, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "maj9", bars: 2 }, { d: 1, q: "min9", bars: 2 }] },
-    { id: "t080", name: "四級大七起頭", sub: "IVM7–iii7–vi7–ii7 ・ 綿密", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 80, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }] },
-    { id: "t081", name: "半音經過", sub: "IM7–♭IIIdim7–ii7–V7 ・ 滑順的接縫", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 74, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "maj7" }, { pc: 3, q: "dim7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
-    { id: "t082", name: "小調慵懶", sub: "i9–IV13 ・ 多利安的甜", genre: "neosoul", style: "Neo Soul", mode: "minor", bpm: 70, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "min9", bars: 2 }, { pc: 5, q: "dom13", bars: 2 }] },
-    { id: "t083", name: "教會終止", sub: "IVM7–I/III–ii7–I ・ 溫柔落地", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 72, strum: "roll", drum: "neo", bass: "root", tone: "neosoul", chords: [{ d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 1, q: "min7" }, { d: 0, q: "maj7" }] },
+    { id: "t019", name: "都會夜景", sub: "IM7–vi7–ii7–V7 ・ 鬆軟的四循環", genre: "pop", style: "City Pop", mode: "major", bpm: 104, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t020", name: "海岸公路", sub: "IIIM7–VI7–ii7–V7 ・ 明亮的轉調感", genre: "pop", style: "City Pop", mode: "major", bpm: 108, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ pc: 4, q: "maj7" }, { pc: 9, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t032", name: "掛留漂浮", sub: "Isus2–IV–vi–V ・ 不把話說滿", genre: "rock", style: "另類獨立", mode: "major", bpm: 108, strum: "arp", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "sus2" }, { d: 3 }, { d: 5 }, { d: 4 }] },
+    { id: "t033", name: "大小調交替", sub: "I–iv–I–♭VI ・ 借用小調製造陰影", genre: "rock", style: "另類獨立", mode: "major", bpm: 96, strum: "arp", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0 }, { pc: 5, q: "min" }, { d: 0 }, { pc: 8, q: "maj" }] },
+    { id: "t034", name: "九和弦鋪陳", sub: "IM7–IIIm7–IVM7–V ・ 織體優先", genre: "rock", style: "另類獨立", mode: "major", bpm: 100, strum: "arp", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "maj7" }, { d: 2, q: "min7" }, { d: 3, q: "maj7" }, { d: 4 }] },
+    { id: "t039", name: "長線鋪陳", sub: "I–iii–IV ・ 慢慢堆疊", genre: "rock", style: "後搖", mode: "major", bpm: 72, strum: "arp", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, bars: 2 }, { d: 2, bars: 2 }, { d: 3, bars: 2 }] },
+    { id: "t040", name: "調式漂浮", sub: "IM7–♭VIIM7 ・ 兩個和弦就夠", genre: "rock", style: "後搖", mode: "major", bpm: 68, strum: "roll", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 10, q: "maj7", bars: 2 }] },
+    { id: "t041", name: "多利安循環", sub: "i–IV ・ 亮起來的小調", genre: "rock", style: "迷幻", mode: "minor", bpm: 104, strum: "arp", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "min7", bars: 2 }, { pc: 5, q: "dom7", bars: 2 }] },
+    { id: "t042", name: "半音下行", sub: "i–♭VII–♭VI–V7 ・ 催眠式下行", genre: "rock", style: "迷幻", mode: "minor", bpm: 96, strum: "arp", drum: "rock", bass: "root", tone: "studio", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 7, q: "dom7" }] },
+    { id: "t054", name: "慢速十二小節", sub: "6/8 感的抒情藍調", genre: "blues", style: "慢藍調", mode: "major", bpm: 62, strum: "roll", drum: "shuffle", bass: "walk", tone: "studio", swing: 0.6, chords: [{ d: 0, q: "dom7", bars: 4 }, { d: 3, q: "dom7", bars: 2 }, { d: 0, q: "dom7", bars: 2 }, { d: 4, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 4, q: "dom7" }] },
+    { id: "t056", name: "爵士化十二小節", sub: "加入 ii–V 與經過減和弦", genre: "blues", style: "爵士藍調", mode: "major", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 0, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 0, q: "dom7" }, { d: 3, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 2, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "dom7" }, { d: 4, q: "dom7" }] },
+    { id: "t057", name: "二五一", sub: "ii7–V7–IM7 ・ 爵士的基本句", genre: "jazz", style: "標準曲", mode: "major", bpm: 128, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t058", name: "小調二五一", sub: "iiø–V7–i ・ 小調的解決", genre: "jazz", style: "標準曲", mode: "minor", bpm: 120, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7", bars: 2 }] },
+    { id: "t059", name: "逆循環", sub: "IM7–vi7–ii7–V7 ・ 轉不完的圓", genre: "jazz", style: "標準曲", mode: "major", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t060", name: "節奏變奏 A 段", sub: "I–VI7–ii–V ・ 兩拍一換", genre: "jazz", style: "標準曲", mode: "major", bpm: 168, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 0, q: "maj7" }, { pc: 9, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }, { d: 0, q: "dom7" }, { d: 3, q: "maj7" }, { pc: 6, q: "dim7" }] },
+    { id: "t061", name: "半音下行二五", sub: "連續 ii–V 半音位移", genre: "jazz", style: "Bebop", mode: "major", bpm: 176, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { pc: 1, q: "min7" }, { pc: 6, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t062", name: "三全音代理", sub: "ii7–♭II7–IM7 ・ 換一個屬和弦", genre: "jazz", style: "Bebop", mode: "major", bpm: 160, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.6, chords: [{ d: 1, q: "min7" }, { pc: 1, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t063", name: "多利安兩和弦", sub: "i7–IV7 ・ 調式爵士的留白", genre: "jazz", style: "Modal", mode: "minor", bpm: 128, strum: "jazzcomp", drum: "swing", bass: "walk", tone: "studio", swing: 0.58, chords: [{ d: 0, q: "min7", bars: 4 }, { pc: 5, q: "dom7", bars: 4 }] },
+    { id: "t064", name: "四度堆疊移動", sub: "i7–♭iii7 ・ 大距離平移", genre: "jazz", style: "Modal", mode: "minor", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walk", tone: "studio", swing: 0.58, chords: [{ d: 0, q: "min7", bars: 4 }, { pc: 3, q: "min7", bars: 4 }] },
+    { id: "t065", name: "大樂團段落", sub: "IM7–♭III7–ii7–V7 ・ 亮麗的推進", genre: "jazz", style: "Swing", mode: "major", bpm: 152, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "studio", swing: 0.62, chords: [{ d: 0, q: "maj7" }, { pc: 3, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t066", name: "爵士三拍感", sub: "i–iiø–V7–i ・ 三拍的小調", genre: "jazz", style: "圓舞曲", mode: "minor", bpm: 140, strum: "arp", drum: "swing", bass: "walk", tone: "studio", swing: 0.58, chords: [{ d: 0, q: "min7" }, { d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7" }] },
+    { id: "t073", name: "教會味進行", sub: "I–iii–IV–iv ・ 帶點福音", genre: "rnb", style: "經典靈魂", mode: "major", bpm: 84, strum: "roll", drum: "neo", bass: "root", tone: "studio", chords: [{ d: 0 }, { d: 2 }, { d: 3 }, { pc: 5, q: "min" }] },
+    { id: "t074", name: "六級起頭", sub: "vi7–ii7–V7–IM7 ・ 溫暖的循環", genre: "rnb", style: "經典靈魂", mode: "major", bpm: 88, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }] },
+    { id: "t075", name: "慢板四循環", sub: "IM7–iii7–vi7–IV ・ 順到底", genre: "rnb", style: "90s R&B", mode: "major", bpm: 72, strum: "roll", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }, { d: 3 }] },
+    { id: "t076", name: "New Jack 律動", sub: "ii7–V7–iii7–vi7 ・ 有推力的四循環", genre: "rnb", style: "90s R&B", mode: "major", bpm: 96, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }] },
+    { id: "t077", name: "延伸和聲", sub: "IM7–IVM7 ・ 兩個大七和弦來回", genre: "rnb", style: "現代 R&B", mode: "major", bpm: 78, strum: "roll", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "maj7", bars: 2 }, { d: 3, q: "maj7", bars: 2 }] },
+    { id: "t078", name: "小調都會", sub: "i7–♭VIM7–♭VIIM7 ・ 冷冽", genre: "rnb", style: "現代 R&B", mode: "minor", bpm: 82, strum: "roll", drum: "halftime", bass: "root", tone: "studio", chords: [{ d: 0, q: "min7" }, { pc: 8, q: "maj7" }, { pc: 10, q: "maj7" }, { d: 0, q: "min7" }] },
+    { id: "t079", name: "九和弦漂浮", sub: "IM9–ii9 ・ 慵懶的來回", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 76, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 0, q: "maj9", bars: 2 }, { d: 1, q: "min9", bars: 2 }] },
+    { id: "t080", name: "四級大七起頭", sub: "IVM7–iii7–vi7–ii7 ・ 綿密", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 80, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }] },
+    { id: "t081", name: "半音經過", sub: "IM7–♭IIIdim7–ii7–V7 ・ 滑順的接縫", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 74, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 0, q: "maj7" }, { pc: 3, q: "dim7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t082", name: "小調慵懶", sub: "i9–IV13 ・ 多利安的甜", genre: "neosoul", style: "Neo Soul", mode: "minor", bpm: 70, strum: "roll", drum: "neo", bass: "walk", tone: "studio", chords: [{ d: 0, q: "min9", bars: 2 }, { pc: 5, q: "dom13", bars: 2 }] },
+    { id: "t083", name: "教會終止", sub: "IVM7–I/III–ii7–I ・ 溫柔落地", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 72, strum: "roll", drum: "neo", bass: "root", tone: "studio", chords: [{ d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 1, q: "min7" }, { d: 0, q: "maj7" }] },
     { id: "t084", name: "三和弦敘事", sub: "I–IV–I–V ・ 說故事的節奏", genre: "folk", style: "美式民謠", mode: "major", bpm: 96, strum: "travis", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 0 }, { d: 4 }] },
     { id: "t085", name: "下行低音", sub: "I–I/VII–vi–I/V ・ 走音低音線", genre: "folk", style: "美式民謠", mode: "major", bpm: 88, strum: "travis", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 11, q: "dim" }, { d: 5 }, { d: 4 }] },
     { id: "t086", name: "納許維爾循環", sub: "I–IV–V–IV ・ 明亮直白", genre: "folk", style: "鄉村", mode: "major", bpm: 116, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 4 }, { d: 3 }] },
     { id: "t088", name: "快速三和弦", sub: "I–IV–I–V ・ 高速掃弦", genre: "folk", style: "藍草", mode: "major", bpm: 152, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 0 }, { d: 4 }] },
     { id: "t089", name: "混合調式", sub: "i–♭VII–♭VI–♭VII ・ 古老的味道", genre: "folk", style: "凱爾特", mode: "minor", bpm: 112, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 10, q: "maj" }] },
     { id: "t090", name: "多利安舞曲", sub: "i–♭VII–IV–i ・ 亮一點的小調", genre: "folk", style: "凱爾特", mode: "minor", bpm: 124, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 5, q: "maj" }, { d: 0 }] },
-    { id: "t091", name: "經典二五一", sub: "ii7–V7–IM7 ・ 慵懶的巴西", genre: "latin", style: "Bossa Nova", mode: "major", bpm: 132, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "jazzbox", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
-    { id: "t092", name: "小調 bossa", sub: "i7–iiø–V7–i7 ・ 微微的憂鬱", genre: "latin", style: "Bossa Nova", mode: "minor", bpm: 128, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "min7" }, { d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7" }] },
-    { id: "t093", name: "兩和弦搖擺", sub: "IM7–VI7 ・ 推進的森巴", genre: "latin", style: "Samba", mode: "major", bpm: 140, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 9, q: "dom7", bars: 2 }] },
+    { id: "t091", name: "經典二五一", sub: "ii7–V7–IM7 ・ 慵懶的巴西", genre: "latin", style: "Bossa Nova", mode: "major", bpm: 132, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "studio", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t092", name: "小調 bossa", sub: "i7–iiø–V7–i7 ・ 微微的憂鬱", genre: "latin", style: "Bossa Nova", mode: "minor", bpm: 128, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "studio", chords: [{ d: 0, q: "min7" }, { d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7" }] },
+    { id: "t093", name: "兩和弦搖擺", sub: "IM7–VI7 ・ 推進的森巴", genre: "latin", style: "Samba", mode: "major", bpm: 140, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "studio", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 9, q: "dom7", bars: 2 }] },
     { id: "t097", name: "小調戲劇性", sub: "i–V7–i–iv ・ 探戈的緊繃", genre: "latin", style: "Tango", mode: "minor", bpm: 120, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 7, q: "dom7" }, { d: 0 }, { d: 3 }] },
-    { id: "t098", name: "反拍切音", sub: "I–V–vi–IV ・ skank 專用", genre: "latin", style: "雷鬼", mode: "major", bpm: 76, strum: "skank", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 3 }] },
-    { id: "t099", name: "小調 roots", sub: "i–♭VII ・ 兩和弦的沉穩", genre: "latin", style: "雷鬼", mode: "minor", bpm: 72, strum: "skank", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0, bars: 2 }, { pc: 10, q: "maj", bars: 2 }] },
-    { id: "t101", name: "Deep House", sub: "ii9–V9–IM9 ・ 柔和的深夜", genre: "edm", style: "House", mode: "major", bpm: 122, strum: "roll", drum: "pop16", bass: "octave", tone: "jazzbox", chords: [{ d: 1, q: "min9" }, { d: 4, q: "dom9" }, { d: 0, q: "maj9", bars: 2 }] },
-    { id: "t105", name: "掛留與大七", sub: "IVM7–V–iii7–vi ・ 甜而不膩", genre: "edm", style: "Future Bass", mode: "major", bpm: 150, strum: "roll", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 3, q: "maj7" }, { d: 4, q: "sus4" }, { d: 2, q: "min7" }, { d: 5 }] },
-    { id: "t106", name: "慵懶循環", sub: "IM7–vi7–ii7–V7 ・ 讀書配樂", genre: "edm", style: "Lo-fi", mode: "major", bpm: 78, strum: "roll", drum: "halftime", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
-    { id: "t107", name: "小調 chill", sub: "i9–iv9 ・ 雨天的房間", genre: "edm", style: "Lo-fi", mode: "minor", bpm: 74, strum: "roll", drum: "halftime", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "min9", bars: 2 }, { d: 3, q: "min9", bars: 2 }] },
+    { id: "t098", name: "反拍切音", sub: "I–V–vi–IV ・ skank 專用", genre: "latin", style: "雷鬼", mode: "major", bpm: 76, strum: "skank", drum: "halftime", bass: "octave", tone: "studio", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 3 }] },
+    { id: "t099", name: "小調 roots", sub: "i–♭VII ・ 兩和弦的沉穩", genre: "latin", style: "雷鬼", mode: "minor", bpm: 72, strum: "skank", drum: "halftime", bass: "octave", tone: "studio", chords: [{ d: 0, bars: 2 }, { pc: 10, q: "maj", bars: 2 }] },
+    { id: "t101", name: "Deep House", sub: "ii9–V9–IM9 ・ 柔和的深夜", genre: "edm", style: "House", mode: "major", bpm: 122, strum: "roll", drum: "pop16", bass: "octave", tone: "studio", chords: [{ d: 1, q: "min9" }, { d: 4, q: "dom9" }, { d: 0, q: "maj9", bars: 2 }] },
+    { id: "t105", name: "掛留與大七", sub: "IVM7–V–iii7–vi ・ 甜而不膩", genre: "edm", style: "Future Bass", mode: "major", bpm: 150, strum: "roll", drum: "halftime", bass: "octave", tone: "studio", chords: [{ d: 3, q: "maj7" }, { d: 4, q: "sus4" }, { d: 2, q: "min7" }, { d: 5 }] },
+    { id: "t106", name: "慵懶循環", sub: "IM7–vi7–ii7–V7 ・ 讀書配樂", genre: "edm", style: "Lo-fi", mode: "major", bpm: 78, strum: "roll", drum: "halftime", bass: "walk", tone: "studio", chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t107", name: "小調 chill", sub: "i9–iv9 ・ 雨天的房間", genre: "edm", style: "Lo-fi", mode: "minor", bpm: 74, strum: "roll", drum: "halftime", bass: "walk", tone: "studio", chords: [{ d: 0, q: "min9", bars: 2 }, { d: 3, q: "min9", bars: 2 }] },
     { id: "t108", name: "帕海貝爾低音", sub: "I–V–vi–iii–IV–I–IV–V ・ 卡農原型", genre: "classical", style: "巴洛克", mode: "major", bpm: 72, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 2 }, { d: 3 }, { d: 0 }, { d: 3 }, { d: 4 }] },
     { id: "t109", name: "圓圈五度", sub: "vi–ii–V–I–IV–viiø–iii ・ 一路下行五度", genre: "classical", style: "巴洛克", mode: "major", bpm: 84, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 5 }, { d: 1 }, { d: 4 }, { d: 0 }, { d: 3 }, { d: 6 }, { d: 2 }] },
     { id: "t110", name: "低音頑固", sub: "i–♭VII–♭VI–V ・ 傳統的下行四音", genre: "classical", style: "巴洛克", mode: "minor", bpm: 76, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 7, q: "maj" }] },
@@ -1264,10 +1139,10 @@ window.__CHORDLAB__ = function(){
     { id: "t114", name: "拿坡里六和弦", sub: "i–♭II–V7–i ・ 濃烈的張力", genre: "classical", style: "浪漫", mode: "minor", bpm: 66, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 1, q: "maj" }, { pc: 7, q: "dom7" }, { d: 0 }] },
     { id: "t115", name: "利底亞明亮", sub: "IM7–II7 ・ 升四度的漂浮", genre: "classical", style: "教會調式", mode: "major", bpm: 80, strum: "roll", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 2, q: "dom7", bars: 2 }] },
     { id: "t116", name: "弗里吉亞", sub: "i–♭II ・ 最暗的兩個和弦", genre: "classical", style: "教會調式", mode: "minor", bpm: 72, strum: "roll", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "min", bars: 2 }, { pc: 1, q: "maj", bars: 2 }] },
-    { id: "t117", name: "大調三度平移", sub: "I–♭VI–♭III–♭VII ・ 開闊壯麗", genre: "cinematic", style: "史詩", mode: "major", bpm: 90, strum: "roll", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0 }, { pc: 8, q: "maj" }, { pc: 3, q: "maj" }, { pc: 10, q: "maj" }] },
-    { id: "t118", name: "小調行軍", sub: "i–♭VI–iv–V ・ 沉重的推進", genre: "cinematic", style: "史詩", mode: "minor", bpm: 96, strum: "roll", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0 }, { pc: 8, q: "maj" }, { d: 3 }, { pc: 7, q: "maj" }] },
-    { id: "t119", name: "增和弦滑移", sub: "i–i+ ・ 逐步升高的不安", genre: "cinematic", style: "懸疑", mode: "minor", bpm: 60, strum: "roll", drum: "none", bass: "root", tone: "clean", chords: [{ d: 0, q: "min", bars: 2 }, { d: 0, q: "aug", bars: 2 }] },
-    { id: "t120", name: "減和弦懸吊", sub: "idim7–♭II ・ 沒有解決", genre: "cinematic", style: "懸疑", mode: "minor", bpm: 64, strum: "roll", drum: "none", bass: "root", tone: "clean", chords: [{ d: 0, q: "dim7", bars: 2 }, { pc: 1, q: "maj", bars: 2 }] },
+    { id: "t117", name: "大調三度平移", sub: "I–♭VI–♭III–♭VII ・ 開闊壯麗", genre: "cinematic", style: "史詩", mode: "major", bpm: 90, strum: "roll", drum: "halftime", bass: "octave", tone: "studio", chords: [{ d: 0 }, { pc: 8, q: "maj" }, { pc: 3, q: "maj" }, { pc: 10, q: "maj" }] },
+    { id: "t118", name: "小調行軍", sub: "i–♭VI–iv–V ・ 沉重的推進", genre: "cinematic", style: "史詩", mode: "minor", bpm: 96, strum: "roll", drum: "halftime", bass: "octave", tone: "studio", chords: [{ d: 0 }, { pc: 8, q: "maj" }, { d: 3 }, { pc: 7, q: "maj" }] },
+    { id: "t119", name: "增和弦滑移", sub: "i–i+ ・ 逐步升高的不安", genre: "cinematic", style: "懸疑", mode: "minor", bpm: 60, strum: "roll", drum: "none", bass: "root", tone: "studio", chords: [{ d: 0, q: "min", bars: 2 }, { d: 0, q: "aug", bars: 2 }] },
+    { id: "t120", name: "減和弦懸吊", sub: "idim7–♭II ・ 沒有解決", genre: "cinematic", style: "懸疑", mode: "minor", bpm: 64, strum: "roll", drum: "none", bass: "root", tone: "studio", chords: [{ d: 0, q: "dim7", bars: 2 }, { pc: 1, q: "maj", bars: 2 }] },
     { id: "t121", name: "大七鋪陳", sub: "IM7–IVM7–iii7–vi7 ・ 回憶的顏色", genre: "cinematic", style: "溫暖", mode: "major", bpm: 70, strum: "arp", drum: "halftime", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "maj7" }, { d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }] },
     { id: "t122", name: "掛留漂浮", sub: "Isus2–IVsus2 ・ 留白的空間", genre: "cinematic", style: "溫暖", mode: "major", bpm: 66, strum: "roll", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "sus2", bars: 2 }, { d: 3, q: "sus2", bars: 2 }] }
   ];
@@ -1417,21 +1292,28 @@ window.__CHORDLAB__ = function(){
     "G#4": "Gs4.mp3",
     C5: "C5.mp3"
   };
-  const ELECTRIC_URLS = {
-    "C#2": "Cs2.mp3",
-    E2: "E2.mp3",
-    "F#2": "Fs2.mp3",
-    A2: "A2.mp3",
-    C3: "C3.mp3",
-    "D#3": "Ds3.mp3",
-    "F#3": "Fs3.mp3",
-    A3: "A3.mp3",
-    C4: "C4.mp3",
-    "D#4": "Ds4.mp3",
-    "F#4": "Fs4.mp3",
-    A4: "A4.mp3",
-    C5: "C5.mp3"
+  const LAYERED_BASES = [
+    "https://raw.githubusercontent.com/11111111-collab/-1111/main/",
+    "https://cdn.jsdelivr.net/gh/11111111-collab/-1111@main/"
+  ];
+  // 這把吉他的每個音都錄了四段力度，檔名是「音名_力度」，1 最輕、4 最重。
+  const LAYERED_NOTES = {
+    E2: "E2", F2: "F2", A2: "A2", C3: "C3", D3: "D3", E3: "E3", G3: "G3", B3: "B3",
+    "C#4": "Cs4", E4: "E4", G4: "G4", B4: "B4", C5: "C5", D5: "D5", F5: "F5",
+    "G#5": "Gs5", "A#5": "As5", "C#6": "Cs6"
   };
+  // 來源缺兩個檔：C#4 的第四層檔名被寫成 C#s_4，D5 沒有第四層（借用第三層）。
+  // 檔名直接寫 #，Tone 會自己轉成 %23，先轉會被重複編碼成 %2523。
+  const LAYERED_FIXUP = { "C#4": { 4: "C#s_4" }, D5: { 4: "D5_3" } };
+  const LAYERED_COUNT = 4;
+  function layeredUrls(layer) {
+    const urls = {};
+    Object.keys(LAYERED_NOTES).forEach((note) => {
+      const fix = LAYERED_FIXUP[note] && LAYERED_FIXUP[note][layer];
+      urls[note] = (fix || LAYERED_NOTES[note] + "_" + layer) + ".mp3";
+    });
+    return urls;
+  }
   const DRUM_BASES = [
     "https://raw.githubusercontent.com/Tonejs/audio/master/drum-samples/acoustic-kit/",
     "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/drum-samples/acoustic-kit/"
@@ -1487,12 +1369,14 @@ window.__CHORDLAB__ = function(){
       attempt();
     });
   }
-  function loadSampler(folder, urls, onDone) {
+  function loadSampler(folder, urls, opts) {
+    const bases = opts && opts.bases || SAMPLE_BASES;
+    const timeoutMs = opts && opts.timeout || 18e3;
     return new Promise((resolve) => {
       let idx = 0;
       const attempt = () => {
-        if (idx >= SAMPLE_BASES.length) return resolve(null);
-        const base = SAMPLE_BASES[idx++] + folder + "/";
+        if (idx >= bases.length) return resolve(null);
+        const base = bases[idx++] + (folder ? folder + "/" : "");
         let settled = false;
         const timer = setTimeout(() => {
           if (settled) return;
@@ -1502,7 +1386,7 @@ window.__CHORDLAB__ = function(){
           } catch (e) {
           }
           attempt();
-        }, 18e3);
+        }, timeoutMs);
         const s = new Tone.Sampler({
           urls,
           baseUrl: base,
@@ -1609,37 +1493,8 @@ window.__CHORDLAB__ = function(){
         oscillator: { type: "sine" },
         envelope: { attack: 1e-3, decay: 0.028, sustain: 0, release: 0.01 }
       }).connect(new Tone.Volume(-8).connect(dest));
-      this.gElectric = new Tone.Volume(-10).connect(this.gGuitar);
-      this.elecVerb = new Tone.Gain(0.13).connect(this.reverb);
-      this.chorus = new Tone.Chorus({ frequency: 0.7, delayTime: 3.6, depth: 0.55, wet: 0 }).start();
-      this.chorus.connect(this.gElectric);
-      this.chorus.connect(this.elecVerb);
-      this.cabConv = new Tone.Convolver().connect(this.chorus);
-      this.cabDry = new Tone.Gain(0).connect(this.chorus);
-      this.cabWet = new Tone.Gain(1).connect(this.cabConv);
-      this.cabMakeup = new Tone.Gain(1);
-      this.cabMakeup.connect(this.cabWet);
-      this.cabMakeup.connect(this.cabDry);
-      this.cabLP = new Tone.Filter({ type: "lowpass", frequency: 5200, Q: 0.9 }).connect(this.cabMakeup);
-      this.cabPk = new Tone.Filter({ type: "peaking", frequency: 2400, Q: 1.3, gain: 3.5 }).connect(this.cabLP);
-      this.cabHP = new Tone.Filter({ type: "highpass", frequency: 90, Q: 0.7 }).connect(this.cabPk);
-      this.presence = new Tone.Filter({ type: "peaking", frequency: 4200, Q: 0.9, gain: 0 }).connect(this.cabHP);
-      this.eqHigh = new Tone.Filter({ type: "highshelf", frequency: 3200, gain: 0 }).connect(this.presence);
-      this.eqMid = new Tone.Filter({ type: "peaking", frequency: 750, Q: 0.8, gain: 0 }).connect(this.eqHigh);
-      this.eqLow = new Tone.Filter({ type: "lowshelf", frequency: 130, gain: 0 }).connect(this.eqMid);
-      this.powerAmp = new Tone.WaveShaper((x) => Math.tanh(x * 1.5) * 0.85, 2048).connect(this.eqLow);
-      this.preAmp = new Tone.WaveShaper((x) => {
-        const b = x < 0 ? 1.3 : 0.86;
-        return Math.tanh(x * b * 2.2) / 1.25;
-      }, 4096).connect(this.powerAmp);
-      try {
-        this.preAmp.oversample = "4x";
-        this.powerAmp.oversample = "2x";
-      } catch (e) {}
-      this.driveGain = new Tone.Gain(1).connect(this.preAmp);
-      this.ampComp = new Tone.Compressor({ threshold: -18, ratio: 3, attack: 4e-3, release: 0.12 }).connect(this.driveGain);
-      this.ampHP = new Tone.Filter({ type: "highpass", frequency: 80, Q: 0.7 }).connect(this.ampComp);
-      this.amp = new Tone.Gain(1).connect(this.ampHP);
+      // 取樣吉他（四段力度）自己的音量匯流排，走原吉他匯流排的殘響與混音
+      this.gLayered = new Tone.Volume(-3).connect(this.gGuitar);
       this.tone = "acoustic";
       this.toneSrc = "acoustic";
       this.ready = true;
@@ -1673,80 +1528,42 @@ window.__CHORDLAB__ = function(){
         report && report({ drum: kit ? "sample" : "synth" });
       });
     }
-    async loadElectric(report) {
-      if (this.electric || this.electricLoading) return this.electric;
-      this.electricLoading = true;
+    /**
+     * 載入四段力度的取樣吉他。四層各是一整組音，所以四個 Sampler 平行載，
+     * 全部到齊才算 ready；某一層真的載不到就用最接近的那層頂上。
+     */
+    async loadLayered(report) {
+      if (this.layered || this.layeredLoading) return this.layered;
+      this.layeredLoading = true;
       report && report("loading");
-      const e = await loadSampler("guitar-electric", ELECTRIC_URLS);
-      this.electricLoading = false;
-      if (e) {
-        this.electric = e.connect(this.amp);
-        report && report("ready");
-      } else report && report("failed");
-      return e;
-    }
-    setHead(kind, drive) {
-      const h = AMP_HEADS[kind] || AMP_HEADS.clean;
-      this.head = kind;
-      if (!this.ready) return;
-      const dv = drive == null ? h.drive : drive;
-      try {
-        this.preAmp.curve = ampCurve(h.stages, h.bias, dv, 4096);
-        this.powerAmp.curve = ampCurve(1, 1 + h.sag * 0.3, 1.2 + h.sag, 2048);
-      } catch (e) {
+      const opts = { bases: LAYERED_BASES, timeout: 9e4 };
+      const layers = await Promise.all(
+        Array.from({ length: LAYERED_COUNT }, (_, i) => loadSampler("", layeredUrls(i + 1), opts))
+      );
+      this.layeredLoading = false;
+      if (!layers.some(Boolean)) {
+        report && report("failed");
+        return null;
       }
-      this.eqLow.frequency.value = h.tone[0];
-      this.eqMid.frequency.value = h.tone[1];
-      this.eqHigh.frequency.value = h.tone[2];
-      this.presence.gain.value = h.pres;
-      const comp = -10 - Math.min(10, Math.log2(Math.max(1, dv)) * 2.6 + h.stages * 0.8);
-      this.gElectric.volume.value = comp;
-    }
-    async setCab(cabKey, micKey, pos, dist) {
-      this.cab = cabKey;
-      this.mic = micKey;
-      this.micPos = pos;
-      this.micDist = dist;
-      if (!this.ready || !this.cabConv) return;
-      const c = CABS[cabKey];
-      if (!c || c.off) {
-        this.cabWet.gain.value = 0;
-        this.cabDry.gain.value = 1;
-        return;
-      }
-      try {
-        const ir = await makeCabIR(cabKey, micKey, pos, dist);
-        if (!ir) return;
-        this.cabConv.buffer = ir;
-        this.cabWet.gain.value = 1;
-        this.cabDry.gain.value = 0;
-      } catch (e) {
-        this.cabWet.gain.value = 0;
-        this.cabDry.gain.value = 1;
-      }
+      layers.forEach((s) => s && s.connect(this.gLayered));
+      this.layered = layers.map((s, i) => {
+        if (s) return s;
+        for (let d = 1; d < LAYERED_COUNT; d++) {
+          if (layers[i - d]) return layers[i - d];
+          if (layers[i + d]) return layers[i + d];
+        }
+        return null;
+      });
+      report && report("ready");
+      return this.layered;
     }
     setGuitarTone(t) {
       this.releaseAll(Tone.now());
       const p = TONES[t] || TONES.acoustic;
       this.tone = t;
       this.toneSrc = p.src;
-      if (!this.ready || p.src !== "electric") return;
-      this.driveGain.gain.value = p.pre;
-      this.eqLow.gain.value = p.low;
-      this.eqMid.gain.value = p.mid;
-      this.eqHigh.gain.value = p.high;
-      this.presence.gain.value = p.pres;
-      this.cabLP.frequency.value = p.cut;
-      this.cabHP.frequency.value = p.hp;
-      this.ampHP.frequency.value = Math.max(60, p.hp - 10);
-      this.ampComp.threshold.value = p.thr;
-      this.ampComp.ratio.value = p.rat;
-      this.toneRev = p.rev;
-      this.elecVerb.gain.value = p.rev * (this.lastGuitarVol == null ? 1 : this.lastGuitarVol);
-      this.chorus.wet.value = p.cho;
-      if (p.head) this.setHead(p.head, p.pre * 1.6);
-      if (p.cab) this.setCab(p.cab, p.mic || "dyn57", p.pos == null ? 0.35 : p.pos, p.dist == null ? 2 : p.dist);
-      this.gElectric.volume.value = -10 - Math.min(9, Math.log2(Math.max(1, p.pre)) * 1.9);
+      if (!this.ready || !this.gLayered) return;
+      this.gLayered.volume.value = p.gain == null ? -3 : p.gain;
     }
     duck(time, amt) {
       if (!this.mixOn || !this.mixNodes) return;
@@ -1787,35 +1604,40 @@ window.__CHORDLAB__ = function(){
       if (!this.ready) return;
       const db = (x) => x <= 0 ? -Infinity : 20 * Math.log10(x);
       this.lastGuitarVol = v.guitar;
-      if (this.elecVerb) this.elecVerb.gain.value = (this.toneRev == null ? 0.13 : this.toneRev) * v.guitar;
       this.gGuitar.volume.value = db(v.guitar) - 4;
       this.gPiano.volume.value = db(v.piano) - 13;
       this.gBass.volume.value = db(v.bass) - 9;
       this.gDrum.volume.value = db(v.drum) - 11;
     }
-    _sampler() {
-      if (this.toneSrc === "electric" && this.electric) return this.electric;
+    // 0–1 的力度切成四段，對到取樣的四層力度
+    _layerFor(vel) {
+      return vel < 0.3 ? 0 : vel < 0.55 ? 1 : vel < 0.8 ? 2 : 3;
+    }
+    _sampler(vel) {
+      if (this.toneSrc === "layered" && this.layered) return this.layered[this._layerFor(vel)];
       return this.mode.guitar === "sample" ? this.guitar : null;
     }
     _attackString(k, midi, time, vel) {
       const note = midiToName(midi);
-      const smp = this._sampler();
+      const smp = this._sampler(vel);
       if (smp) {
         const prev = this.ringing[k];
-        if (prev) smp.triggerRelease(prev, time);
-        smp.triggerAttack(note, time + 2e-3, vel);
+        if (prev) prev.smp.triggerRelease(prev.note, time);
+        // 力度已經選過層了，這裡只留一點層內的音量起伏，不要重複算兩次
+        const g = this.toneSrc === "layered" ? Math.min(1, 0.78 + vel * 0.22) : vel;
+        smp.triggerAttack(note, time + 2e-3, g);
+        this.ringing[k] = { note, smp };
       } else {
         const v = this.pluck[k];
         v.g.gain.setValueAtTime(Math.max(0.05, vel * 0.9), time);
         v.p.triggerAttack(note, time);
+        this.ringing[k] = null;
       }
-      this.ringing[k] = note;
     }
     _releaseString(k, time) {
       const prev = this.ringing[k];
       if (!prev) return;
-      const smp = this._sampler();
-      if (smp) smp.triggerRelease(prev, time);
+      prev.smp.triggerRelease(prev.note, time);
       this.ringing[k] = null;
     }
     releaseAll(time) {
@@ -2128,21 +1950,6 @@ window.__CHORDLAB__ = function(){
     const [bassKey, setBassKey] = useState("fifth");
     const [vols, setVols] = useState({ guitar: 0.3, piano: 1.6, bass: 0.8, drum: 0.8 });
     const [autoMix, setAutoMix] = useState(true);
-    const [ampOpen, setAmpOpen] = useState(false);
-    const [head, setHead] = useState("clean");
-    const [drive, setDrive] = useState(1.6);
-    const [cab, setCab] = useState("combo212");
-    const [mic, setMic] = useState("dyn57");
-    const [micPos, setMicPos] = useState(0.35);
-    const [micDist, setMicDist] = useState(2);
-    useEffect(() => {
-      const eng = engineRef.current;
-      if (eng && eng.ready && eng.setHead) eng.setHead(head, drive);
-    }, [head, drive, booted, gtone]);
-    useEffect(() => {
-      const eng = engineRef.current;
-      if (eng && eng.ready && eng.setCab) eng.setCab(cab, mic, micPos, micDist);
-    }, [cab, mic, micPos, micDist, booted, gtone]);
     const [master, setMaster] = useState(1);
     const [on, setOn] = useState({ guitar: true, piano: false, bass: true, drum: true });
     const useFlats = FLAT_KEYS.includes(keyPc) || mode === "minor" && FLAT_KEYS.includes((keyPc + 3) % 12);
@@ -2500,9 +2307,17 @@ window.__CHORDLAB__ = function(){
       const eng = engineRef.current;
       setGtone(key);
       if (!eng || !eng.ready) return;
-      if (TONES[key] && TONES[key].src === "electric") {
-        setStatus((st) => st.electric === "ready" ? st : { ...st, electric: "loading" });
-        await eng.loadElectric((r) => setStatus((st) => ({ ...st, electric: r })));
+      if (TONES[key] && TONES[key].src === "layered") {
+        // 四層力度是一整組音檔，第一次切過去要等一下，先講一聲
+        if (!eng.layered) notify("取樣吉他載入中，第一次要下載四段力度的音檔…");
+        setStatus((st) => st.layered === "ready" ? st : { ...st, layered: "loading" });
+        const smp = await eng.loadLayered((r) => setStatus((st) => ({ ...st, layered: r })));
+        if (!smp) {
+          notify("取樣吉他載不下來，先用原聲鋼弦");
+          setGtone("acoustic");
+          eng.setGuitarTone("acoustic");
+          return;
+        }
       }
       eng.setGuitarTone(key);
     };
@@ -2778,7 +2593,7 @@ window.__CHORDLAB__ = function(){
           const eng = engineRef.current;
           if (!eng || !eng.ready) return;
           unlock();
-          await applyTone(gtone === "acoustic" ? "clean" : "acoustic");
+          await applyTone(gtone === "acoustic" ? "studio" : "acoustic");
         }
       }
     ), /* @__PURE__ */ React.createElement("header", { className: "bar top" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement("span", { className: "brand-name" }, "CHORD LAB")), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "速度"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.max(40, b - 1)) }, "−"), /* @__PURE__ */ React.createElement("input", { className: "num", type: "text", inputMode: "numeric", "aria-label": "每分鐘拍數", value: bpmText, onChange: (e) => setBpmText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)), onBlur: commitBpm, onKeyDown: (e) => { if (e.key === "Enter") e.currentTarget.blur(); } }), /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.min(220, b + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "移調夾"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.max(0, c - 1)) }, "−"), /* @__PURE__ */ React.createElement("span", { className: "num" }, capo === 0 ? "無" : capo + " 格"), /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.min(9, c + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement(
@@ -3045,7 +2860,7 @@ window.__CHORDLAB__ = function(){
         onChange: applyTone,
         options: Object.entries(TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "音箱模擬", /* @__PURE__ */ React.createElement("button", { className: "lbl-btn" + (ampOpen ? " on" : ""), onClick: () => setAmpOpen((v) => !v) }, ampOpen ? "收起" : "展開")), ampOpen && /* @__PURE__ */ React.createElement("div", { className: "amp-panel" }, /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "機頭"), /* @__PURE__ */ React.createElement(Picker, { value: head, up: true, width: 150, onChange: setHead, options: Object.entries(AMP_HEADS).map(([k, v]) => ({ v: k, l: v.n, s: v.s })) })), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "增益"), /* @__PURE__ */ React.createElement("input", { type: "range", min: "1", max: "5", step: "0.05", value: drive, onChange: (e) => setDrive(+e.target.value) }), /* @__PURE__ */ React.createElement("i", null, drive.toFixed(2))), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "箱體"), /* @__PURE__ */ React.createElement(Picker, { value: cab, up: true, width: 150, onChange: setCab, options: Object.entries(CABS).map(([k, v]) => ({ v: k, l: v.n, s: v.s })) })), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "麥克風"), /* @__PURE__ */ React.createElement(Picker, { value: mic, up: true, width: 150, onChange: setMic, options: Object.entries(MICS).map(([k, v]) => ({ v: k, l: v.n, s: v.s })) })), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "收音位置"), /* @__PURE__ */ React.createElement("input", { type: "range", min: "0", max: "1", step: "0.02", value: micPos, onChange: (e) => setMicPos(+e.target.value) }), /* @__PURE__ */ React.createElement("i", null, micPos < 0.33 ? "中心" : micPos < 0.66 ? "中間" : "邊緣")), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "麥克風距離"), /* @__PURE__ */ React.createElement("input", { type: "range", min: "0", max: "12", step: "0.5", value: micDist, onChange: (e) => setMicDist(+e.target.value) }), /* @__PURE__ */ React.createElement("i", null, micDist + " cm")))), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鼓組"), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鼓組"), /* @__PURE__ */ React.createElement(
       Picker,
       {
         value: drumKey,
@@ -3220,8 +3035,8 @@ window.__CHORDLAB__ = function(){
             strumMark(TONE_DEMO);
           }
         },
-        "aria-label": gtone !== "acoustic" ? "切回原聲吉他音色" : "切換成電吉他音色",
-        title: gtone !== "acoustic" ? "點一下切回原聲吉他" : "點一下換成電吉他"
+        "aria-label": gtone !== "acoustic" ? "切回原聲吉他音色" : "切換成取樣吉他音色",
+        title: gtone !== "acoustic" ? "點一下切回原聲吉他" : "點一下換成取樣吉他"
       },
       "B",
       /* @__PURE__ */ React.createElement("span", { className: "b-stem", "aria-hidden": "true" })
