@@ -1,0 +1,8 @@
+{
+  "name": "Chord Lab",
+  "description": "自由組裝和弦進行、真實吉他刷弦音色、指板總覽與即興 Pad 的編曲工具。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

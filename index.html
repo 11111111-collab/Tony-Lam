@@ -1,0 +1,3570 @@
+<!DOCTYPE html>
+<!--
+  Chord Lab
+  音源授權 / Sample credits:
+  - 吉他（原聲・電）、鋼琴、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 原聲套鼓：Tonejs/audio (drum-samples/acoustic-kit)
+  - Tone.js — MIT
+  以 CC-BY 授權的素材需要標示出處，公開發布時請保留這段註解，或在網站的任一處（關於頁、頁尾等）標註。
+-->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Chord Lab</title>
+<meta name="description" content="自由組裝和弦進行、真實吉他刷弦音色、指板總覽與即興 Pad 的編曲工具。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+<style>
+*{box-sizing:border-box}
+/* 全站隱藏原生捲軸，但保留捲動 */
+html,body,*{scrollbar-width:none !important;-ms-overflow-style:none !important}
+*::-webkit-scrollbar,*::-webkit-scrollbar-track,*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-corner{display:none !important;width:0 !important;height:0 !important;
+  background:transparent !important}
+html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
+#root{height:100%}
+
+.cl-root{
+  --bg:#0B0C0E; --panel:#13151A; --panel2:#1A1D24; --line:#2A2E37;
+  --txt:#EEF0F4; --dim:#868C98; --brass:#8B8CFF; --brass2:#454A85;
+  --jade:#4FE3B0; --rust:#FF5F6D; --wood:#121419; --bone:#E8EAEE;
+  --string:#B6BCC7; --dot:#2A2E38;
+  --fret:#7D828C;
+  --display:"Syne","Space Grotesk",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --sans:"Space Grotesk",system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --serif:"Instrument Serif","Songti TC",Georgia,"Times New Roman",serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  position:fixed; inset:0; height:100dvh;
+  display:grid; grid-template-rows:auto minmax(0,1fr) auto;
+  background:var(--bg); color:var(--txt); font-family:var(--sans); overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.cl-root,.lp{-webkit-user-select:none;-moz-user-select:none;user-select:none;
+  -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.cl-root input,.cl-root textarea,.cl-root [contenteditable],
+.lp input,.lp textarea{-webkit-user-select:text;-moz-user-select:text;user-select:text;
+  -webkit-touch-callout:default}
+.cl-root button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.cl-root svg,.lp svg{-webkit-user-select:none;user-select:none;pointer-events:auto}
+.cl-root button:focus-visible,.cl-root input:focus-visible{outline:2px solid var(--jade);outline-offset:2px}
+
+/* 列 */
+.bar{display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);position:relative;z-index:20}
+.top{height:60px;border-bottom:1px solid var(--line);z-index:50}
+.spacer{flex:1}
+.brand{display:flex;flex-direction:column;line-height:1.15;padding-right:10px;border-right:1px solid var(--line)}
+.brand-name{font-family:var(--serif);font-size:21px;letter-spacing:.16em}
+.brand-sub{font-size:10px;color:var(--dim);letter-spacing:.22em}
+.ctl-group{display:flex;align-items:center;gap:7px;min-width:0}
+.ctl-group.grow{flex:1;min-width:0}
+.lbl{font-size:10px;color:var(--dim);letter-spacing:.14em;white-space:nowrap}
+
+/* 自訂下拉 */
+.pick{position:relative;flex-shrink:1;min-width:84px}
+.pick.grow{flex:1;min-width:0}
+.pick.sm .pick-btn{height:24px;padding:0 8px;font-size:10.5px}
+.pick-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 9px;
+  font-size:12.5px;color:var(--txt);text-align:left;transition:.12s}
+.pick-btn:hover{border-color:var(--brass2)}
+.pick-btn.open{border-color:var(--brass);background:#232730}
+.pick-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-caret{color:var(--dim);flex-shrink:0;transition:transform .15s}
+.pick-btn.open .pick-caret{transform:rotate(180deg);color:var(--brass)}
+.pick.key .pick-val{font-family:var(--serif);font-size:15px}
+.pick-menu{position:fixed;max-width:340px;overflow-y:auto;overscroll-behavior:contain;
+  background:#181B22;border:1px solid var(--brass2);border-radius:9px;
+  padding:5px;z-index:200;box-shadow:0 16px 40px -12px #000,0 0 0 1px #0006;
+  animation:popIn .13s ease-out}
+@keyframes popIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.pick-item{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;
+  padding:7px 10px;border-radius:6px;text-align:left;line-height:1.35}
+.pick-item:hover{background:#232730}
+.pick-item.on{background:var(--brass);color:#080B12}
+.pi-l{font-size:13px}
+.pi-s{font-size:10.5px;color:var(--dim)}
+.pick-item.on .pi-s{color:#2A2C63}
+.pick-item.on .pi-l{font-weight:700}
+
+.stepper{display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.stepper button{width:24px;height:28px;color:var(--dim);font-size:14px}
+.stepper button:hover{color:var(--brass)}
+.stepper .num{font-family:var(--mono);font-size:12.5px;min-width:46px;text-align:center;color:var(--brass)}
+.stepper input.num{background:none;border:none;outline:none;padding:0;width:46px}
+.stepper.sm button{height:24px;width:20px}
+.stepper.sm .num{font-size:11px;min-width:52px}
+
+.btn-primary{background:var(--brass);color:#080B12;font-weight:700;border-radius:7px;padding:9px 18px;font-size:13.5px}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-primary.playing{background:var(--jade)}
+.btn-primary.big{padding:13px 34px;font-size:15px;border-radius:9px}
+.btn-primary:disabled{opacity:.45;cursor:default}
+.btn-ghost{border:1px solid var(--line);background:var(--panel2);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--dim)}
+.btn-ghost:hover{color:var(--brass);border-color:var(--brass2)}
+.btn-ghost.sm{padding:6px 10px;font-size:11.5px}
+.btn-ghost.wide{width:100%;padding:9px}
+.btn-ghost.on{color:var(--jade);border-color:var(--jade)}
+.btn-ghost.danger:hover{color:var(--rust);border-color:var(--rust)}
+.btn-rec{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--dim)}
+.btn-rec .dot{width:8px;height:8px;border-radius:50%;background:var(--rust);opacity:.55}
+.btn-rec.on{color:var(--rust);border-color:var(--rust)}
+.btn-rec.on .dot{opacity:1;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.btn-neck{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px;border-radius:7px;
+  border:1px solid var(--brass2);color:var(--brass);font-size:11px;line-height:1;background:#161920;
+  white-space:nowrap;flex-shrink:0;
+  transition:background .14s,color .14s,border-color .14s}
+.btn-neck svg{flex-shrink:0}
+.btn-neck:hover{background:#1F232C;border-color:var(--brass)}
+.btn-neck.on{background:var(--brass);color:#080B12;border-color:var(--brass)}
+
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:5px 8px;font-size:11.5px;color:var(--dim)}
+.chip.src{display:flex;align-items:center;gap:6px;font-size:10.5px;padding:6px 9px}
+.chip.src .led{width:7px;height:7px;border-radius:50%;background:var(--brass)}
+.chip.src.ok .led{background:var(--jade)}
+.chip.src.warn .led{background:var(--brass);animation:blink 1.4s infinite}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{padding:4px 9px;font-size:10.5px;color:var(--dim);background:var(--panel2)}
+.seg button.on{background:var(--brass);color:#080B12;font-weight:700}
+
+/* 三欄 */
+.mid{display:grid;grid-template-columns:272px minmax(0,1fr) 320px;min-height:0}
+.col{display:flex;flex-direction:column;gap:9px;padding:12px 14px;min-height:0;min-width:0}
+.left{border-right:1px solid var(--line);background:#0E1014;overflow-y:auto}
+.right{border-left:1px solid var(--line);background:#0E1014;overflow-y:auto}
+.col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.col-head h2{font-size:12px;letter-spacing:.16em;color:var(--dim);margin:0;font-weight:600;text-transform:uppercase}
+.live-tag{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;letter-spacing:.16em;
+  color:var(--jade);border:1px solid var(--jade);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.live-tag::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--jade);
+  animation:live-blip 1.1s ease-in-out infinite}
+@keyframes live-blip{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.72)}}
+.head-actions{display:flex;gap:6px;align-items:center}
+.bars-badge{font-family:var(--mono);color:var(--brass);margin-left:10px;font-size:11px;letter-spacing:0}
+.sub-head{font-size:10.5px;letter-spacing:.14em;color:var(--dim);margin-top:2px;display:flex;gap:8px;align-items:baseline}
+.sub-head i{opacity:.55;font-style:normal;letter-spacing:0;font-size:10px}
+
+/* 和弦盤 */
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pad{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  padding:9px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:.12s}
+.pad:hover{border-color:var(--brass);background:#232730;transform:translateY(-1px)}
+.pad:active{transform:translateY(1px)}
+.pad-deg{font-family:var(--mono);font-size:11px;color:var(--brass)}
+.pad-name{font-family:var(--serif);font-size:15px}
+.spice{display:flex;flex-wrap:wrap;gap:5px}
+.spice-chip{display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.25}
+.spice-chip em{font-style:normal;font-size:9px;opacity:.65}
+.spice-chip:hover{border-color:var(--brass);color:var(--txt)}
+
+/* 範本清單 */
+.genre-count{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+.tmpl-mode{font-style:normal;font-size:9px;margin-left:5px;padding:0 5px;border-radius:99px;
+  border:1px solid var(--line);color:var(--dim);vertical-align:1px}
+.tmpl-meta{display:block;font-family:var(--mono);font-size:9px;color:var(--dim);opacity:.72;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tmpl-wrap{position:relative;flex:1;min-height:60px;border:1px solid var(--line);
+  border-radius:8px;background:#0B0D11;overflow:hidden}
+.tmpl-wrap::after{content:"";position:absolute;left:1px;right:1px;bottom:0;height:26px;pointer-events:none;
+  background:linear-gradient(to top,#0B0D11 12%,rgba(10,14,22,0))}
+.tmpl-list{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:3px;padding:4px 4px 14px}
+.tmpl-row{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 8px;
+  border-radius:6px;text-align:left;line-height:1.3;transition:.1s}
+.tmpl-row:hover{background:#1E222A}
+.tmpl-name{font-size:12.5px}
+.tmpl-sub{font-size:9.5px;color:var(--dim)}
+.tmpl-row:hover .tmpl-name{color:var(--brass)}
+
+/* 進行軌 */
+.track{display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;flex:1;min-height:96px;
+  overflow-y:auto;padding:2px}
+.card{position:relative;width:110px;min-height:94px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:8px;display:flex;flex-direction:column;justify-content:space-between;
+  cursor:pointer;transition:.14s}
+.card:hover{border-color:var(--brass2);transform:translateY(-1px)}
+.card.sel{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset}
+.card.live{border-color:var(--jade);box-shadow:0 0 18px -4px var(--jade)}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.card-top-r{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.card-del{width:19px;height:19px;border-radius:5px;color:var(--dim);font-size:11px;line-height:1;
+  display:flex;align-items:center;justify-content:center;border:1px solid transparent;transition:.12s}
+.card-del:hover{color:var(--rust);border-color:var(--rust);background:var(--panel2)}
+.card.sel .card-del{color:#8A93A6}
+.deg{font-family:var(--mono);font-size:12px;color:var(--brass)}
+.card.live .deg{color:var(--jade)}
+.card-bars{font-family:var(--mono);font-size:9.5px;color:var(--dim);border:1px solid var(--line);
+  border-radius:4px;padding:0 4px}
+.card-name{font-family:var(--serif);font-size:23px;line-height:1.1;padding:2px 0}
+.card.barline{border-left:2px solid var(--brass);border-top-left-radius:2px;border-bottom-left-radius:2px}
+.card.over{border-color:var(--rust)}
+.card.over::after{content:"\8d85\51fa\5c0f\7bc0";position:absolute;left:0;right:0;bottom:-13px;text-align:center;
+  font-size:8.5px;letter-spacing:.1em;color:var(--rust);pointer-events:none}
+.card-len{font-family:var(--mono);font-style:normal;color:var(--brass);margin-left:5px}
+.len-btn{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:46px;padding:5px 6px;
+  border:1px solid var(--line);border-radius:7px;background:var(--panel2);transition:.12s}
+.len-btn span{font-size:14px;line-height:1;color:var(--txt)}
+.len-btn i{font-size:9px;font-style:normal;color:var(--dim);white-space:nowrap}
+.len-btn:hover{border-color:var(--brass2)}
+.len-btn.on{border-color:var(--brass);background:#1D2030}
+.len-btn.on span,.len-btn.on i{color:var(--brass)}
+.btn-exp{border:1px solid var(--brass2);border-radius:7px;padding:8px 13px;font-size:12px;color:var(--brass);
+  white-space:nowrap;transition:.12s}
+.btn-exp:hover,.btn-exp.on{background:var(--brass);color:#080B12;border-color:var(--brass);font-weight:600}
+.pick.exp{position:relative}
+.exp-menu{position:absolute;top:calc(100% + 7px);right:0;min-width:236px;background:#181B22;
+  border:1px solid var(--brass2);border-radius:9px;padding:5px;z-index:200;
+  box-shadow:0 16px 40px -12px #000;animation:popIn .13s ease-out}
+.exp-item{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;
+  padding:7px 10px;border-radius:6px;text-align:left}
+.exp-item:hover{background:#232730}
+.exp-item b{font-size:12px;font-weight:600;color:var(--txt)}
+.exp-item i{font-size:9.5px;font-style:normal;color:var(--dim)}
+.card-hint{font-size:9px;color:var(--dim);letter-spacing:.02em;border-top:1px solid var(--line);padding-top:5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:var(--dim);font-size:12.5px;line-height:1.8;padding:14px;border:1px dashed var(--line);border-radius:10px;width:100%}
+.empty.tall{margin:auto 0}
+
+/* 右欄・和弦屬性 */
+.cprop{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;
+  display:flex;flex-direction:column;gap:6px}
+.cprop-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.cprop-title{font-family:var(--serif);font-size:20px;line-height:1.1}
+.cprop-deg{font-family:var(--mono);font-size:11px;color:var(--brass)}
+.cprop-live{font-size:9px;letter-spacing:.14em;color:var(--jade);border:1px solid var(--jade);
+  border-radius:99px;padding:0 6px}
+.cprop-label{font-size:9.5px;letter-spacing:.16em;color:var(--dim);margin-top:3px}
+.cprop-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cprop-row.end{justify-content:flex-end;gap:6px;margin-top:2px}
+.cprop-keys{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim);margin-top:2px}
+.cprop-keys kbd{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--panel2);
+  border:1px solid var(--line);border-radius:4px;padding:1px 4px;line-height:1.4}
+.amp-panel{display:flex;flex-direction:column;gap:5px;padding:8px 9px;margin-top:2px;
+  border:1px solid var(--brass2);border-radius:8px;background:#0E1014}
+.amp-row{display:flex;align-items:center;gap:7px}
+.amp-row > span{font-size:9.5px;color:var(--dim);width:52px;flex-shrink:0;letter-spacing:.08em}
+.amp-row > i{font-family:var(--mono);font-size:9px;font-style:normal;color:var(--brass);
+  width:38px;text-align:right;flex-shrink:0}
+.amp-row input[type=range]{flex:1;min-width:0}
+.lbl-btn{margin-left:6px;font-size:9px;padding:1px 6px;border-radius:99px;
+  border:1px solid var(--line);color:var(--dim)}
+.lbl-btn:hover{border-color:var(--brass2);color:var(--txt)}
+.lbl-btn.on{border-color:var(--brass);color:var(--brass)}
+.mute-row{display:flex;gap:5px}
+.mute-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;
+  border:1px solid var(--line);background:var(--panel2);font-size:11px;color:var(--txt);transition:.12s}
+.mute-btn b{font-size:9px;color:var(--jade)}
+.mute-btn:hover{border-color:var(--brass2)}
+.mute-btn.off{border-color:var(--rust);color:var(--dim);background:#241417}
+.mute-btn.off b{color:var(--rust)}
+.card-mute{font-family:var(--mono);font-style:normal;color:var(--rust);margin-right:5px}
+.len-row{display:flex;flex-wrap:wrap;gap:4px}
+.quals{display:flex;flex-wrap:wrap;gap:4px}
+.chip.q{font-family:var(--serif);font-size:12.5px;padding:4px 7px}
+.chip.q:hover{border-color:var(--brass);color:var(--txt)}
+.chip.q.on{background:var(--brass);color:#080B12;border-color:var(--brass);font-weight:600}
+
+/* 推薦 */
+.dock{display:flex;flex-direction:column;min-height:0;flex-shrink:0}
+.sug{border-top:1px solid var(--line);padding-top:9px}
+.sug-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.sug-label{font-size:10.5px;letter-spacing:.16em;color:var(--dim)}
+.neck-slot{max-height:0;opacity:0;overflow:hidden;transform:translateY(20px);
+  display:flex;flex-direction:column;min-height:0;
+  transition:max-height .34s cubic-bezier(.22,.85,.3,1),opacity .2s ease,
+    transform .34s cubic-bezier(.22,.85,.3,1),margin-top .34s cubic-bezier(.22,.85,.3,1);
+  margin-top:0;pointer-events:none}
+.dock.open .neck-slot{max-height:min(52vh,400px);opacity:1;transform:none;margin-top:9px;pointer-events:auto}
+.sug-row{display:flex;gap:7px;flex-wrap:wrap}
+.sug-chip{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;transition:.12s}
+.sug-key{position:absolute;top:-7px;right:-7px;min-width:16px;height:16px;padding:0 4px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9.5px;line-height:1;color:var(--dim);
+  background:var(--panel);border:1px solid var(--line);border-radius:5px;
+  transition:color .12s,border-color .12s,background .12s}
+.sug-chip:hover .sug-key{color:var(--brass);border-color:var(--brass2);background:#1D2030}
+.sug-chip.spice:hover .sug-key{color:var(--jade);border-color:var(--jade)}
+.sug-chip:hover{border-color:var(--brass);transform:translateY(-1px)}
+.sug-chip.spice{border-style:dashed}
+.sug-chip.spice:hover{border-color:var(--jade)}
+.sug-name{font-family:var(--serif);font-size:16px}
+.sug-tag{font-size:9.5px;color:var(--dim)}
+.sug-chip.spice .sug-tag{color:var(--jade);opacity:.85}
+
+/* 右欄和弦圖 */
+.voice-name{font-family:var(--serif);font-size:26px;display:flex;align-items:baseline;gap:9px}
+.voice-name span{font-family:var(--sans);font-size:10.5px;color:var(--dim);letter-spacing:.1em}
+.fb-wrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px}
+.fb{width:100%;height:auto;display:block}
+.fb-mark{fill:var(--dim);font-size:11px;text-anchor:middle}
+.fb-fnum{fill:#080B12;font-size:9.5px;text-anchor:middle;font-family:var(--mono);font-weight:700}
+.fb-pos{fill:var(--dim);font-size:9.5px;text-anchor:middle;font-family:var(--mono)}
+.fb-glow{opacity:0;animation:strumGlow .5s ease-out forwards}
+@keyframes strumGlow{0%{opacity:0;stroke-width:1}10%{opacity:.95;stroke-width:5}100%{opacity:0;stroke-width:2}}
+.voice-stack{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;margin-top:-2px}
+.win-label{font-size:9.5px;color:var(--dim);letter-spacing:.16em;margin-top:2px}
+.win-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.win-btn{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border-radius:6px;
+  border:1px solid var(--line);background:var(--panel2);transition:.12s}
+.win-btn b{font-size:10.5px;font-weight:600;color:var(--txt)}
+.win-btn i{font-family:var(--mono);font-size:9px;font-style:normal;color:var(--dim);letter-spacing:.02em}
+.win-btn:hover{border-color:var(--brass2)}
+.win-btn.on{border-color:var(--brass);background:#1D2030}
+.win-btn.on b{color:var(--brass)}
+.win-btn.weak{opacity:.45}
+.mods{display:flex;flex-wrap:wrap;gap:4px}
+.mod{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.mod.add{border-color:var(--jade);color:var(--jade)}
+.mod.drop{border-color:var(--rust);color:var(--rust)}
+.mod.reset{margin-left:auto;border-style:dashed}
+.voice-nav{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--dim)}
+.voice-nav button{width:26px;height:24px;border:1px solid var(--line);border-radius:5px}
+.voice-nav button:hover{color:var(--brass);border-color:var(--brass2)}
+.voice-nav span{display:flex;flex-direction:column;align-items:center;line-height:1.3}
+.voice-nav em{font-style:normal;font-family:var(--mono);font-size:9.5px;opacity:.65}
+.notes{display:flex;flex-wrap:wrap;gap:4px}
+.note-pill{font-family:var(--serif);font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:2px 7px}
+.note-pill em{font-style:normal;font-family:var(--mono);font-size:9px;color:var(--dim);margin-left:2px}
+
+/* 指板總覽 */
+.neck-wrap{display:flex;flex-direction:column;gap:11px;flex:1;min-height:0;overflow-y:auto}
+.neck{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
+.nk-fnum{fill:var(--dim);font-size:11px;text-anchor:middle;font-family:var(--mono)}
+.nk-scale{fill:var(--brass);opacity:.16;cursor:pointer;transition:opacity .12s}
+.nk-scale:hover{opacity:.75;r:5}
+.nk-dot{cursor:pointer;opacity:.24;transition:opacity .12s}
+.nk-dot.active{opacity:1}
+.nk-dot:hover{opacity:.85}
+.nk-dot.active:hover{opacity:1}
+.nd-head .pick{flex-shrink:0}
+.nk-hit{fill:transparent;cursor:pointer}
+.nk-hit:hover{fill:#4C8FD433}
+.nk-dot.chrom circle{fill:#0E1F33;stroke:#4C8FD4;stroke-width:1.6}
+.nk-dot.chrom text{fill:#8CC0F0}
+.nk-dot.outside circle{fill:#171A20;stroke:#4C525E;stroke-width:1.2}
+.nk-dot.outside text{fill:var(--dim)}
+.nk-dot.manual circle{stroke:var(--jade);stroke-width:2.2}
+.nk-dot.cut{opacity:.5}
+.nk-dot.cut circle{stroke:var(--rust);stroke-width:1.6;stroke-dasharray:2.5 2}
+.nk-dot text{font-size:9.5px;text-anchor:middle;font-family:var(--mono);font-weight:700;pointer-events:none}
+.nk-dot.root circle{fill:var(--brass);stroke:none}
+.nk-dot.root text{fill:#080B12}
+.nk-dot.third circle{fill:var(--jade);stroke:none}
+.nk-dot.third text{fill:#04261C}
+.nk-dot.fifth circle{fill:#232830;stroke:var(--brass);stroke-width:1.4}
+.nk-dot.fifth text{fill:var(--brass)}
+.nk-dot.ext circle{fill:#14171D;stroke:var(--dim);stroke-width:1.3}
+.nk-dot.ext text{fill:var(--txt)}
+.nk-dot:hover circle{filter:brightness(1.25)}
+.nk-ring{fill:none;stroke:var(--jade);stroke-width:2}
+.brk-body{fill:#8B8CFF0E;stroke:var(--brass);stroke-width:1.4;opacity:.85;pointer-events:none}
+.brk-bar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.brk-lbl{font-size:9.5px;letter-spacing:.16em;color:var(--dim);margin-right:2px}
+.brk-btn{display:flex;align-items:baseline;gap:5px;padding:4px 9px;border-radius:6px;
+  border:1px solid var(--line);background:var(--panel2);transition:.12s;white-space:nowrap}
+.brk-btn b{font-size:11px;font-weight:600;color:var(--txt)}
+.brk-btn i{font-family:var(--mono);font-size:9px;font-style:normal;color:var(--dim)}
+.brk-btn:hover{border-color:var(--brass2)}
+.brk-btn.on{background:var(--brass);border-color:var(--brass)}
+.brk-btn.on b{color:#080B12;font-weight:700}
+.brk-btn.on i{color:#080B12;opacity:.7}
+.neck-legend{display:flex;flex-wrap:wrap;gap:7px 12px;align-items:center;font-size:10.5px;color:var(--dim)}
+.lg{display:inline-flex;flex-flow:row nowrap;align-items:center;gap:5px;white-space:nowrap;
+  flex:0 0 auto;line-height:1.4}
+.lg::before{content:"";display:block;box-sizing:border-box;width:11px;height:11px;border-radius:50%;
+  flex:0 0 11px;align-self:center}
+.lg.root::before{background:var(--brass)}
+.lg.third::before{background:var(--jade)}
+.lg.fifth::before{background:#232830;border:1.4px solid var(--brass)}
+.lg.ext::before{background:#14171D;border:1.3px solid var(--dim)}
+.lg.chrom::before{background:#0E1F33;border:1.5px solid #4C8FD4}
+.lg.sc::before{display:none;}
+.lg.sc{padding-left:0}
+
+/* 混音 */
+.rack{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--line)}
+.rack .ctl-group{flex-direction:column;align-items:stretch;gap:4px;min-width:0}
+.rack .ctl-group.grow{flex:none}
+.rack .lbl{font-size:9.5px;letter-spacing:.16em}
+.rack .pick{width:100%}
+.rack .pick .pick-btn{width:100%;height:30px}
+.rack > .btn-ghost.sm{align-self:flex-start}
+.mixer{display:flex;flex-direction:column;gap:7px;padding-top:9px;margin-top:2px;
+  border-top:1px solid var(--line)}
+.mixer .ch{flex-direction:row;align-items:center;gap:8px;width:100%}
+.mixer .ch-top{width:76px;flex-shrink:0}
+.mixer .ch input[type=range]{flex:1;min-width:0}
+.mixer .ch.master{padding-left:0;margin-left:0;border-left:none;
+  padding-top:7px;border-top:1px solid var(--line)}
+.ch{display:flex;flex-direction:column;gap:3px;width:86px}
+.ch-top{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.ch-val{font-family:var(--mono);font-size:9.5px;color:var(--dim);flex-shrink:0;
+  font-variant-numeric:tabular-nums}
+.ch.master{padding-left:10px;margin-left:2px;border-left:1px solid var(--line)}
+.ch.master .ch-name{color:var(--brass);cursor:default}
+.ch.master input[type=range]{accent-color:var(--brass)}
+.ch.off{opacity:.38}
+.ch-name{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--txt)}
+.ch-led{width:6px;height:6px;border-radius:50%;display:inline-block}
+.ch-led.s{background:var(--jade)}
+.ch-led.l{background:var(--brass);animation:blink 1.2s infinite}
+.ch-led.y{background:var(--brass2)}
+.ch input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:2px;background:var(--line);outline:none}
+.ch input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--brass);cursor:pointer}
+.ch input[type=range]::-moz-range-thumb{width:11px;height:11px;border:none;border-radius:50%;background:var(--brass);cursor:pointer}
+
+.toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%);background:#181B22;
+  border:1px solid var(--brass2);color:var(--txt);padding:9px 18px;border-radius:8px;font-size:12.5px;z-index:90}
+
+@media (max-width:1180px){
+  .mid{grid-template-columns:236px minmax(0,1fr) 292px}
+  .card{width:98px}
+}
+@media (max-width:1040px){
+}
+@media (max-width:900px){
+  .cl-root{position:static;height:auto;min-height:100dvh;overflow:visible}
+  .mid{grid-template-columns:1fr}
+  .left,.right{border:none;border-top:1px solid var(--line);overflow:visible}
+  .top{height:auto;min-height:0;flex-wrap:wrap;padding:10px 12px;gap:10px}
+  .tmpl-list{max-height:220px}
+}
+@media (prefers-reduced-motion:reduce){
+  .fb-glow{animation-duration:.01ms}
+  .card,.pad,.sug-chip,.pick-menu{transition:none;animation:none}
+}
+
+/* ── 左欄調性 ── */
+.key-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.key-note{font-size:9.5px;color:var(--dim);opacity:.62;width:100%;letter-spacing:.04em}
+
+/* ── 節拍器開關 ── */
+.btn-toggle{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:7px;
+  padding:8px 12px;font-size:12px;color:var(--dim);background:var(--panel2)}
+.btn-toggle:hover{border-color:var(--brass2);color:var(--txt)}
+.metro-dot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.btn-toggle.on{color:var(--jade);border-color:var(--jade)}
+.btn-toggle.on .metro-dot{background:var(--jade);animation:blink 1s steps(1) infinite}
+
+/* ── 指板抽屜（浮層，不動到底下欄位） ── */
+.neck-drawer{position:relative;z-index:45;background:#0E1014;flex-shrink:0;
+  border:1px solid var(--brass2);border-radius:10px;box-shadow:0 -18px 46px -24px #000;
+  padding:10px 12px 12px;max-height:min(52vh,400px);min-height:0;
+  display:flex;flex-direction:column;gap:9px;flex:1;overflow:hidden}
+.nd-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.nd-title{font-family:var(--serif);font-size:22px;line-height:1}
+.nd-sub{font-size:10.5px;color:var(--dim);letter-spacing:.08em}
+.nd-head .head-actions{margin-left:auto}
+
+/* ══════════ 主頁 ══════════ */
+.lp{position:fixed;inset:0;z-index:80;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  background:#08090B;scroll-behavior:smooth}
+.lp-hero{position:relative;min-height:100dvh;overflow:hidden;isolation:isolate;
+  display:grid;grid-template-columns:1fr clamp(290px,33vw,500px);
+  --pad:clamp(26px,5.2vw,76px)}
+.lp-glow{position:absolute;inset:-8%;pointer-events:none;z-index:0;
+  background:radial-gradient(38% 30% at 26% 26%,rgba(255,255,255,.075) 0%,transparent 68%),
+             radial-gradient(44% 44% at 88% 84%,rgba(124,126,235,.15) 0%,transparent 72%)}
+.lp-grain{position:absolute;inset:0;pointer-events:none;z-index:9;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* 左：字 */
+.lp-left{position:relative;z-index:7;display:flex;align-items:center;padding:var(--pad);min-width:0}
+.lp-left-in{width:100%;position:relative;z-index:10}
+.lp-title{font-family:var(--display);font-weight:800;font-size:min(7.2vw,112px);
+  line-height:.88;letter-spacing:-.045em;white-space:nowrap;margin:0;color:#fff;text-indent:-.02em}
+.lp-meta{margin-top:clamp(22px,3.6vh,38px);padding-top:clamp(18px,2.8vh,28px);
+  border-top:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;
+  align-items:flex-start;gap:clamp(18px,3vh,28px)}
+.lp-lede{color:#9AA0AB;font-size:clamp(12.5px,1.1vw,15px);letter-spacing:.05em;margin:0;line-height:1.85}
+.lp-ctawrap{display:inline-block}
+.lp-cta{display:inline-flex;align-items:center;gap:11px;background:#fff;color:#0B0C0E;font-weight:700;
+  padding:13px 30px;border-radius:999px;font-size:14.5px;letter-spacing:.02em;
+  box-shadow:0 10px 34px -14px rgba(255,255,255,.45);
+  transition:transform .2s,box-shadow .2s,background .2s,color .2s}
+.lp-cta:hover{transform:translateY(-2px);background:#8B8CFF;color:#fff;
+  box-shadow:0 18px 44px -16px rgba(139,140,255,.85)}
+.lp-cta svg{transition:transform .2s}
+.lp-cta:hover svg{transform:translateX(4px)}
+.lp-cta.big{padding:16px 44px;font-size:16px}
+
+/* 右：直立指板 */
+.lp-neckpanel{position:relative;overflow:hidden;z-index:6;
+  border-left:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,#0C0E12 0%,#14161C 42%,#0C0E12 100%)}
+.lp-neckpanel::after{content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 30px 0 60px -40px #000,inset 0 60px 70px -60px #000,inset 0 -60px 70px -60px #000}
+.lp-neckin{position:absolute;inset:-3% -2%}
+.lp-frets{position:absolute;inset:0;width:100%;height:100%}
+.lp-inlays{position:absolute;inset:0;pointer-events:none}
+.inlay{position:absolute;left:50%;width:9px;height:9px;border-radius:50%;background:var(--dot);
+  transform:translate(-50%,-50%);opacity:.85}
+.inlay.dbl.a{left:33%}
+.inlay.dbl.b{left:67%}
+.lp-vstrings{position:absolute;inset:0;display:flex;justify-content:space-evenly;z-index:3}
+.vstr{position:relative;height:100%;width:clamp(26px,4.6vw,52px);padding:0;
+  background:none;cursor:default}
+.vstr.armed{cursor:pointer}
+.vstr-line{position:absolute;top:0;bottom:0;left:50%;width:var(--w);transform:translateX(-50%);
+  border-radius:2px;opacity:.35;transition:opacity .3s,background .22s,box-shadow .22s;
+  background:linear-gradient(180deg,transparent,#B6BCC7 5%,#B6BCC7 95%,transparent)}
+.vstr.armed .vstr-line{opacity:1}
+.vstr.armed:hover .vstr-line{background:linear-gradient(180deg,transparent,#4FE3B0 5%,#4FE3B0 95%,transparent);
+  box-shadow:0 0 18px rgba(79,227,176,.5)}
+.vstr.live .vstr-line{animation:strVibX .78s ease-out;animation-delay:var(--d,0ms)}
+@keyframes strVibX{0%,100%{transform:translateX(-50%)}
+  11%{transform:translateX(calc(-50% - 3.2px))}25%{transform:translateX(calc(-50% + 2.5px))}
+  40%{transform:translateX(calc(-50% - 1.7px))}56%{transform:translateX(calc(-50% + 1.1px))}
+  74%{transform:translateX(calc(-50% - .55px))}}
+.vstr-name{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-family:var(--mono);
+  font-size:9.5px;letter-spacing:.12em;color:#4FE3B0;opacity:0;transition:opacity .2s}
+.vstr.armed:hover .vstr-name{opacity:.95}
+/* 和弦符號：散落在標題上下的安全帶，純文字、懸浮才亮 */
+.lp-scatter{position:absolute;inset:var(--pad);z-index:2;pointer-events:none}
+.cmark{position:absolute;pointer-events:auto;background:none;border:none;padding:6px 8px;
+  cursor:pointer;font-family:var(--serif);font-size:clamp(16px,1.6vw,23px);color:#C6CBD6;
+  white-space:nowrap;line-height:1;transform:translate(0,-50%);
+  transition:color .22s,text-shadow .22s,opacity .22s}
+.cmark:hover{color:#fff;text-shadow:0 0 28px rgba(139,140,255,.7);opacity:1 !important}
+.cmark:active{transform:translate(0,-50%) scale(.96)}
+
+.lp-loading{position:absolute;left:0;right:0;bottom:14px;text-align:center;z-index:8;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:#61656E}
+
+.lp-scroll{position:absolute;left:50%;transform:translateX(-50%);bottom:18px;display:flex;
+  align-items:center;color:#6E737E;z-index:8;transition:opacity .4s}
+.lp-scroll.hide{opacity:0}
+.lp-scroll svg{animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
+
+.lp-sec{max-width:1060px;margin:0 auto;padding:15vh 28px}
+.lp-kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.4em;color:var(--brass)}
+.lp-sec-head h2{font-family:var(--display);font-weight:700;letter-spacing:-.02em;
+  font-size:clamp(27px,4vw,44px);margin:15px 0 14px;color:var(--txt)}
+.lp-sec-head p{color:#7F8590;max-width:580px;line-height:2.1;font-size:14px;margin:0}
+.craft-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);margin-top:54px}
+.craft-card{background:#0F1115;padding:34px 30px;transition:background .25s}
+.craft-card:hover{background:#16181E}
+.craft-n{font-family:var(--mono);font-size:11px;color:var(--brass);letter-spacing:.24em}
+.craft-card h3{font-size:17px;margin:15px 0 11px;font-weight:600;color:var(--txt)}
+.craft-card p{color:#7F8590;font-size:13.5px;line-height:2.05;margin:0}
+.bench-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:54px}
+.bench-card{border-top:1px solid var(--brass2);padding-top:22px}
+.bench-k{font-family:var(--mono);font-size:10.5px;letter-spacing:.3em;color:var(--brass)}
+.bench-card h3{font-family:var(--serif);font-weight:400;font-size:24px;margin:13px 0;color:var(--txt)}
+.bench-card p{color:#7F8590;font-size:13.5px;line-height:2.05;margin:0}
+.lp-end{text-align:center;padding:16vh 24px 18vh;border-top:1px solid rgba(255,255,255,.09);background:#0A0B0D}
+.lp-end h2{font-family:var(--display);font-weight:700;letter-spacing:-.02em;font-size:clamp(28px,4.6vw,50px);margin:0 0 34px;color:var(--txt)}
+[data-reveal]{opacity:0;transform:translateY(28px);
+  transition:opacity .75s cubic-bezier(.2,.7,.3,1),transform .75s cubic-bezier(.2,.7,.3,1)}
+[data-reveal].in{opacity:1;transform:none}
+
+@media (max-width:820px){
+  .craft-grid,.bench-grid{grid-template-columns:1fr}
+  .lp-hero{grid-template-columns:1fr;grid-template-rows:1fr clamp(240px,38vh,340px)}
+  .lp-neckpanel{border-left:none;border-top:1px solid rgba(255,255,255,.08)}
+  .lp-title{font-size:min(15vw,84px)}
+  .lp-scatter{position:static;display:flex;flex-wrap:wrap;gap:14px 20px;margin-bottom:22px}
+  .cmark{position:static;transform:none;opacity:.75 !important;font-size:15px !important;padding:2px}
+  .cmark:active{transform:scale(.96)}
+
+  .lp-scroll{display:none}
+  .neck-drawer{padding:9px 10px 10px}
+  .dock.open .neck-slot{max-height:min(46vh,300px)}
+}
+@media (prefers-reduced-motion:reduce){
+  [data-reveal]{opacity:1;transform:none;transition:none}
+  .lp-scroll,.lp-str.live .lp-str-line{animation:none}
+  .neck-slot{transition:none}
+}
+
+
+/* 標題的「B」：整個字母都是電吉他開關，左豎是它的立體造型 */
+.b-wrap{position:relative;display:inline-block;background:none;border:none;padding:0;margin:0;
+  font:inherit;color:inherit;letter-spacing:inherit;cursor:pointer;-webkit-appearance:none}
+.b-stem{position:absolute;left:.082em;top:.145em;width:.152em;height:.56em;pointer-events:none;
+  border-radius:.015em;background:transparent;
+  transition:transform .18s cubic-bezier(.2,.8,.3,1),box-shadow .18s,background .25s}
+.b-wrap:hover .b-stem{
+  background:linear-gradient(150deg,#ffffff 0%,#DCDDF3 42%,#9FA1E8 100%);
+  box-shadow:.028em .034em 0 #4A4C86, .05em .06em 0 #2E2F5C,
+             .07em .085em .1em rgba(0,0,0,.55),
+             inset .014em .014em 0 rgba(255,255,255,.95),
+             inset -.01em -.012em .02em rgba(0,0,0,.28);
+  transform:translate(-.028em,-.034em)}
+.b-wrap:active .b-stem{transform:translate(-.006em,-.008em);
+  box-shadow:.01em .012em 0 #4A4C86,.02em .024em .04em rgba(0,0,0,.5),
+             inset .012em .012em 0 rgba(255,255,255,.9)}
+.b-wrap.on .b-stem{
+  background:linear-gradient(150deg,#EAFFF8 0%,#7BEFCB 45%,#2FBF95 100%);
+  box-shadow:.028em .034em 0 #14664F, .05em .06em 0 #0B3B2E,
+             0 0 .34em .07em rgba(79,227,176,.8),
+             inset .014em .014em 0 rgba(255,255,255,.95);
+  transform:translate(-.028em,-.034em);
+  animation:stemGlow 2.4s ease-in-out infinite}
+@keyframes stemGlow{50%{box-shadow:.028em .034em 0 #14664F,.05em .06em 0 #0B3B2E,
+  0 0 .6em .13em rgba(79,227,176,.95),inset .014em .014em 0 rgba(255,255,255,.95)}}
+
+/* 往下看：文字在上、箭頭在下 */
+.lp-scroll{flex-direction:column;gap:7px;font-size:11px;letter-spacing:.28em;text-indent:.28em}
+.lp-scroll svg{animation:bob 2.6s ease-in-out infinite}
+
+#boot-fail{position:fixed;inset:0;display:none;place-items:center;text-align:center;
+  font-family:"Space Grotesk",system-ui,"PingFang TC","Noto Sans TC",sans-serif;color:#EEF0F4;background:#0B0C0E;padding:24px;line-height:1.9}
+#boot-fail code{color:#8B8CFF;font-size:12px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="boot-fail">
+  <div>
+    <p>載入不到必要的函式庫。</p>
+    <p><code>需要能連上 cdnjs.cloudflare.com 才能執行</code></p>
+    <p style="opacity:.6;font-size:13px">若在離線環境使用，請把 React、ReactDOM、Tone.js 下載到同一層資料夾再改寫這三個網址。</p>
+  </div>
+</div>
+
+<script>
+window.__CHORDLAB__ = function(){
+(() => {
+  const { useState, useEffect, useRef, useCallback, useMemo } = React;
+  const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const FLAT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+  const FLAT_KEYS = [5, 10, 3, 8, 1, 6];
+  const pcName = (pc, useFlats) => (useFlats ? FLAT_NAMES : SHARP_NAMES)[(pc % 12 + 12) % 12];
+  const QUALITIES = {
+    maj: { label: "", full: "大三和弦", iv: [0, 4, 7] },
+    min: { label: "m", full: "小三和弦", iv: [0, 3, 7] },
+    dim: { label: "dim", full: "減三和弦", iv: [0, 3, 6] },
+    aug: { label: "aug", full: "增三和弦", iv: [0, 4, 8] },
+    sus2: { label: "sus2", full: "掛留二", iv: [0, 2, 7] },
+    sus4: { label: "sus4", full: "掛留四", iv: [0, 5, 7] },
+    maj7: { label: "maj7", full: "大七", iv: [0, 4, 7, 11] },
+    min7: { label: "m7", full: "小七", iv: [0, 3, 7, 10] },
+    dom7: { label: "7", full: "屬七", iv: [0, 4, 7, 10] },
+    m7b5: { label: "m7♭5", full: "半減七", iv: [0, 3, 6, 10] },
+    dim7: { label: "dim7", full: "減七", iv: [0, 3, 6, 9] },
+    sixth: { label: "6", full: "大六", iv: [0, 4, 7, 9] },
+    m6: { label: "m6", full: "小六", iv: [0, 3, 7, 9] },
+    add9: { label: "add9", full: "加九", iv: [0, 4, 7, 14] },
+    dom9: { label: "9", full: "屬九", iv: [0, 4, 7, 10, 14] },
+    maj9: { label: "maj9", full: "大九", iv: [0, 4, 7, 11, 14] },
+    min9: { label: "m9", full: "小九", iv: [0, 3, 7, 10, 14] },
+    dom13: { label: "13", full: "屬十三", iv: [0, 4, 7, 10, 21] },
+    sus7: { label: "7sus4", full: "屬七掛留四", iv: [0, 5, 7, 10] }
+  };
+  const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+  const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10];
+  const MAJOR_TRIADS = ["maj", "min", "min", "maj", "maj", "min", "dim"];
+  const MINOR_TRIADS = ["min", "dim", "maj", "min", "min", "maj", "maj"];
+  const MAJOR_SEVENTHS = ["maj7", "min7", "min7", "maj7", "dom7", "min7", "m7b5"];
+  const MINOR_SEVENTHS = ["min7", "m7b5", "maj7", "min7", "min7", "maj7", "dom7"];
+  const MAJOR_ROMAN = ["I", "ii", "iii", "IV", "V", "vi", "vii°"];
+  const MINOR_ROMAN = ["i", "ii°", "III", "iv", "v", "VI", "VII"];
+  const scaleOf = (mode) => mode === "minor" ? MINOR_SCALE : MAJOR_SCALE;
+  const Q_MAJ = ["maj", "maj7", "sixth", "add9", "maj9"];
+  const Q_MIN = ["min", "min7", "m6", "min9"];
+  const Q_DOM = ["dom7", "dom9", "dom13", "sus7"];
+  const Q_SUS = ["sus2", "sus4"];
+  function defaultScale(rootPc, quality, keyPc, mode) {
+    const keySet = [...new Set(scaleOf(mode).map((x) => (keyPc + x) % 12))].sort((a, b) => a - b).join(",");
+    const allow = Object.keys(SCALES).filter((k) => !SCALES[k].q || SCALES[k].q.includes(quality));
+    const seven = allow.filter((k) => SCALES[k].iv.length === 7);
+    for (const k of seven) {
+      const set = [...new Set(SCALES[k].iv.map((x) => (rootPc + x) % 12))].sort((a, b) => a - b).join(",");
+      if (set === keySet) return k;
+    }
+    return seven[0] || allow[0] || "chromatic";
+  }
+  const SCALES = {
+    ionian: { n: "1級 Ionian", s: "大調、最標準", iv: [0, 2, 4, 5, 7, 9, 11], q: [...Q_MAJ, ...Q_SUS] },
+    lydian: { n: "4級 Lydian", s: "♯4，漂浮、開闊", iv: [0, 2, 4, 6, 7, 9, 11], q: [...Q_MAJ] },
+    mixo: { n: "5級 Mixolydian", s: "降七音，屬和弦與藍調", iv: [0, 2, 4, 5, 7, 9, 10], q: ["maj", "sixth", "add9", ...Q_DOM, ...Q_SUS] },
+    majPent: { n: "大調五聲", s: "拿掉半音，怎麼彈都安全", iv: [0, 2, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13"] },
+    majBlues: { n: "大調藍調", s: "五聲加♭3 藍調音", iv: [0, 2, 3, 4, 7, 9], q: ["maj", "sixth", "dom7", "dom9", "dom13"] },
+    aeolian: { n: "6級 Aeolian", s: "自然小調", iv: [0, 2, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
+    dorian: { n: "2級 Dorian", s: "小調加大六，沒那麼暗", iv: [0, 2, 3, 5, 7, 9, 10], q: [...Q_MIN] },
+    phrygian: { n: "3級 Phrygian", s: "降二音，西班牙色彩", iv: [0, 1, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
+    minPent: { n: "小調五聲", s: "最通用的 solo 音階", iv: [0, 3, 5, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13"] },
+    minBlues: { n: "小調藍調", s: "五聲加♭5", iv: [0, 3, 5, 6, 7, 10], q: ["min", "min7", "min9", "dom7", "dom9", "dom13"] },
+    harmMin: { n: "和聲小調", s: "小調加大七（跟 m7 會撞）", iv: [0, 2, 3, 5, 7, 8, 11], q: ["min", "m6"] },
+    melMin: { n: "旋律小調", s: "小三大六大七", iv: [0, 2, 3, 5, 7, 9, 11], q: ["min", "m6"] },
+    locrian: { n: "7級 Locrian", s: "降二降五", iv: [0, 1, 3, 5, 6, 8, 10], q: ["m7b5", "dim"] },
+    dimWH: { n: "全半減", s: "全音半音交替，配減七", iv: [0, 2, 3, 5, 6, 8, 9, 11], q: ["dim", "dim7"] },
+    altered: { n: "變化音階", s: "屬和弦綔音全上", iv: [0, 1, 3, 4, 6, 8, 10], q: [...Q_DOM] },
+    dimHW: { n: "半全減", s: "半音全音交替，配屬七", iv: [0, 1, 3, 4, 6, 7, 9, 10], q: ["dom7", "dom9", "dom13"] },
+    wholeTone: { n: "全音階", s: "全是全音，配 aug", iv: [0, 2, 4, 6, 8, 10], q: ["aug", "dom7", "dom9", "dom13"] },
+    chromatic: { n: "半音階全開", s: "十二個音全部顯示", iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], q: null }
+  };
+  const triadsOf = (mode) => mode === "minor" ? MINOR_TRIADS : MAJOR_TRIADS;
+  const seventhsOf = (mode) => mode === "minor" ? MINOR_SEVENTHS : MAJOR_SEVENTHS;
+  const romanOf = (mode) => mode === "minor" ? MINOR_ROMAN : MAJOR_ROMAN;
+  function chordLabel(rootPc, quality, bassPc, useFlats) {
+    const base = pcName(rootPc, useFlats) + QUALITIES[quality].label;
+    return bassPc != null && bassPc !== rootPc % 12 ? base + "/" + pcName(bassPc, useFlats) : base;
+  }
+  function degreeLabel(rootPc, quality, keyPc, mode) {
+    const scale = scaleOf(mode);
+    const rel = ((rootPc - keyPc) % 12 + 12) % 12;
+    const idx = scale.indexOf(rel);
+    const isMinorish = ["min", "min7", "min9", "m6", "dim", "dim7", "m7b5"].includes(quality);
+    if (idx >= 0) {
+      let r = romanOf(mode)[idx];
+      if (quality === "dim" || quality === "dim7" || quality === "m7b5") {
+        r = r.replace("°", "") + "°";
+      } else if (isMinorish && r === r.toUpperCase()) r = r.toLowerCase();
+      else if (!isMinorish && r === r.toLowerCase()) r = r.toUpperCase().replace("°", "");
+      return r;
+    }
+    const flatMap = { 1: "♭II", 3: "♭III", 6: "♯IV", 8: "♭VI", 10: "♭VII" };
+    const base = flatMap[rel] || "?";
+    return isMinorish ? base.toLowerCase() : base;
+  }
+  const STRING_MIDI = [40, 45, 50, 55, 59, 64];
+  const OPEN_SHAPES = {
+    "0:maj": [-1, 3, 2, 0, 1, 0],
+    "0:maj7": [-1, 3, 2, 0, 0, 0],
+    "0:dom7": [-1, 3, 2, 3, 1, 0],
+    "0:sus4": [-1, 3, 3, 0, 1, 1],
+    "0:sixth": [-1, 3, 2, 2, 1, 0],
+    "0:add9": [-1, 3, 2, 0, 3, 0],
+    "2:maj": [-1, -1, 0, 2, 3, 2],
+    "2:min": [-1, -1, 0, 2, 3, 1],
+    "2:dom7": [-1, -1, 0, 2, 1, 2],
+    "2:maj7": [-1, -1, 0, 2, 2, 2],
+    "2:min7": [-1, -1, 0, 2, 1, 1],
+    "2:sus4": [-1, -1, 0, 2, 3, 3],
+    "2:sus2": [-1, -1, 0, 2, 3, 0],
+    "2:sixth": [-1, -1, 0, 2, 0, 2],
+    "4:maj": [0, 2, 2, 1, 0, 0],
+    "4:min": [0, 2, 2, 0, 0, 0],
+    "4:dom7": [0, 2, 0, 1, 0, 0],
+    "4:min7": [0, 2, 0, 0, 0, 0],
+    "4:maj7": [0, 2, 1, 1, 0, 0],
+    "4:sus4": [0, 2, 2, 2, 0, 0],
+    "4:add9": [0, 2, 2, 1, 0, 2],
+    "4:min9": [0, 2, 0, 0, 0, 2],
+    "5:maj7": [-1, -1, 3, 2, 1, 0],
+    "5:sixth": [-1, -1, 3, 2, 3, 1],
+    "7:maj": [3, 2, 0, 0, 0, 3],
+    "7:dom7": [3, 2, 0, 0, 0, 1],
+    "7:maj7": [3, 2, 0, 0, 0, 2],
+    "7:sixth": [3, 2, 0, 0, 0, 0],
+    "7:sus4": [3, 3, 0, 0, 1, 3],
+    "7:add9": [3, 0, 0, 2, 0, 3],
+    "9:maj": [-1, 0, 2, 2, 2, 0],
+    "9:min": [-1, 0, 2, 2, 1, 0],
+    "9:dom7": [-1, 0, 2, 0, 2, 0],
+    "9:min7": [-1, 0, 2, 0, 1, 0],
+    "9:maj7": [-1, 0, 2, 1, 2, 0],
+    "9:sus4": [-1, 0, 2, 2, 3, 0],
+    "9:sus2": [-1, 0, 2, 2, 0, 0],
+    "9:add9": [-1, 0, 2, 4, 2, 0],
+    "9:min9": [-1, 0, 2, 4, 1, 3],
+    "9:m7b5": [-1, 0, 1, 2, 1, -1],
+    "11:dom7": [-1, 2, 1, 2, 0, 2],
+    "11:min7": [-1, 2, 0, 2, 0, 2],
+    "11:m7b5": [-1, 2, 3, 2, 3, -1]
+  };
+  const FAMILIES = [
+    {
+      tag: "C 型",
+      rootString: 1,
+      minRoot: 3,
+      shapes: {
+        maj: [null, 0, -1, -3, -2, -3],
+        maj7: [null, 0, -1, -3, -3, -3],
+        dom7: [null, 0, -1, 0, -2, -3],
+        sixth: [null, 0, -1, -1, -2, -3],
+        add9: [null, 0, -1, -3, 0, -3],
+        maj9: [null, 0, -1, -3, 0, -3]
+      }
+    },
+    {
+      tag: "A 型",
+      rootString: 1,
+      minRoot: 0,
+      shapes: {
+        maj: [null, 0, 2, 2, 2, 0],
+        min: [null, 0, 2, 2, 1, 0],
+        dom7: [null, 0, 2, 0, 2, 0],
+        min7: [null, 0, 2, 0, 1, 0],
+        maj7: [null, 0, 2, 1, 2, 0],
+        sus4: [null, 0, 2, 2, 3, 0],
+        sus2: [null, 0, 2, 2, 0, 0],
+        sixth: [null, 0, 2, 2, 2, 2],
+        m6: [null, 0, 2, 2, 1, 2],
+        add9: [null, 0, 2, 4, 2, 0],
+        dom9: [null, 0, 2, 4, 2, 3],
+        maj9: [null, 0, 2, 4, 2, 4],
+        min9: [null, 0, 2, 4, 1, 3],
+        aug: [null, 0, 3, 2, 2, 1],
+        sus7: [null, 0, 2, 0, 3, 0],
+        dom13: [null, 0, 2, 0, 2, 2],
+        m7b5: [null, 0, 1, 2, 1, null],
+        dim: [null, 0, 1, 2, 1, null],
+        dim7: [null, 0, 1, 2, 1, 2]
+      }
+    },
+    {
+      tag: "G 型",
+      rootString: 0,
+      minRoot: 3,
+      shapes: {
+        maj: [0, -1, -3, -3, -3, 0],
+        maj7: [0, -1, -3, -3, -3, -1],
+        dom7: [0, -1, -3, -3, -3, -2],
+        sixth: [0, -1, -3, -3, -3, -3],
+        add9: [0, -3, -3, -1, -3, 0]
+      }
+    },
+    {
+      tag: "E 型",
+      rootString: 0,
+      minRoot: 0,
+      shapes: {
+        maj: [0, 2, 2, 1, 0, 0],
+        min: [0, 2, 2, 0, 0, 0],
+        dom7: [0, 2, 0, 1, 0, 0],
+        min7: [0, 2, 0, 0, 0, 0],
+        maj7: [0, 2, 1, 1, 0, 0],
+        sus4: [0, 2, 2, 2, 0, 0],
+        sus2: [0, 2, 4, 4, 0, 0],
+        sixth: [0, 2, 2, 1, 2, 0],
+        m6: [0, 2, 2, 0, 2, 0],
+        add9: [0, 2, 2, 1, 0, 2],
+        dom9: [0, 2, 0, 1, 0, 2],
+        maj9: [0, 2, 1, 1, 0, 2],
+        min9: [0, 2, 0, 0, 0, 2],
+        aug: [0, 3, 2, 1, 1, 0],
+        sus7: [0, 2, 0, 2, 0, 0],
+        dom13: [0, 2, 0, 1, 2, 0],
+        m7b5: [0, 1, 0, 0, null, null],
+        dim: [0, 1, 2, 0, null, null],
+        dim7: [0, 1, null, 0, 2, null]
+      }
+    },
+    {
+      tag: "D 型",
+      rootString: 2,
+      minRoot: 0,
+      shapes: {
+        maj: [null, null, 0, 2, 3, 2],
+        min: [null, null, 0, 2, 3, 1],
+        dom7: [null, null, 0, 2, 1, 2],
+        maj7: [null, null, 0, 2, 2, 2],
+        min7: [null, null, 0, 2, 1, 1],
+        sus4: [null, null, 0, 2, 3, 3],
+        sus2: [null, null, 0, 2, 3, 0],
+        sixth: [null, null, 0, 2, 0, 2],
+        m6: [null, null, 0, 2, 0, 1],
+        min9: [null, null, 0, 2, 1, 0],
+        dom9: [null, null, 0, 2, 1, 0]
+      }
+    }
+  ];
+  const STRING_PC = STRING_MIDI.map((m) => m % 12);
+  const shapeSpan = (frets) => {
+    const f = frets.filter((x) => x > 0);
+    return f.length ? Math.max(...f) - Math.min(...f) : 0;
+  };
+  const cagedTag = (bs, rootFret, minFret) => bs === 2 ? "D \u578b"
+    : bs === 1 ? (minFret < rootFret ? "C \u578b" : "A \u578b")
+    : (minFret < rootFret ? "G \u578b" : "E \u578b");
+  function genShapes(shapedPc, quality, capo) {
+    const iv = QUALITIES[quality].iv.map((x) => ((x % 12) + 12) % 12);
+    const tones = iv.map((x) => (shapedPc + x) % 12);
+    const third = iv.find((x) => x === 3 || x === 4);
+    const sev = iv.find((x) => x === 10 || x === 11);
+    const out = [];
+    const TOP = 22 - capo;
+    for (let lo = 1; lo <= TOP; lo++) {
+      for (let bs = 0; bs <= 2; bs++) {
+        const span = [];
+        for (let f = lo; f <= Math.min(lo + 3, TOP); f++) span.push(f);
+        if (!span.length) continue;
+        const cand = [];
+        for (let st = 0; st < 6; st++) {
+          const list = [];
+          if (st < bs) { cand.push([-1]); continue; }
+          span.forEach((f) => {
+            if (tones.includes((STRING_MIDI[st] + capo + f) % 12)) list.push(f);
+          });
+          if (lo <= 2 && tones.includes((STRING_MIDI[st] + capo) % 12)) list.push(0);
+          cand.push(list.length ? list : [-1]);
+        }
+        const rootF = cand[bs].filter((f) => f >= 0 && (STRING_MIDI[bs] + capo + f) % 12 === (shapedPc % 12 + 12) % 12);
+        if (!rootF.length) continue;
+        const frets = cand.map((l, st) => {
+          if (st < bs) return -1;
+          if (st === bs) return rootF[0];
+          const pref = l.filter((f) => f >= 0);
+          return pref.length ? pref[pref.length - 1] : -1;
+        });
+        const lit = frets.filter((f) => f >= 0);
+        if (lit.length < 4) continue;
+        let cut = false;
+        for (let st = bs; st < 6; st++) {
+          if (frets[st] < 0) cut = true;
+          else if (cut) { frets[st] = -1; }
+        }
+        if (frets.filter((f) => f >= 0).length < 4) continue;
+        if (shapeSpan(frets) > 4) continue;
+        const press = {};
+        frets.forEach((f) => { if (f > 0) press[f] = 1; });
+        if (Object.keys(press).length > 4) continue;
+        const got = frets.map((f, st) => f < 0 ? -1 : ((STRING_MIDI[st] + capo + f) % 12 - shapedPc % 12 + 24) % 12).filter((x) => x >= 0);
+        if (!got.includes(0)) continue;
+        if (third != null && !got.includes(third)) continue;
+        if (sev != null && !got.includes(sev)) continue;
+        const base = Math.min(...frets.filter((f) => f > 0));
+        out.push({ frets, tag: cagedTag(bs, frets[bs], base), pos: base });
+      }
+    }
+    return out;
+  }
+  function getVoicings(rootPc, quality, capo) {
+    const shapedPc = ((rootPc - capo) % 12 + 12) % 12;
+    const out = [];
+    const push = (frets, tag, pos) => {
+      if (!frets) return;
+      if (frets.some((f) => f > 0 && f + capo > 22)) return;
+      if (frets.filter((f) => f >= 0).length < 3) return;
+      if (shapeSpan(frets) > 5) return;
+      const key = frets.join(",");
+      if (out.some((v) => v.key === key)) return;
+      out.push({ key, frets, tag, pos });
+    };
+    const open = OPEN_SHAPES[shapedPc + ":" + quality];
+    if (open) push(open, "開放把位", 0);
+    const cands = [];
+    FAMILIES.forEach((fam) => {
+      const tpl = fam.shapes[quality];
+      if (!tpl) return;
+      const base = ((shapedPc - STRING_PC[fam.rootString]) % 12 + 12) % 12;
+      [base, base + 12, base + 24].forEach((r) => {
+        if (r < fam.minRoot) return;
+        const frets = tpl.map((o) => o == null ? -1 : r + o);
+        if (frets.some((f) => f >= 0 && f < 0)) return;
+        if (frets.some((f) => f !== -1 && f < 0)) return;
+        const lows = frets.filter((f) => f > 0);
+        cands.push({ frets, tag: fam.tag, pos: lows.length ? Math.min(...lows) : 0 });
+      });
+    });
+    genShapes(shapedPc, quality, capo).forEach((g) => cands.push(g));
+    cands.sort((a, b) => a.pos - b.pos);
+    cands.forEach((c) => push(c.frets, c.tag, c.pos));
+    if (!out.length) {
+      const iv = QUALITIES[quality].iv.map((i) => ((rootPc - capo + i) % 12 + 12) % 12);
+      const frets = STRING_MIDI.map((m) => {
+        for (let f = 0; f <= 5; f++) if (iv.includes(((m + f) % 12 + 12) % 12)) return f;
+        return -1;
+      });
+      push(frets, "自動排列", 0);
+    }
+    const LIM = 14;
+    if (out.length <= LIM) return out;
+    const keep = [out[0]];
+    const step = (out.length - 1) / (LIM - 1);
+    for (let i = 1; i < LIM - 1; i++) {
+      const c = out[Math.round(i * step)];
+      if (c && !keep.includes(c)) keep.push(c);
+    }
+    const last = out[out.length - 1];
+    if (!keep.includes(last)) keep.push(last);
+    return keep;
+  }
+  function voicingToMidi(frets, capo) {
+    const notes = [];
+    frets.forEach((f, i) => {
+      if (f >= 0) notes.push(STRING_MIDI[i] + capo + f);
+    });
+    return notes;
+  }
+  const midiToName = (m) => SHARP_NAMES[m % 12] + (Math.floor(m / 12) - 1);
+  const AMP_HEADS = {
+    clean: { n: "\u900f\u4eae\u53f0\u5f0f", s: "\u55ae\u7d1a\u524d\u7d1a\uff0c\u982d\u5ea6\u5927\u3001\u4e0d\u6613\u7834",
+      stages: 1, bias: 1, drive: 1.6, tone: [95, 520, 3200], pres: 1.5, sag: 0 },
+    chime: { n: "\u82f1\u5f0f Chime", s: "\u4e2d\u9ad8\u9838\u4eae\uff0c\u63a8\u5927\u6642\u5e36\u9846\u7c92",
+      stages: 2, bias: 1.18, drive: 2.1, tone: [110, 700, 3800], pres: 3, sag: 0.15 },
+    tweed: { n: "\u7f8e\u5f0f Tweed", s: "\u4e2d\u9838\u80a5\u539a\uff0c\u81ea\u7136\u58d3\u7e2e",
+      stages: 2, bias: 1.32, drive: 2.6, tone: [120, 480, 2600], pres: 0.5, sag: 0.35 },
+    crunch: { n: "\u5927\u5730\u7345 Crunch", s: "\u4e2d\u9838\u7a81\u51fa\uff0c\u7d93\u5178\u6416\u6efe",
+      stages: 3, bias: 1.28, drive: 3.2, tone: [130, 620, 3400], pres: 2.5, sag: 0.25 },
+    hifi: { n: "\u73fe\u4ee3\u9ad8\u6e05", s: "\u7dca\u5be6\u4f4e\u9838\uff0c\u984f\u8272\u5c11",
+      stages: 2, bias: 1.05, drive: 1.9, tone: [90, 900, 4200], pres: 2, sag: 0.05 }
+  };
+  const CABS = {
+    none: { n: "\u4e0d\u7528\u7bb1\u9ad4", s: "\u76f4\u63a5\u8f38\u51fa", off: true },
+    combo112: { n: "1x12 \u958b\u80cc Combo", s: "\u8f15\u5feb\uff0c\u4f4e\u9838\u5c11",
+      lowF: 95, lowQ: 0.8, hiF: 5200, peaks: [[220, 2.5, 1.4], [1900, 3, 2.2], [3600, -3, 1.6]],
+      taps: [[0.9, -0.42], [2.1, 0.26], [4.4, -0.14]], decay: 0.012 },
+    combo212: { n: "2x12 \u534a\u5c01\u80cc", s: "\u5747\u8861\uff0c\u4e2d\u9838\u6709\u8089",
+      lowF: 85, lowQ: 1, hiF: 4800, peaks: [[160, 3.5, 1.2], [1500, 2.5, 2], [3900, -4, 1.5]],
+      taps: [[1.2, -0.38], [2.8, 0.3], [5.6, -0.18], [8.1, 0.1]], decay: 0.018 },
+    stack412: { n: "4x12 \u5c01\u80cc\u97f3\u7bb1", s: "\u4f4e\u9838\u91cf\u5927\uff0c\u63a8\u529b\u8db3",
+      lowF: 72, lowQ: 1.3, hiF: 4300, peaks: [[105, 5, 1.1], [1300, 2, 1.8], [4000, -5.5, 1.4]],
+      taps: [[1.6, -0.4], [3.4, 0.32], [6.9, -0.2], [10.2, 0.12], [14, -0.07]], decay: 0.026 },
+    jazz15: { n: "1x15 \u7235\u58eb\u7bb1", s: "\u5713\u6da6\uff0c\u9ad8\u9838\u65e9\u6ede",
+      lowF: 68, lowQ: 0.9, hiF: 3200, peaks: [[130, 4, 1.1], [900, 2, 1.6], [2600, -4, 1.3]],
+      taps: [[1.4, -0.3], [3.1, 0.22], [6.2, -0.12]], decay: 0.02 }
+  };
+  const MICS = {
+    dyn57: { n: "\u52d5\u5708\u8fd1\u9ea5", s: "\u4e2d\u9ad8\u9838\u63a8\u524d\uff0c\u6700\u5e38\u898b", tilt: 3.5, tiltF: 2800, body: 0 },
+    dyn421: { n: "\u52d5\u5708\u5927\u632f\u819c", s: "\u4f4e\u9838\u591a\u4e00\u9ede", tilt: 1, tiltF: 2400, body: 3 },
+    cond: { n: "\u96fb\u5bb9\u9ea5", s: "\u7d30\u7bc0\u591a\uff0c\u9ad8\u9838\u5f00", tilt: 5, tiltF: 6000, body: -1 },
+    ribbon: { n: "\u5e36\u72c0\u9ea5", s: "\u67d4\u548c\uff0c\u9ad8\u9838\u6536", tilt: -4, tiltF: 4500, body: 2 }
+  };
+  function ampCurve(stages, bias, drive, n) {
+    const c = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let y = i / (n - 1) * 2 - 1;
+      const per = Math.pow(Math.max(1.02, drive), 1 / Math.max(1, stages));
+      for (let st = 0; st < stages; st++) {
+        const b = y < 0 ? bias : 2 - bias;
+        y = Math.tanh(y * b * per) / Math.tanh(b * per);
+      }
+      c[i] = y * 0.92;
+    }
+    return c;
+  }
+  async function makeCabIR(cabKey, micKey, pos, dist) {
+    const cab = CABS[cabKey];
+    if (!cab || cab.off) return null;
+    const mic = MICS[micKey] || MICS.dyn57;
+    const sr = Tone.context.sampleRate;
+    const len = Math.max(256, Math.floor(sr * 0.09));
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const off = new OAC(1, len, sr);
+    const buf = off.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    d[0] = 1;
+    const edge = Math.max(0, Math.min(1, pos == null ? 0.35 : pos));
+    cab.taps.forEach(([ms, g], ti) => {
+      const idx = Math.round(ms / 1e3 * sr);
+      if (idx > 0 && idx < len) d[idx] += g * (1 - edge * 0.35) * (ti % 2 ? 1 : 1);
+    });
+    const dl = Math.round(Math.max(0, dist || 0) / 1e3 * sr);
+    if (dl > 1 && dl < len) d[dl] += 0.3;
+    for (let i = 1; i < len; i++) {
+      d[i] += (Math.random() * 2 - 1) * 0.06 * Math.exp(-i / (sr * cab.decay));
+    }
+    const src = off.createBufferSource();
+    src.buffer = buf;
+    const hp = off.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = cab.lowF;
+    hp.Q.value = cab.lowQ;
+    let head = hp;
+    cab.peaks.forEach(([f, g, q]) => {
+      const pk = off.createBiquadFilter();
+      pk.type = "peaking";
+      pk.frequency.value = f;
+      pk.gain.value = g;
+      pk.Q.value = q;
+      head.connect(pk);
+      head = pk;
+    });
+    const tilt = off.createBiquadFilter();
+    tilt.type = "highshelf";
+    tilt.frequency.value = mic.tiltF;
+    tilt.gain.value = mic.tilt - edge * 6;
+    head.connect(tilt);
+    const body = off.createBiquadFilter();
+    body.type = "peaking";
+    body.frequency.value = 200;
+    body.gain.value = mic.body;
+    body.Q.value = 1;
+    tilt.connect(body);
+    const lp = off.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = cab.hiF;
+    lp.Q.value = 0.7;
+    body.connect(lp);
+    lp.connect(off.destination);
+    src.connect(hp);
+    src.start(0);
+    const rendered = await off.startRendering();
+    const ch = rendered.getChannelData(0);
+    let peak = 0;
+    for (let i = 0; i < ch.length; i++) peak = Math.max(peak, Math.abs(ch[i]));
+    if (peak > 0) for (let i = 0; i < ch.length; i++) ch[i] /= peak * 1.6;
+    return rendered;
+  }
+  const TONES = {
+    acoustic: { n: "原聲鋼弦", s: "木吉他，乾淨自然", src: "acoustic" },
+    clean: { n: "清音 Clean", s: "透亮、不失真", src: "electric", pre: 1, low: 2, mid: 0, high: 2.5, pres: 2, cut: 7000, hp: 80, thr: -18, rat: 3, rev: 0.16, cho: 0 },
+    jazzbox: { n: "爵士箱琴", s: "厚暖，高頻收掉", src: "electric", pre: 0.9, low: 4, mid: 1.5, high: -8, pres: -4, cut: 2600, hp: 70, thr: -20, rat: 4, rev: 0.14, cho: 0 },
+    neosoul: { n: "Neo Soul", s: "柔和清音＋合唱", src: "electric", pre: 1.15, low: 2.5, mid: -1, high: 1, pres: 0, cut: 5200, hp: 75, thr: -22, rat: 5, rev: 0.2, cho: 0.4 },
+    rnb: { n: "R&B 溫暖", s: "圓潤、微壓縮", src: "electric", pre: 1.05, low: 3, mid: 0.5, high: -1, pres: -1, cut: 4200, hp: 75, thr: -24, rat: 6, rev: 0.18, cho: 0.15 },
+    funk: { n: "放克切音", s: "明亮、緊、彈性強", src: "electric", pre: 1.25, low: -2, mid: 3, high: 4, pres: 3, cut: 7500, hp: 130, thr: -26, rat: 8, rev: 0.08, cho: 0 },
+    blues: { n: "藍調 Crunch", s: "輕破音，中頻突出", src: "electric", pre: 2.4, low: 1.5, mid: 4, high: 1, pres: 2, cut: 5000, hp: 90, thr: -16, rat: 3, rev: 0.15, cho: 0 },
+
+  };
+  const STRUM_PATTERNS = {
+    arp: {
+      name: "分解琶音",
+      hint: "指彈感，適合前奏",
+      events: [
+        { i: 0, d: "P", s: [0], v: 0.9 },
+        { i: 2, d: "P", s: [3], v: 0.7 },
+        { i: 4, d: "P", s: [4], v: 0.72 },
+        { i: 6, d: "P", s: [5], v: 0.68 },
+        { i: 8, d: "P", s: [1], v: 0.85 },
+        { i: 10, d: "P", s: [3], v: 0.7 },
+        { i: 12, d: "P", s: [4], v: 0.72 },
+        { i: 14, d: "P", s: [5], v: 0.66 }
+      ]
+    },
+    jazzcomp: {
+      name: "\u7235\u58eb Comp",
+      hint: "\u67e5\u723e\u65af\u9813\u91cd\u97f3\uff0c\u7559\u767d\u591a",
+      events: [
+        { i: 0, d: "D", v: 0.9 }, { i: 6, d: "D", v: 0.78 },
+        { i: 10, d: "U", v: 0.5 }, { i: 12, d: "D", v: 0.72 }
+      ]
+    },
+    travis: {
+      name: "Travis \u4ea4\u66ff\u4f4e\u97f3",
+      hint: "\u62c7\u6307\u8e29\u4f4e\u97f3\u3001\u624b\u6307\u5e36\u9ad8\u97f3\uff0c\u6307\u5f48\u57fa\u672c\u529f",
+      events: [
+        { i: 0, d: "P", s: [0], v: 0.9 },
+        { i: 2, d: "P", s: [4], v: 0.6 },
+        { i: 3, d: "P", s: [3], v: 0.5 },
+        { i: 4, d: "P", s: [2], v: 0.74 },
+        { i: 6, d: "P", s: [5], v: 0.6 },
+        { i: 8, d: "P", s: [1], v: 0.85 },
+        { i: 10, d: "P", s: [4], v: 0.6 },
+        { i: 11, d: "P", s: [3], v: 0.5 },
+        { i: 12, d: "P", s: [2], v: 0.72 },
+        { i: 14, d: "P", s: [5], v: 0.58 }
+      ]
+    },
+    skank: {
+      name: "\u53cd\u62cd\u5207\u97f3 Skank",
+      hint: "\u53ea\u5728\u53cd\u62cd\u51fa\u8072\uff0c\u96f7\u9b3c\u8207 Ska \u7684\u9aa8\u67b6",
+      events: [2, 6, 10, 14].map((i) => ({
+        i, d: "U", v: i % 8 === 6 ? 0.9 : 0.84,
+        a: i % 8 === 6 ? 1 : 0, s: [2, 3, 4, 5], m: 0.55, sp: 7
+      }))
+    },
+    countryBoom: {
+      name: "\u9109\u6751 Boom-Chick",
+      hint: "\u4f4e\u97f3\u4ea4\u66ff\uff0c\u53cd\u62cd\u5237\u9ad8\u97f3\u5f26",
+      events: [
+        { i: 0, d: "P", s: [0], v: 0.95 },
+        { i: 4, d: "D", v: 0.62, s: [2, 3, 4, 5], m: 0.35, sp: 8 },
+        { i: 8, d: "P", s: [1], v: 0.88 },
+        { i: 10, d: "P", s: [2], v: 0.5 },
+        { i: 12, d: "D", v: 0.6, s: [2, 3, 4, 5], m: 0.35, sp: 8 },
+        { i: 14, d: "U", v: 0.4, s: [4, 5], sp: 6 }
+      ]
+    },
+    roll: {
+      name: "慢速掃弦 (Roll)",
+      hint: "一小節一下，最能聽清和弦色彩",
+      events: [{ i: 0, d: "R", v: 0.9 }]
+    }
+  };
+  const DRUM_PATTERNS = {
+    none: { name: "不用鼓", kick: [], snare: [], hat: [] },
+    rock: { name: "直拍 8 beat", kick: [0, 8, 11], snare: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14] },
+    ballad: { name: "抒情慢拍", kick: [0, 8], snare: [8], hat: [0, 4, 8, 12] },
+    pop16: { name: "流行 16 beat", kick: [0, 7, 8, 14], snare: [4, 12], hat: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
+    bossa: { name: "Bossa 感", kick: [0, 6, 8, 14], snare: [3, 10], hat: [0, 4, 8, 12] },
+    funk: { name: "放克 16 beat", kick: [0, 6, 10], snare: [4, 12], hat: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
+    shuffle: { name: "藍調 Shuffle", kick: [0, 8], snare: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14] },
+    swing: { name: "爵士 Swing", kick: [0], snare: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14] },
+    halftime: { name: "半拍子", kick: [0, 10], snare: [8], hat: [0, 2, 4, 6, 8, 10, 12, 14] },
+    neo: { name: "Neo Soul 懶拍", kick: [0, 7, 10], snare: [4, 12], hat: [0, 2, 3, 4, 6, 8, 10, 11, 12, 14] }
+  };
+  const BASS_PATTERNS = {
+    none: { name: "不用貝斯", events: [] },
+    root: { name: "根音長音", events: [{ i: 0, deg: 0, len: 4 }] },
+    pulse: { name: "四分音符", events: [0, 4, 8, 12].map((i) => ({ i, deg: 0, len: 1 })) },
+    fifth: { name: "根音 + 五度", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 7, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 12, deg: 7, len: 1 }] },
+    walk: { name: "八分律動", events: [0, 3, 6, 8, 11, 14].map((i, k) => ({ i, deg: k % 3 === 2 ? 7 : 0, len: 1 })) },
+    walkq: { name: "行走四分", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 7, len: 1 }, { i: 8, deg: 12, len: 1 }, { i: 12, deg: 7, len: 1 }] },
+    funk: { name: "放克切分", events: [{ i: 0, deg: 0, len: 1 }, { i: 3, deg: 0, len: 1 }, { i: 6, deg: 12, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 11, deg: 7, len: 1 }, { i: 14, deg: 12, len: 1 }] },
+    octave: { name: "根音 + 八度", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 12, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 12, deg: 12, len: 1 }] },
+    drive8: { name: "八分根音衝", events: [0, 2, 4, 6, 8, 10, 12, 14].map((i) => ({ i, deg: 0, len: 1 })) }
+  };
+  const TEMPLATES = [
+    { id: "t001", name: "四和弦神曲", sub: "I–V–vi–IV ・ 全世界通用的骨架", genre: "pop", style: "西洋主流", mode: "major", bpm: 100, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 3 }] },
+    { id: "t004", name: "六四一五", sub: "vi–IV–I–V ・ 從陰影走向光", genre: "pop", style: "西洋主流", mode: "major", bpm: 96, strum: "roll", drum: "pop16", bass: "root", tone: "acoustic", chords: [{ d: 5 }, { d: 3 }, { d: 0 }, { d: 4 }] },
+    { id: "t006", name: "王道進行", sub: "IVM7–V7–iii7–vi ・ 日系副歌的標配", genre: "pop", style: "J-Pop", mode: "major", bpm: 92, strum: "roll", drum: "pop16", bass: "root", tone: "acoustic", chords: [{ d: 3, q: "maj7" }, { d: 4, q: "dom7" }, { d: 2, q: "min7" }, { d: 5 }] },
+    { id: "t008", name: "卡農進行", sub: "I–V–vi–iii–IV–I–IV–V ・ 最會催淚的長句", genre: "pop", style: "J-Pop", mode: "major", bpm: 84, strum: "arp", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 2 }, { d: 3 }, { d: 0 }, { d: 3 }, { d: 4 }] },
+    { id: "t009", name: "4536251", sub: "IV–V–iii–vi–ii–V–I ・ 萬用長句", genre: "pop", style: "J-Pop", mode: "major", bpm: 88, strum: "roll", drum: "pop16", bass: "root", tone: "acoustic", chords: [{ d: 3 }, { d: 4 }, { d: 2 }, { d: 5 }, { d: 1 }, { d: 4 }, { d: 0 }] },
+    { id: "t010", name: "丸之內進行", sub: "IVM7–III7–vi7–I7 ・ 都會爵士味", genre: "pop", style: "J-Pop", mode: "major", bpm: 96, strum: "roll", drum: "neo", bass: "walk", tone: "jazzbox", chords: [{ d: 3, q: "maj7" }, { pc: 4, q: "dom7" }, { d: 5, q: "min7" }, { d: 0, q: "dom7" }] },
+    { id: "t011", name: "純情進行", sub: "卡農的下行低音變體", genre: "pop", style: "J-Pop", mode: "major", bpm: 80, strum: "arp", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 2 }, { d: 3 }, { d: 0 }, { d: 1 }, { d: 4 }] },
+    { id: "t012", name: "4156 進行", sub: "IV–I–V–vi ・ 哀愁的浮遊感", genre: "pop", style: "J-Pop", mode: "major", bpm: 94, strum: "roll", drum: "pop16", bass: "root", tone: "clean", chords: [{ d: 3 }, { d: 0 }, { d: 4 }, { d: 5 }] },
+    { id: "t015", name: "都會 R&B 味", sub: "ii7–V7–IM7–vi7 ・ 順滑不刺耳", genre: "pop", style: "K-Pop", mode: "major", bpm: 102, strum: "roll", drum: "neo", bass: "walk", tone: "rnb", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }, { d: 5, q: "min7" }] },
+    { id: "t018", name: "民謠敘事", sub: "I–iii–IV–V ・ 娓娓道來", genre: "pop", style: "華語", mode: "major", bpm: 88, strum: "travis", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 2 }, { d: 3 }, { d: 4 }] },
+    { id: "t019", name: "都會夜景", sub: "IM7–vi7–ii7–V7 ・ 鬆軟的四循環", genre: "pop", style: "City Pop", mode: "major", bpm: 104, strum: "roll", drum: "neo", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t020", name: "海岸公路", sub: "IIIM7–VI7–ii7–V7 ・ 明亮的轉調感", genre: "pop", style: "City Pop", mode: "major", bpm: 108, strum: "roll", drum: "neo", bass: "walk", tone: "clean", chords: [{ pc: 4, q: "maj7" }, { pc: 9, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t032", name: "掛留漂浮", sub: "Isus2–IV–vi–V ・ 不把話說滿", genre: "rock", style: "另類獨立", mode: "major", bpm: 108, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "sus2" }, { d: 3 }, { d: 5 }, { d: 4 }] },
+    { id: "t033", name: "大小調交替", sub: "I–iv–I–♭VI ・ 借用小調製造陰影", genre: "rock", style: "另類獨立", mode: "major", bpm: 96, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0 }, { pc: 5, q: "min" }, { d: 0 }, { pc: 8, q: "maj" }] },
+    { id: "t034", name: "九和弦鋪陳", sub: "IM7–IIIm7–IVM7–V ・ 織體優先", genre: "rock", style: "另類獨立", mode: "major", bpm: 100, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "maj7" }, { d: 2, q: "min7" }, { d: 3, q: "maj7" }, { d: 4 }] },
+    { id: "t039", name: "長線鋪陳", sub: "I–iii–IV ・ 慢慢堆疊", genre: "rock", style: "後搖", mode: "major", bpm: 72, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, bars: 2 }, { d: 2, bars: 2 }, { d: 3, bars: 2 }] },
+    { id: "t040", name: "調式漂浮", sub: "IM7–♭VIIM7 ・ 兩個和弦就夠", genre: "rock", style: "後搖", mode: "major", bpm: 68, strum: "roll", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 10, q: "maj7", bars: 2 }] },
+    { id: "t041", name: "多利安循環", sub: "i–IV ・ 亮起來的小調", genre: "rock", style: "迷幻", mode: "minor", bpm: 104, strum: "arp", drum: "halftime", bass: "root", tone: "clean", chords: [{ d: 0, q: "min7", bars: 2 }, { pc: 5, q: "dom7", bars: 2 }] },
+    { id: "t042", name: "半音下行", sub: "i–♭VII–♭VI–V7 ・ 催眠式下行", genre: "rock", style: "迷幻", mode: "minor", bpm: 96, strum: "arp", drum: "rock", bass: "root", tone: "blues", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 7, q: "dom7" }] },
+    { id: "t054", name: "慢速十二小節", sub: "6/8 感的抒情藍調", genre: "blues", style: "慢藍調", mode: "major", bpm: 62, strum: "roll", drum: "shuffle", bass: "walk", tone: "blues", swing: 0.6, chords: [{ d: 0, q: "dom7", bars: 4 }, { d: 3, q: "dom7", bars: 2 }, { d: 0, q: "dom7", bars: 2 }, { d: 4, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 4, q: "dom7" }] },
+    { id: "t056", name: "爵士化十二小節", sub: "加入 ii–V 與經過減和弦", genre: "blues", style: "爵士藍調", mode: "major", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 0, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 0, q: "dom7" }, { d: 3, q: "dom7" }, { d: 3, q: "dom7" }, { d: 0, q: "dom7" }, { d: 2, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "dom7" }, { d: 4, q: "dom7" }] },
+    { id: "t057", name: "二五一", sub: "ii7–V7–IM7 ・ 爵士的基本句", genre: "jazz", style: "標準曲", mode: "major", bpm: 128, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t058", name: "小調二五一", sub: "iiø–V7–i ・ 小調的解決", genre: "jazz", style: "標準曲", mode: "minor", bpm: 120, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7", bars: 2 }] },
+    { id: "t059", name: "逆循環", sub: "IM7–vi7–ii7–V7 ・ 轉不完的圓", genre: "jazz", style: "標準曲", mode: "major", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t060", name: "節奏變奏 A 段", sub: "I–VI7–ii–V ・ 兩拍一換", genre: "jazz", style: "標準曲", mode: "major", bpm: 168, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 0, q: "maj7" }, { pc: 9, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }, { d: 0, q: "dom7" }, { d: 3, q: "maj7" }, { pc: 6, q: "dim7" }] },
+    { id: "t061", name: "半音下行二五", sub: "連續 ii–V 半音位移", genre: "jazz", style: "Bebop", mode: "major", bpm: 176, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { pc: 1, q: "min7" }, { pc: 6, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t062", name: "三全音代理", sub: "ii7–♭II7–IM7 ・ 換一個屬和弦", genre: "jazz", style: "Bebop", mode: "major", bpm: 160, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.6, chords: [{ d: 1, q: "min7" }, { pc: 1, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t063", name: "多利安兩和弦", sub: "i7–IV7 ・ 調式爵士的留白", genre: "jazz", style: "Modal", mode: "minor", bpm: 128, strum: "jazzcomp", drum: "swing", bass: "walk", tone: "jazzbox", swing: 0.58, chords: [{ d: 0, q: "min7", bars: 4 }, { pc: 5, q: "dom7", bars: 4 }] },
+    { id: "t064", name: "四度堆疊移動", sub: "i7–♭iii7 ・ 大距離平移", genre: "jazz", style: "Modal", mode: "minor", bpm: 132, strum: "jazzcomp", drum: "swing", bass: "walk", tone: "jazzbox", swing: 0.58, chords: [{ d: 0, q: "min7", bars: 4 }, { pc: 3, q: "min7", bars: 4 }] },
+    { id: "t065", name: "大樂團段落", sub: "IM7–♭III7–ii7–V7 ・ 亮麗的推進", genre: "jazz", style: "Swing", mode: "major", bpm: 152, strum: "jazzcomp", drum: "swing", bass: "walkq", tone: "jazzbox", swing: 0.62, chords: [{ d: 0, q: "maj7" }, { pc: 3, q: "dom7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t066", name: "爵士三拍感", sub: "i–iiø–V7–i ・ 三拍的小調", genre: "jazz", style: "圓舞曲", mode: "minor", bpm: 140, strum: "arp", drum: "swing", bass: "walk", tone: "jazzbox", swing: 0.58, chords: [{ d: 0, q: "min7" }, { d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7" }] },
+    { id: "t073", name: "教會味進行", sub: "I–iii–IV–iv ・ 帶點福音", genre: "rnb", style: "經典靈魂", mode: "major", bpm: 84, strum: "roll", drum: "neo", bass: "root", tone: "rnb", chords: [{ d: 0 }, { d: 2 }, { d: 3 }, { pc: 5, q: "min" }] },
+    { id: "t074", name: "六級起頭", sub: "vi7–ii7–V7–IM7 ・ 溫暖的循環", genre: "rnb", style: "經典靈魂", mode: "major", bpm: 88, strum: "roll", drum: "neo", bass: "walk", tone: "rnb", chords: [{ d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7" }] },
+    { id: "t075", name: "慢板四循環", sub: "IM7–iii7–vi7–IV ・ 順到底", genre: "rnb", style: "90s R&B", mode: "major", bpm: 72, strum: "roll", drum: "halftime", bass: "root", tone: "rnb", chords: [{ d: 0, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }, { d: 3 }] },
+    { id: "t076", name: "New Jack 律動", sub: "ii7–V7–iii7–vi7 ・ 有推力的四循環", genre: "rnb", style: "90s R&B", mode: "major", bpm: 96, strum: "roll", drum: "neo", bass: "walk", tone: "rnb", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }] },
+    { id: "t077", name: "延伸和聲", sub: "IM7–IVM7 ・ 兩個大七和弦來回", genre: "rnb", style: "現代 R&B", mode: "major", bpm: 78, strum: "roll", drum: "halftime", bass: "root", tone: "rnb", chords: [{ d: 0, q: "maj7", bars: 2 }, { d: 3, q: "maj7", bars: 2 }] },
+    { id: "t078", name: "小調都會", sub: "i7–♭VIM7–♭VIIM7 ・ 冷冽", genre: "rnb", style: "現代 R&B", mode: "minor", bpm: 82, strum: "roll", drum: "halftime", bass: "root", tone: "rnb", chords: [{ d: 0, q: "min7" }, { pc: 8, q: "maj7" }, { pc: 10, q: "maj7" }, { d: 0, q: "min7" }] },
+    { id: "t079", name: "九和弦漂浮", sub: "IM9–ii9 ・ 慵懶的來回", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 76, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "maj9", bars: 2 }, { d: 1, q: "min9", bars: 2 }] },
+    { id: "t080", name: "四級大七起頭", sub: "IVM7–iii7–vi7–ii7 ・ 綿密", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 80, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }] },
+    { id: "t081", name: "半音經過", sub: "IM7–♭IIIdim7–ii7–V7 ・ 滑順的接縫", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 74, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "maj7" }, { pc: 3, q: "dim7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t082", name: "小調慵懶", sub: "i9–IV13 ・ 多利安的甜", genre: "neosoul", style: "Neo Soul", mode: "minor", bpm: 70, strum: "roll", drum: "neo", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "min9", bars: 2 }, { pc: 5, q: "dom13", bars: 2 }] },
+    { id: "t083", name: "教會終止", sub: "IVM7–I/III–ii7–I ・ 溫柔落地", genre: "neosoul", style: "Neo Soul", mode: "major", bpm: 72, strum: "roll", drum: "neo", bass: "root", tone: "neosoul", chords: [{ d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 1, q: "min7" }, { d: 0, q: "maj7" }] },
+    { id: "t084", name: "三和弦敘事", sub: "I–IV–I–V ・ 說故事的節奏", genre: "folk", style: "美式民謠", mode: "major", bpm: 96, strum: "travis", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 0 }, { d: 4 }] },
+    { id: "t085", name: "下行低音", sub: "I–I/VII–vi–I/V ・ 走音低音線", genre: "folk", style: "美式民謠", mode: "major", bpm: 88, strum: "travis", drum: "ballad", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 11, q: "dim" }, { d: 5 }, { d: 4 }] },
+    { id: "t086", name: "納許維爾循環", sub: "I–IV–V–IV ・ 明亮直白", genre: "folk", style: "鄉村", mode: "major", bpm: 116, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 4 }, { d: 3 }] },
+    { id: "t088", name: "快速三和弦", sub: "I–IV–I–V ・ 高速掃弦", genre: "folk", style: "藍草", mode: "major", bpm: 152, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 0 }, { d: 4 }] },
+    { id: "t089", name: "混合調式", sub: "i–♭VII–♭VI–♭VII ・ 古老的味道", genre: "folk", style: "凱爾特", mode: "minor", bpm: 112, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 10, q: "maj" }] },
+    { id: "t090", name: "多利安舞曲", sub: "i–♭VII–IV–i ・ 亮一點的小調", genre: "folk", style: "凱爾特", mode: "minor", bpm: 124, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 5, q: "maj" }, { d: 0 }] },
+    { id: "t091", name: "經典二五一", sub: "ii7–V7–IM7 ・ 慵懶的巴西", genre: "latin", style: "Bossa Nova", mode: "major", bpm: 132, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "jazzbox", chords: [{ d: 1, q: "min7" }, { d: 4, q: "dom7" }, { d: 0, q: "maj7", bars: 2 }] },
+    { id: "t092", name: "小調 bossa", sub: "i7–iiø–V7–i7 ・ 微微的憂鬱", genre: "latin", style: "Bossa Nova", mode: "minor", bpm: 128, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "min7" }, { d: 1, q: "m7b5" }, { pc: 7, q: "dom7" }, { d: 0, q: "min7" }] },
+    { id: "t093", name: "兩和弦搖擺", sub: "IM7–VI7 ・ 推進的森巴", genre: "latin", style: "Samba", mode: "major", bpm: 140, strum: "jazzcomp", drum: "bossa", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 9, q: "dom7", bars: 2 }] },
+    { id: "t097", name: "小調戲劇性", sub: "i–V7–i–iv ・ 探戈的緊繃", genre: "latin", style: "Tango", mode: "minor", bpm: 120, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 7, q: "dom7" }, { d: 0 }, { d: 3 }] },
+    { id: "t098", name: "反拍切音", sub: "I–V–vi–IV ・ skank 專用", genre: "latin", style: "雷鬼", mode: "major", bpm: 76, strum: "skank", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 3 }] },
+    { id: "t099", name: "小調 roots", sub: "i–♭VII ・ 兩和弦的沉穩", genre: "latin", style: "雷鬼", mode: "minor", bpm: 72, strum: "skank", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0, bars: 2 }, { pc: 10, q: "maj", bars: 2 }] },
+    { id: "t101", name: "Deep House", sub: "ii9–V9–IM9 ・ 柔和的深夜", genre: "edm", style: "House", mode: "major", bpm: 122, strum: "roll", drum: "pop16", bass: "octave", tone: "jazzbox", chords: [{ d: 1, q: "min9" }, { d: 4, q: "dom9" }, { d: 0, q: "maj9", bars: 2 }] },
+    { id: "t105", name: "掛留與大七", sub: "IVM7–V–iii7–vi ・ 甜而不膩", genre: "edm", style: "Future Bass", mode: "major", bpm: 150, strum: "roll", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 3, q: "maj7" }, { d: 4, q: "sus4" }, { d: 2, q: "min7" }, { d: 5 }] },
+    { id: "t106", name: "慵懶循環", sub: "IM7–vi7–ii7–V7 ・ 讀書配樂", genre: "edm", style: "Lo-fi", mode: "major", bpm: 78, strum: "roll", drum: "halftime", bass: "walk", tone: "jazzbox", chords: [{ d: 0, q: "maj7" }, { d: 5, q: "min7" }, { d: 1, q: "min7" }, { d: 4, q: "dom7" }] },
+    { id: "t107", name: "小調 chill", sub: "i9–iv9 ・ 雨天的房間", genre: "edm", style: "Lo-fi", mode: "minor", bpm: 74, strum: "roll", drum: "halftime", bass: "walk", tone: "neosoul", chords: [{ d: 0, q: "min9", bars: 2 }, { d: 3, q: "min9", bars: 2 }] },
+    { id: "t108", name: "帕海貝爾低音", sub: "I–V–vi–iii–IV–I–IV–V ・ 卡農原型", genre: "classical", style: "巴洛克", mode: "major", bpm: 72, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 2 }, { d: 3 }, { d: 0 }, { d: 3 }, { d: 4 }] },
+    { id: "t109", name: "圓圈五度", sub: "vi–ii–V–I–IV–viiø–iii ・ 一路下行五度", genre: "classical", style: "巴洛克", mode: "major", bpm: 84, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 5 }, { d: 1 }, { d: 4 }, { d: 0 }, { d: 3 }, { d: 6 }, { d: 2 }] },
+    { id: "t110", name: "低音頑固", sub: "i–♭VII–♭VI–V ・ 傳統的下行四音", genre: "classical", style: "巴洛克", mode: "minor", bpm: 76, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 10, q: "maj" }, { pc: 8, q: "maj" }, { pc: 7, q: "maj" }] },
+    { id: "t111", name: "正格終止", sub: "I–IV–V7–I ・ 最正統的落地", genre: "classical", style: "古典", mode: "major", bpm: 88, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 4, q: "dom7" }, { d: 0 }] },
+    { id: "t112", name: "假終止", sub: "I–IV–V7–vi ・ 留一個懸念", genre: "classical", style: "古典", mode: "major", bpm: 84, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 3 }, { d: 4, q: "dom7" }, { d: 5 }] },
+    { id: "t113", name: "半音中介", sub: "I–III7–vi–♭VI ・ 遠系轉折", genre: "classical", style: "浪漫", mode: "major", bpm: 68, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 4, q: "dom7" }, { d: 5 }, { pc: 8, q: "maj" }] },
+    { id: "t114", name: "拿坡里六和弦", sub: "i–♭II–V7–i ・ 濃烈的張力", genre: "classical", style: "浪漫", mode: "minor", bpm: 66, strum: "arp", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { pc: 1, q: "maj" }, { pc: 7, q: "dom7" }, { d: 0 }] },
+    { id: "t115", name: "利底亞明亮", sub: "IM7–II7 ・ 升四度的漂浮", genre: "classical", style: "教會調式", mode: "major", bpm: 80, strum: "roll", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "maj7", bars: 2 }, { pc: 2, q: "dom7", bars: 2 }] },
+    { id: "t116", name: "弗里吉亞", sub: "i–♭II ・ 最暗的兩個和弦", genre: "classical", style: "教會調式", mode: "minor", bpm: 72, strum: "roll", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "min", bars: 2 }, { pc: 1, q: "maj", bars: 2 }] },
+    { id: "t117", name: "大調三度平移", sub: "I–♭VI–♭III–♭VII ・ 開闊壯麗", genre: "cinematic", style: "史詩", mode: "major", bpm: 90, strum: "roll", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0 }, { pc: 8, q: "maj" }, { pc: 3, q: "maj" }, { pc: 10, q: "maj" }] },
+    { id: "t118", name: "小調行軍", sub: "i–♭VI–iv–V ・ 沉重的推進", genre: "cinematic", style: "史詩", mode: "minor", bpm: 96, strum: "roll", drum: "halftime", bass: "octave", tone: "clean", chords: [{ d: 0 }, { pc: 8, q: "maj" }, { d: 3 }, { pc: 7, q: "maj" }] },
+    { id: "t119", name: "增和弦滑移", sub: "i–i+ ・ 逐步升高的不安", genre: "cinematic", style: "懸疑", mode: "minor", bpm: 60, strum: "roll", drum: "none", bass: "root", tone: "clean", chords: [{ d: 0, q: "min", bars: 2 }, { d: 0, q: "aug", bars: 2 }] },
+    { id: "t120", name: "減和弦懸吊", sub: "idim7–♭II ・ 沒有解決", genre: "cinematic", style: "懸疑", mode: "minor", bpm: 64, strum: "roll", drum: "none", bass: "root", tone: "clean", chords: [{ d: 0, q: "dim7", bars: 2 }, { pc: 1, q: "maj", bars: 2 }] },
+    { id: "t121", name: "大七鋪陳", sub: "IM7–IVM7–iii7–vi7 ・ 回憶的顏色", genre: "cinematic", style: "溫暖", mode: "major", bpm: 70, strum: "arp", drum: "halftime", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "maj7" }, { d: 3, q: "maj7" }, { d: 2, q: "min7" }, { d: 5, q: "min7" }] },
+    { id: "t122", name: "掛留漂浮", sub: "Isus2–IVsus2 ・ 留白的空間", genre: "cinematic", style: "溫暖", mode: "major", bpm: 66, strum: "roll", drum: "none", bass: "root", tone: "acoustic", chords: [{ d: 0, q: "sus2", bars: 2 }, { d: 3, q: "sus2", bars: 2 }] }
+  ];
+;
+;
+  const TRANSITIONS = {
+    0: [[3, 5, "開展"], [4, 5, "推進"], [5, 4, "轉暗"], [1, 3, "前置屬"], [2, 2, "銜接"]],
+    1: [[4, 7, "屬和弦・強推進"], [6, 2, "半音靠近"], [0, 2, "直接回家"], [2, 1, "延伸"]],
+    2: [[5, 5, "自然下行"], [3, 4, "開展"], [1, 2, "銜接"], [0, 1, "回家"]],
+    3: [[4, 6, "推進"], [0, 5, "阿們終止"], [1, 3, "前置屬"], [2, 2, "銜接"], [5, 2, "轉暗"]],
+    4: [[0, 7, "完全終止・解決"], [5, 4, "偽終止・意外感"], [3, 2, "延遲解決"], [2, 1, "轉折"]],
+    5: [[3, 5, "開展"], [1, 4, "前置屬"], [4, 3, "推進"], [2, 2, "銜接"], [0, 1, "回家"]],
+    6: [[0, 6, "解決"], [2, 2, "代理"], [5, 1, "延伸"]]
+  };
+  const SPICE = [
+    { semi: 10, q: "maj", tag: "♭VII・借用大調外", note: "混合利底亞感" },
+    { semi: 5, q: "min", tag: "iv・小下屬", note: "瞬間變憂鬱" },
+    { semi: 8, q: "maj", tag: "♭VI・借用", note: "電影感轉折" },
+    { semi: 9, q: "dom7", tag: "VI7・副屬", note: "推向 ii" },
+    { semi: 4, q: "dom7", tag: "III7・副屬", note: "推向 vi" },
+    { semi: 2, q: "dom7", tag: "II7・副屬", note: "推向 V" }
+  ];
+  function suggestNext(lastChord, keyPc, mode) {
+    const scale = scaleOf(mode);
+    const triads = triadsOf(mode);
+    const out = [];
+    let degIdx = 0;
+    if (lastChord) {
+      const rel = ((lastChord.rootPc - keyPc) % 12 + 12) % 12;
+      const i = scale.indexOf(rel);
+      degIdx = i >= 0 ? i : 0;
+    }
+    (TRANSITIONS[degIdx] || TRANSITIONS[0]).forEach(([d, w, tag]) => {
+      out.push({
+        rootPc: (keyPc + scale[d]) % 12,
+        quality: triads[d],
+        tag,
+        weight: w,
+        spice: false
+      });
+    });
+    out.sort((a, b) => b.weight - a.weight);
+    const top = out.slice(0, 4);
+    const picks = [...SPICE].sort(() => Math.random() - 0.5).slice(0, 2);
+    picks.forEach(
+      (s) => top.push({
+        rootPc: (keyPc + s.semi) % 12,
+        quality: s.q,
+        tag: s.tag,
+        note: s.note,
+        spice: true
+      })
+    );
+    return top;
+  }
+  function writeVarLen(n) {
+    const bytes = [n & 127];
+    n >>= 7;
+    while (n > 0) {
+      bytes.unshift(n & 127 | 128);
+      n >>= 7;
+    }
+    return bytes;
+  }
+  function strBytes(s) {
+    return Array.from(s).map((c) => c.charCodeAt(0));
+  }
+  function u32(n) {
+    return [n >> 24 & 255, n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  function u16(n) {
+    return [n >> 8 & 255, n & 255];
+  }
+  function buildTrack(noteEvents, ppq, program, channel, name) {
+    const evs = [];
+    evs.push({ tick: 0, data: [255, 3, name.length, ...strBytes(name)] });
+    evs.push({ tick: 0, data: [192 | channel, program] });
+    noteEvents.forEach((n) => {
+      const on = Math.round(n.beat * ppq);
+      const off = Math.round((n.beat + n.dur) * ppq);
+      evs.push({ tick: on, data: [144 | channel, n.midi, Math.max(1, Math.min(127, Math.round(n.vel * 127)))] });
+      evs.push({ tick: off, data: [128 | channel, n.midi, 0], off: true });
+    });
+    evs.sort((a, b) => a.tick - b.tick || (a.off ? -1 : 1));
+    let last = 0;
+    const body = [];
+    evs.forEach((e) => {
+      body.push(...writeVarLen(e.tick - last), ...e.data);
+      last = e.tick;
+    });
+    body.push(...writeVarLen(0), 255, 47, 0);
+    return [...strBytes("MTrk"), ...u32(body.length), ...body];
+  }
+  function exportMidi(noteTracks, bpm, ppq = 480) {
+    const header = [...strBytes("MThd"), ...u32(6), ...u16(1), ...u16(noteTracks.length + 1), ...u16(ppq)];
+    const mpqn = Math.round(6e7 / bpm);
+    const tempoBody = [
+      ...writeVarLen(0),
+      255,
+      81,
+      3,
+      mpqn >> 16 & 255,
+      mpqn >> 8 & 255,
+      mpqn & 255,
+      ...writeVarLen(0),
+      255,
+      88,
+      4,
+      4,
+      2,
+      24,
+      8,
+      ...writeVarLen(0),
+      255,
+      47,
+      0
+    ];
+    const tempoTrack = [...strBytes("MTrk"), ...u32(tempoBody.length), ...tempoBody];
+    const bytes = [...header, ...tempoTrack];
+    noteTracks.forEach((t) => bytes.push(...t));
+    return new Blob([new Uint8Array(bytes)], { type: "audio/midi" });
+  }
+  const SAMPLE_BASES = [
+    "https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/",
+    "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/"
+  ];
+  const GUITAR_URLS = {
+    E2: "E2.mp3",
+    G2: "G2.mp3",
+    "A#2": "As2.mp3",
+    "C#3": "Cs3.mp3",
+    E3: "E3.mp3",
+    G3: "G3.mp3",
+    "A#3": "As3.mp3",
+    "C#4": "Cs4.mp3",
+    E4: "E4.mp3",
+    G4: "G4.mp3",
+    "A#4": "As4.mp3",
+    "C#5": "Cs5.mp3"
+  };
+  const PIANO_URLS = {
+    C3: "C3.mp3",
+    E3: "E3.mp3",
+    "G#3": "Gs3.mp3",
+    C4: "C4.mp3",
+    E4: "E4.mp3",
+    "G#4": "Gs4.mp3",
+    C5: "C5.mp3"
+  };
+  const ELECTRIC_URLS = {
+    "C#2": "Cs2.mp3",
+    E2: "E2.mp3",
+    "F#2": "Fs2.mp3",
+    A2: "A2.mp3",
+    C3: "C3.mp3",
+    "D#3": "Ds3.mp3",
+    "F#3": "Fs3.mp3",
+    A3: "A3.mp3",
+    C4: "C4.mp3",
+    "D#4": "Ds4.mp3",
+    "F#4": "Fs4.mp3",
+    A4: "A4.mp3",
+    C5: "C5.mp3"
+  };
+  const DRUM_BASES = [
+    "https://raw.githubusercontent.com/Tonejs/audio/master/drum-samples/acoustic-kit/",
+    "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/drum-samples/acoustic-kit/"
+  ];
+  const DRUM_PIECES = ["kick", "snare", "hihat", "tom1", "tom2"];
+  const BASS_URLS = {
+    E1: "E1.mp3",
+    G1: "G1.mp3",
+    "A#1": "As1.mp3",
+    "C#2": "Cs2.mp3",
+    E2: "E2.mp3",
+    G2: "G2.mp3",
+    "A#2": "As2.mp3"
+  };
+  const getTransport = () => Tone.getTransport ? Tone.getTransport() : Tone.Transport;
+  const getDest = () => Tone.getDestination ? Tone.getDestination() : Tone.Destination;
+  const getDraw = () => Tone.getDraw ? Tone.getDraw() : Tone.Draw;
+  function loadDrumKit() {
+    return new Promise((resolve) => {
+      let idx = 0;
+      const attempt = () => {
+        if (idx >= DRUM_BASES.length) return resolve(null);
+        const base = DRUM_BASES[idx++];
+        const players = {};
+        let left = DRUM_PIECES.length, failed = false;
+        const done = () => {
+          if (failed) return;
+          if (--left === 0) resolve(players);
+        };
+        const fail = () => {
+          if (failed) return;
+          failed = true;
+          Object.values(players).forEach((p) => {
+            try {
+              p.dispose();
+            } catch (e) {
+            }
+          });
+          attempt();
+        };
+        const timer = setTimeout(fail, 15e3);
+        DRUM_PIECES.forEach((name) => {
+          players[name] = new Tone.Player({
+            url: base + name + ".mp3",
+            onload: () => {
+              if (left === 1) clearTimeout(timer);
+              done();
+            },
+            onerror: fail
+          });
+        });
+      };
+      attempt();
+    });
+  }
+  function loadSampler(folder, urls, onDone) {
+    return new Promise((resolve) => {
+      let idx = 0;
+      const attempt = () => {
+        if (idx >= SAMPLE_BASES.length) return resolve(null);
+        const base = SAMPLE_BASES[idx++] + folder + "/";
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          try {
+            s.dispose();
+          } catch (e) {
+          }
+          attempt();
+        }, 18e3);
+        const s = new Tone.Sampler({
+          urls,
+          baseUrl: base,
+          release: 1.2,
+          onload: () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(s);
+          },
+          onerror: () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            try {
+              s.dispose();
+            } catch (e) {
+            }
+            attempt();
+          }
+        });
+      };
+      attempt();
+    });
+  }
+  class Engine {
+    constructor() {
+      this.ready = false;
+      this.mode = { guitar: "synth", piano: "synth", bass: "synth", drum: "synth" };
+      this.ringing = {};
+      this.onStrum = null;
+    }
+    async boot(report) {
+      try {
+        Tone.start();
+      } catch (e) {
+      }
+      const dest = getDest();
+      dest.volume.value = -3;
+      this.master = new Tone.Limiter(-1).connect(dest);
+      this.gMaster = new Tone.Volume(0).connect(this.master);
+      this.glue = new Tone.Compressor({ threshold: -14, ratio: 2, attack: 0.02, release: 0.18 }).connect(this.gMaster);
+      this.mixOn = true;
+      const bus = (name, pan, hp, lpHz) => {
+        const panner = new Tone.Panner(pan).connect(this.glue);
+        const nodes = [panner];
+        let head = panner;
+        if (lpHz) { const lp = new Tone.Filter({ type: "lowpass", frequency: lpHz, Q: 0.5 }).connect(head); nodes.push(lp); head = lp; }
+        if (hp) { const f = new Tone.Filter({ type: "highpass", frequency: hp, Q: 0.7 }).connect(head); nodes.push(f); head = f; }
+        const duck = new Tone.Gain(1).connect(head);
+        this.mixNodes[name] = { panner, hp: hp ? nodes[nodes.length - 1] : null, duck, pan, hpHz: hp, lpHz };
+        return duck;
+      };
+      this.mixNodes = {};
+      this.gGuitar = new Tone.Volume(-4).connect(bus("guitar", -0.22, 110, 0));
+      this.gPiano = new Tone.Volume(-13).connect(bus("piano", 0.26, 160, 0));
+      this.gBass = new Tone.Volume(-9).connect(bus("bass", 0, 0, 900));
+      this.gDrum = new Tone.Volume(-11).connect(bus("drum", 0.05, 0, 0));
+      this.gNoise = new Tone.Volume(-26).connect(this.gGuitar);
+      this.reverb = new Tone.Reverb({ decay: 1.6, wet: 0.13 }).connect(this.glue);
+      this.gGuitar.connect(this.reverb);
+      this.gPiano.connect(this.reverb);
+      this.pluck = Array.from({ length: 6 }, () => {
+        const g2 = new Tone.Gain(0.8).connect(this.gGuitar);
+        const p = new Tone.PluckSynth({ attackNoise: 1.4, dampening: 3800, resonance: 0.965 }).connect(g2);
+        return { p, g: g2 };
+      });
+      this.polyFallback = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "triangle" },
+        envelope: { attack: 5e-3, decay: 0.9, sustain: 0.25, release: 1.6 }
+      }).connect(this.gPiano);
+      this.bassFallback = new Tone.MonoSynth({
+        oscillator: { type: "sawtooth" },
+        filter: { Q: 1, type: "lowpass" },
+        envelope: { attack: 8e-3, decay: 0.3, sustain: 0.5, release: 0.3 },
+        filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, baseFrequency: 90, octaves: 2.4 }
+      }).connect(this.gBass);
+      this.fretNoise = new Tone.NoiseSynth({
+        noise: { type: "pink" },
+        envelope: { attack: 4e-3, decay: 0.09, sustain: 0 }
+      }).connect(new Tone.Filter(2600, "bandpass").connect(this.gNoise));
+      this.scratch = new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 2e-3, decay: 0.05, sustain: 0 }
+      }).connect(new Tone.Filter(1400, "bandpass").connect(this.gNoise));
+      this.drumGains = {};
+      DRUM_PIECES.forEach((n) => {
+        this.drumGains[n] = new Tone.Gain(1).connect(this.gDrum);
+      });
+      this.kick = new Tone.MembraneSynth({
+        pitchDecay: 0.045,
+        octaves: 6,
+        envelope: { attack: 1e-3, decay: 0.32, sustain: 0, release: 0.1 }
+      }).connect(this.gDrum);
+      this.snare = new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 1e-3, decay: 0.16, sustain: 0 }
+      }).connect(new Tone.Filter(1700, "bandpass").connect(this.gDrum));
+      this.hat = new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 1e-3, decay: 0.035, sustain: 0 }
+      }).connect(new Tone.Filter(9e3, "highpass").connect(new Tone.Volume(-8).connect(this.gDrum)));
+      this.click = new Tone.Synth({
+        oscillator: { type: "sine" },
+        envelope: { attack: 1e-3, decay: 0.028, sustain: 0, release: 0.01 }
+      }).connect(new Tone.Volume(-8).connect(dest));
+      this.gElectric = new Tone.Volume(-10).connect(this.gGuitar);
+      this.elecVerb = new Tone.Gain(0.13).connect(this.reverb);
+      this.chorus = new Tone.Chorus({ frequency: 0.7, delayTime: 3.6, depth: 0.55, wet: 0 }).start();
+      this.chorus.connect(this.gElectric);
+      this.chorus.connect(this.elecVerb);
+      this.cabConv = new Tone.Convolver().connect(this.chorus);
+      this.cabDry = new Tone.Gain(0).connect(this.chorus);
+      this.cabWet = new Tone.Gain(1).connect(this.cabConv);
+      this.cabMakeup = new Tone.Gain(1);
+      this.cabMakeup.connect(this.cabWet);
+      this.cabMakeup.connect(this.cabDry);
+      this.cabLP = new Tone.Filter({ type: "lowpass", frequency: 5200, Q: 0.9 }).connect(this.cabMakeup);
+      this.cabPk = new Tone.Filter({ type: "peaking", frequency: 2400, Q: 1.3, gain: 3.5 }).connect(this.cabLP);
+      this.cabHP = new Tone.Filter({ type: "highpass", frequency: 90, Q: 0.7 }).connect(this.cabPk);
+      this.presence = new Tone.Filter({ type: "peaking", frequency: 4200, Q: 0.9, gain: 0 }).connect(this.cabHP);
+      this.eqHigh = new Tone.Filter({ type: "highshelf", frequency: 3200, gain: 0 }).connect(this.presence);
+      this.eqMid = new Tone.Filter({ type: "peaking", frequency: 750, Q: 0.8, gain: 0 }).connect(this.eqHigh);
+      this.eqLow = new Tone.Filter({ type: "lowshelf", frequency: 130, gain: 0 }).connect(this.eqMid);
+      this.powerAmp = new Tone.WaveShaper((x) => Math.tanh(x * 1.5) * 0.85, 2048).connect(this.eqLow);
+      this.preAmp = new Tone.WaveShaper((x) => {
+        const b = x < 0 ? 1.3 : 0.86;
+        return Math.tanh(x * b * 2.2) / 1.25;
+      }, 4096).connect(this.powerAmp);
+      try {
+        this.preAmp.oversample = "4x";
+        this.powerAmp.oversample = "2x";
+      } catch (e) {}
+      this.driveGain = new Tone.Gain(1).connect(this.preAmp);
+      this.ampComp = new Tone.Compressor({ threshold: -18, ratio: 3, attack: 4e-3, release: 0.12 }).connect(this.driveGain);
+      this.ampHP = new Tone.Filter({ type: "highpass", frequency: 80, Q: 0.7 }).connect(this.ampComp);
+      this.amp = new Tone.Gain(1).connect(this.ampHP);
+      this.tone = "acoustic";
+      this.toneSrc = "acoustic";
+      this.ready = true;
+      report && report({ guitar: "loading", piano: "loading", bass: "loading", drum: "loading" });
+      const g = await loadSampler("guitar-acoustic", GUITAR_URLS);
+      if (g) {
+        this.guitar = g.connect(this.gGuitar);
+        this.mode.guitar = "sample";
+      }
+      report && report({ guitar: g ? "sample" : "synth" });
+      loadSampler("piano", PIANO_URLS).then((p) => {
+        if (p) {
+          this.piano = p.connect(this.gPiano);
+          this.mode.piano = "sample";
+        }
+        report && report({ piano: p ? "sample" : "synth" });
+      });
+      loadSampler("bass-electric", BASS_URLS).then((b) => {
+        if (b) {
+          this.bass = b.connect(this.gBass);
+          this.mode.bass = "sample";
+        }
+        report && report({ bass: b ? "sample" : "synth" });
+      });
+      loadDrumKit().then((kit) => {
+        if (kit) {
+          this.drums = kit;
+          DRUM_PIECES.forEach((n) => kit[n].connect(this.drumGains[n]));
+          this.mode.drum = "sample";
+        }
+        report && report({ drum: kit ? "sample" : "synth" });
+      });
+    }
+    async loadElectric(report) {
+      if (this.electric || this.electricLoading) return this.electric;
+      this.electricLoading = true;
+      report && report("loading");
+      const e = await loadSampler("guitar-electric", ELECTRIC_URLS);
+      this.electricLoading = false;
+      if (e) {
+        this.electric = e.connect(this.amp);
+        report && report("ready");
+      } else report && report("failed");
+      return e;
+    }
+    setHead(kind, drive) {
+      const h = AMP_HEADS[kind] || AMP_HEADS.clean;
+      this.head = kind;
+      if (!this.ready) return;
+      const dv = drive == null ? h.drive : drive;
+      try {
+        this.preAmp.curve = ampCurve(h.stages, h.bias, dv, 4096);
+        this.powerAmp.curve = ampCurve(1, 1 + h.sag * 0.3, 1.2 + h.sag, 2048);
+      } catch (e) {
+      }
+      this.eqLow.frequency.value = h.tone[0];
+      this.eqMid.frequency.value = h.tone[1];
+      this.eqHigh.frequency.value = h.tone[2];
+      this.presence.gain.value = h.pres;
+      const comp = -10 - Math.min(10, Math.log2(Math.max(1, dv)) * 2.6 + h.stages * 0.8);
+      this.gElectric.volume.value = comp;
+    }
+    async setCab(cabKey, micKey, pos, dist) {
+      this.cab = cabKey;
+      this.mic = micKey;
+      this.micPos = pos;
+      this.micDist = dist;
+      if (!this.ready || !this.cabConv) return;
+      const c = CABS[cabKey];
+      if (!c || c.off) {
+        this.cabWet.gain.value = 0;
+        this.cabDry.gain.value = 1;
+        return;
+      }
+      try {
+        const ir = await makeCabIR(cabKey, micKey, pos, dist);
+        if (!ir) return;
+        this.cabConv.buffer = ir;
+        this.cabWet.gain.value = 1;
+        this.cabDry.gain.value = 0;
+      } catch (e) {
+        this.cabWet.gain.value = 0;
+        this.cabDry.gain.value = 1;
+      }
+    }
+    setGuitarTone(t) {
+      this.releaseAll(Tone.now());
+      const p = TONES[t] || TONES.acoustic;
+      this.tone = t;
+      this.toneSrc = p.src;
+      if (!this.ready || p.src !== "electric") return;
+      this.driveGain.gain.value = p.pre;
+      this.eqLow.gain.value = p.low;
+      this.eqMid.gain.value = p.mid;
+      this.eqHigh.gain.value = p.high;
+      this.presence.gain.value = p.pres;
+      this.cabLP.frequency.value = p.cut;
+      this.cabHP.frequency.value = p.hp;
+      this.ampHP.frequency.value = Math.max(60, p.hp - 10);
+      this.ampComp.threshold.value = p.thr;
+      this.ampComp.ratio.value = p.rat;
+      this.toneRev = p.rev;
+      this.elecVerb.gain.value = p.rev * (this.lastGuitarVol == null ? 1 : this.lastGuitarVol);
+      this.chorus.wet.value = p.cho;
+      if (p.head) this.setHead(p.head, p.pre * 1.6);
+      if (p.cab) this.setCab(p.cab, p.mic || "dyn57", p.pos == null ? 0.35 : p.pos, p.dist == null ? 2 : p.dist);
+      this.gElectric.volume.value = -10 - Math.min(9, Math.log2(Math.max(1, p.pre)) * 1.9);
+    }
+    duck(time, amt) {
+      if (!this.mixOn || !this.mixNodes) return;
+      [["guitar", 0.72], ["piano", 0.68], ["bass", 0.55]].forEach(([k, floor]) => {
+        const n = this.mixNodes[k];
+        if (!n) return;
+        const g = n.duck.gain;
+        const lo = 1 - (1 - floor) * (amt == null ? 1 : amt);
+        try {
+          g.cancelScheduledValues(time);
+          g.setValueAtTime(1, time);
+          g.linearRampToValueAtTime(lo, time + 0.012);
+          g.linearRampToValueAtTime(1, time + 0.16);
+        } catch (e) {
+        }
+      });
+    }
+    setMix(on) {
+      this.mixOn = !!on;
+      if (!this.mixNodes) return;
+      Object.keys(this.mixNodes).forEach((k) => {
+        const n = this.mixNodes[k];
+        n.panner.pan.value = on ? n.pan : 0;
+        if (n.hp && n.hpHz) n.hp.frequency.value = on ? n.hpHz : 20;
+        try {
+          n.duck.gain.cancelScheduledValues(Tone.now());
+          n.duck.gain.value = 1;
+        } catch (e) {
+        }
+      });
+      this.glue.ratio.value = on ? 2 : 1;
+    }
+    setMaster(x) {
+      if (!this.ready || !this.gMaster) return;
+      this.gMaster.volume.value = x <= 0 ? -Infinity : 20 * Math.log10(x);
+    }
+    setVolumes(v) {
+      if (!this.ready) return;
+      const db = (x) => x <= 0 ? -Infinity : 20 * Math.log10(x);
+      this.lastGuitarVol = v.guitar;
+      if (this.elecVerb) this.elecVerb.gain.value = (this.toneRev == null ? 0.13 : this.toneRev) * v.guitar;
+      this.gGuitar.volume.value = db(v.guitar) - 4;
+      this.gPiano.volume.value = db(v.piano) - 13;
+      this.gBass.volume.value = db(v.bass) - 9;
+      this.gDrum.volume.value = db(v.drum) - 11;
+    }
+    _sampler() {
+      if (this.toneSrc === "electric" && this.electric) return this.electric;
+      return this.mode.guitar === "sample" ? this.guitar : null;
+    }
+    _attackString(k, midi, time, vel) {
+      const note = midiToName(midi);
+      const smp = this._sampler();
+      if (smp) {
+        const prev = this.ringing[k];
+        if (prev) smp.triggerRelease(prev, time);
+        smp.triggerAttack(note, time + 2e-3, vel);
+      } else {
+        const v = this.pluck[k];
+        v.g.gain.setValueAtTime(Math.max(0.05, vel * 0.9), time);
+        v.p.triggerAttack(note, time);
+      }
+      this.ringing[k] = note;
+    }
+    _releaseString(k, time) {
+      const prev = this.ringing[k];
+      if (!prev) return;
+      const smp = this._sampler();
+      if (smp) smp.triggerRelease(prev, time);
+      this.ringing[k] = null;
+    }
+    releaseAll(time) {
+      for (let k = 0; k < 6; k++) this._releaseString(k, time);
+    }
+    /**
+     * 刷弦核心。真人刷弦有四個特徵，這裡全部模擬：
+     * 1) 每條弦錯開 10–30ms（不是同時發聲）
+     * 2) 上擊從高音弦起，而且通常少掃一兩條弦
+     * 3) 力度越大、手速越快，錯開時間越短
+     * 4) 每次的時間與音量都有微小隨機差異
+     */
+    strum(voicing, { time, dir = "D", vel = 0.85, chordChange = false, strings = null, mute = 0, ghost = false, spreadMs = null, acc = 0, ring = false }) {
+      if (!this.ready || !voicing) return;
+      let played = [];
+      voicing.frets.forEach((f, i) => {
+        if (f >= 0) played.push(i);
+      });
+      if (strings && strings.length) {
+        const sub = played.filter((i) => strings.includes(i));
+        if (sub.length) played = sub;
+      }
+      if (!played.length) return;
+      if (acc) vel *= acc >= 2 ? 1.32 : 1.16;
+      if (ghost) vel = Math.min(vel, 0.2);
+      vel = Math.max(0.04, Math.min(1, vel));
+      if (chordChange) {
+        try {
+          this.fretNoise.triggerAttackRelease(0.07, Math.max(0, time - 0.055), 0.5 + Math.random() * 0.3);
+        } catch (e) {
+        }
+      }
+      let order = played.slice();
+      let spread;
+      if (dir === "U") {
+        order.reverse();
+        if (!strings) {
+          const skip = Math.random() < 0.65 ? 2 : 1;
+          order = order.slice(0, Math.max(3, order.length - skip));
+        }
+        spread = 0.013;
+      } else if (dir === "R") {
+        spread = 0.055;
+      } else {
+        spread = 0.019;
+      }
+      const m = dir === "X" ? Math.max(mute, 0.9) : mute;
+      if (spreadMs != null) spread = spreadMs / 1e3;
+      else spread *= 1.3 - vel * 0.45;
+      if (m > 0.55) {
+        try {
+          this.scratch.triggerAttackRelease(0.05, time, 0.35 + m * 0.35);
+        } catch (e) {
+        }
+        if (spreadMs == null) spread = Math.min(spread, 9e-3);
+      }
+      const damp = m > 0 ? 0.035 + (1 - m) * 0.18 : 0;
+      order.forEach((k, n) => {
+        const t = time + n * spread * (0.82 + Math.random() * 0.36);
+        const shape = 1 + (n / Math.max(1, order.length - 1) - 0.5) * (dir === "U" ? 0.18 : 0.12);
+        const v = Math.max(0.04, Math.min(1, vel * shape * (1 - m * 0.5) * (0.9 + Math.random() * 0.2)));
+        const midi = STRING_MIDI[k] + voicing.capo + voicing.frets[k];
+        this._attackString(k, midi, t, v);
+        if (m > 0 && !ring) this._releaseString(k, t + damp);
+      });
+      this.onStrum && this.onStrum({ dir, strings: order, spread, vel });
+    }
+    deadStroke(time, vel, strings) {
+      if (!this.ready) return;
+      try {
+        this.scratch.triggerAttackRelease(0.045, time, Math.max(0.15, vel * 0.8));
+      } catch (e) {
+      }
+      (strings || [2, 3, 4, 5]).forEach((k) => this._releaseString(k, time + 0.02));
+      this.onStrum && this.onStrum({ dir: "X", strings: strings || [2, 3, 4, 5], spread: 0.006, vel });
+    }
+    pick(voicing, stringIdx, time, vel) {
+      if (!this.ready || !voicing) return;
+      let k = stringIdx;
+      if (voicing.frets[k] < 0) {
+        const alt = voicing.frets.map((f, i) => f >= 0 ? i : -1).filter((i) => i >= 0);
+        if (!alt.length) return;
+        k = alt.reduce((a, b) => Math.abs(b - stringIdx) < Math.abs(a - stringIdx) ? b : a);
+      }
+      this._attackString(k, STRING_MIDI[k] + voicing.capo + voicing.frets[k], time, vel);
+      this.onStrum && this.onStrum({ dir: "P", strings: [k], spread: 0, vel });
+    }
+    playString(k, midi, vel) {
+      if (!this.ready) return;
+      this._attackString(k, midi, Tone.now() + 0.02, vel == null ? 0.9 : vel);
+    }
+    playPiano(midis, time, dur, vel) {
+      const notes = midis.map(midiToName);
+      if (this.mode.piano === "sample" && this.piano) this.piano.triggerAttackRelease(notes, dur, time, vel);
+      else this.polyFallback.triggerAttackRelease(notes, dur, time, vel * 0.5);
+    }
+    playBass(midi, time, dur, vel) {
+      const n = midiToName(midi);
+      if (this.mode.bass === "sample" && this.bass) this.bass.triggerAttackRelease(n, dur, time, vel);
+      else this.bassFallback.triggerAttackRelease(n, dur, time, vel);
+    }
+    playClick(accent, time) {
+      if (!this.click) return;
+      this.click.triggerAttackRelease(accent ? "C7" : "C6", 0.03, time, accent ? 0.75 : 0.42);
+    }
+    playDrum(kind, time, vel) {
+      if (this.mode.drum === "sample" && this.drums && this.drums[kind]) {
+        const g = this.drumGains[kind];
+        g.gain.cancelScheduledValues(time);
+        g.gain.setValueAtTime(Math.max(0.04, vel * (kind === "hihat" ? 0.62 : 1)), time);
+        try {
+          this.drums[kind].start(time);
+        } catch (e) {
+        }
+        return;
+      }
+      if (kind === "kick") this.kick.triggerAttackRelease("C1", 0.22, time, vel);
+      else if (kind === "snare") this.snare.triggerAttackRelease(0.14, time, vel);
+      else this.hat.triggerAttackRelease(0.03, time, vel * 0.55);
+    }
+  }
+  const VKEY = (ch) => "c" + ch.id;
+  const semiOf = (pc, rootPc) => ((pc - rootPc) % 12 + 12) % 12;
+  const WINDOWS = [null, [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5]];
+  function buildVoice(rootPc, quality, capo, cfg) {
+    const vs = getVoicings(rootPc, quality, capo);
+    const shape = vs[(cfg.shapeIdx || 0) % vs.length];
+    let frets = shape.frets.slice();
+    const win = cfg.win || null;
+    if (win) frets = frets.map((f, i) => i >= win[0] && i <= win[1] ? f : -1);
+    const baseFrets = frets.slice();
+    const ov = cfg.ov || {};
+    Object.keys(ov).forEach((k) => { frets[+k] = ov[k]; });
+    const lit = frets.filter((f) => f > 0);
+    return { key: frets.join(","), frets, baseFrets, tag: shape.tag, pos: lit.length ? Math.min(...lit) : 1, capo, shape, allShapes: vs };
+  }
+  function voiceInfo(rootPc, quality, frets, capo, useFlats) {
+    const midis = voicingToMidi(frets, capo).slice().sort((a, b) => a - b);
+    const blank = { name: chordLabel(rootPc, quality, null, useFlats), inv: "", stack: "", extra: [], missing: [] };
+    if (!midis.length) return blank;
+    const semis = midis.map((m) => semiOf(m % 12, rootPc));
+    const set = new Set(semis);
+    const iv = QUALITIES[quality].iv.map((i) => ((i % 12) + 12) % 12);
+    const bass = semis[0];
+    const missing = iv.filter((i) => !set.has(i));
+    const extra = [...set].filter((sm) => !iv.includes(sm)).sort((a, b) => a - b);
+    let q2 = quality, ex = extra.slice();
+    const up = (has, to) => { if (ex.includes(has)) { q2 = to; ex = ex.filter((x) => x !== has); } };
+    if (quality === "maj") { up(10, "dom7"); up(11, "maj7"); }
+    else if (quality === "min") { up(10, "min7"); }
+    let name = chordLabel(rootPc, q2, null, useFlats);
+    ex.forEach((sm) => name += "add" + IV_LABEL[sm]);
+    if (missing.includes(3) || missing.includes(4)) name += "no3";
+    if (missing.includes(7)) name += "no5";
+    if (bass !== 0) name += "/" + pcName((rootPc + bass) % 12, useFlats);
+    const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + IV_LABEL[bass];
+    return { name, inv, stack: semis.map((sm) => IV_LABEL[sm]).join("-"), extra: ex, missing };
+  }
+  const METRIC_W = [1, 0.34, 0.62, 0.4, 0.85, 0.34, 0.66, 0.4, 0.92, 0.34, 0.64, 0.4, 0.86, 0.36, 0.68, 0.42];
+  const ACCENT_PROFILES = {
+    straight: { depth: 0.55, back: 0.05, arc: 0.05 },
+    backbeat: { depth: 0.5, back: 0.14, arc: 0.05 },
+    drive: { depth: 0.4, back: 0.08, arc: 0.04 },
+    laid: { depth: 0.68, back: 0.12, arc: 0.07 },
+    swung: { depth: 0.6, back: 0.16, arc: 0.06 }
+  };
+  const STRUM_FEEL = {
+    arp: "straight",
+    jazzcomp: "swung",
+    roll: "straight",
+    travis: "straight",
+    skank: "backbeat",
+    countryBoom: "backbeat"
+  };
+  function accentAt(i, prof, barPos) {
+    const p = ACCENT_PROFILES[prof] || ACCENT_PROFILES.straight;
+    const w = METRIC_W[((i % 16) + 16) % 16];
+    let f = 1 - p.depth + p.depth * w;
+    if (p.back && (i === 4 || i === 12)) f *= 1 + p.back;
+    if (p.arc) f *= 1 + p.arc * (barPos - 0.45);
+    return f;
+  }
+  const SIX = (b) => Math.max(1, Math.round(b * 4));
+  const beatsOf = (ch) => ch.beats != null ? ch.beats : (ch.bars || 1) * 4;
+  function buildSchedule(prog, opts) {
+    const { strumKey, drumKey, bassKey, capo, useGuitar, usePiano, useBass, useDrum, useClick } = opts;
+    const events = [];
+    const at = (abs) => `${Math.floor(abs / 16)}:${Math.floor(abs % 16 / 4)}:${abs % 4}`;
+    const feel = STRUM_FEEL[strumKey] || "straight";
+    const sp = STRUM_PATTERNS[strumKey] || STRUM_PATTERNS.roll || { events: [] };
+    const bp = BASS_PATTERNS[bassKey];
+    const dp = drumKey !== "none" ? DRUM_PATTERNS[drumKey] : null;
+    const drumAt = {};
+    if (dp) {
+      const put = (arr, kind, v, depth) => arr.forEach((i) => {
+        const w = METRIC_W[((i % 16) + 16) % 16];
+        (drumAt[i] = drumAt[i] || []).push({
+          drum: kind,
+          vel: Math.max(0.12, Math.min(1, v * (1 - depth + depth * w))),
+          duck: kind === "kick"
+        });
+      });
+      put(dp.kick, "kick", 0.95, 0.14);
+      put(dp.snare, "snare", 0.82, 0.1);
+      put(dp.hat, "hat", 0.66, 0.6);
+    }
+    let cur = 0;
+    prog.forEach((ch, ci) => {
+      const span = SIX(beatsOf(ch));
+      const voicing = ch.voicing;
+      const rootMidi = 28 + ((ch.bassPc != null ? ch.bassPc : ch.rootPc) - 4 + 12) % 12;
+      const pianoNotes = QUALITIES[ch.quality].iv.map((i) => 48 + (ch.rootPc + i) % 24);
+      events.push({ time: at(cur), kind: "mark", chordIdx: ci, bar: Math.floor(cur / 16), beat: cur / 4 });
+      if (usePiano && !ch.mP) {
+        events.push({
+          time: at(cur), kind: "piano", notes: pianoNotes,
+          dur: Math.max(0.5, span / 4 * 0.9), vel: 0.55, chordIdx: ci, beat: cur / 4
+        });
+      }
+      for (let k = 0; k < span; k++) {
+        const abs = cur + k;
+        const slot = abs % 16;
+        const first = k === 0;
+        if (useGuitar && !ch.mG) {
+          sp.events.forEach((e) => {
+            if (e.i !== slot) return;
+            const shaped = e.g ? e.v : Math.min(1, e.v * accentAt(e.i, feel, e.i / 16));
+            events.push({
+              time: at(abs),
+              kind: e.d === "P" ? "pick" : "strum",
+              dir: e.d, vel: shaped, strings: e.s, mute: e.m, ghost: e.g,
+              acc: e.a, spreadMs: e.sp, ring: e.r,
+              dead: e.x ? 1 : 0,
+              voicing, chordIdx: ci, chordChange: first, beat: abs / 4
+            });
+          });
+        }
+        if (useBass && bp.events.length) {
+          bp.events.forEach((e) => {
+            if (e.i !== slot) return;
+            events.push({
+              time: at(abs), kind: "bass", midi: rootMidi + e.deg,
+              dur: e.len * 0.55, vel: 0.8, chordIdx: ci, beat: abs / 4
+            });
+          });
+        }
+        if (dp && drumAt[slot]) {
+          drumAt[slot].forEach((d) => events.push({
+            time: at(abs), kind: "drum", drum: d.drum, vel: d.vel,
+            duck: d.duck, chordIdx: ci, beat: abs / 4
+          }));
+        }
+        if (useClick && abs % 4 === 0) {
+          events.push({ time: at(abs), kind: "click", accent: slot === 0, chordIdx: ci, beat: abs / 4 });
+        }
+      }
+      cur += span;
+    });
+    return { events, totalBars: Math.max(1, Math.ceil(cur / 16)) };
+  }
+  const NOTE_LENS = [
+    { b: 0.5, g: "\u266a", n: "\u516b\u5206", t: "\u534a\u62cd" },
+    { b: 1, g: "\u2669", n: "\u56db\u5206", t: "\u4e00\u62cd" },
+    { b: 2, g: "\u02d9", n: "\u4e8c\u5206", t: "\u4e8c\u62cd" },
+    { b: 3, g: "\u02d9\u00b7", n: "\u9644\u9ede\u4e8c\u5206", t: "\u4e09\u62cd" },
+    { b: 4, g: "\u25cb", n: "\u5168\u97f3\u7b26", t: "\u4e00\u5c0f\u7bc0" },
+    { b: 8, g: "\u25cb\u25cb", n: "\u5169\u5c0f\u7bc0", t: "\u516b\u62cd" }
+  ];
+  let UID = 1;
+  const mkChord = (rootPc, quality, bars = 1) => ({
+    id: UID++,
+    rootPc: (rootPc % 12 + 12) % 12,
+    quality,
+    bassPc: null,
+    bars,
+    voiceIdx: 0
+  });
+  function ChordLab() {
+    const [booted, setBooted] = useState(false);
+    const [status, setStatus] = useState({ guitar: "idle", piano: "idle", bass: "idle", drum: "idle" });
+    const [keyPc, setKeyPc] = useState(0);
+    const [mode, setMode] = useState("major");
+    const [bpm, setBpm] = useState(92);
+    const [bpmText, setBpmText] = useState("92");
+    const [capo, setCapo] = useState(0);
+    const [seventhMode, setSeventhMode] = useState(false);
+    const [prog, setProg] = useState(() => [
+      mkChord(0, "maj"),
+      mkChord(7, "maj"),
+      mkChord(9, "min"),
+      mkChord(5, "maj")
+    ]);
+    const [voiceMap, setVoiceMap] = useState({});
+    const [selId, setSelId] = useState(null);
+    const [neckOpen, setNeckOpen] = useState(false);
+    const [expOpen, setExpOpen] = useState(false);
+    const [showScale, setShowScale] = useState(true);
+    const [neckScale, setNeckScale] = useState(null);
+    const [labelMode, setLabelMode] = useState("deg");
+    const [swing, setSwing] = useState(0);
+    const [metro, setMetro] = useState(false);
+    const [gtone, setGtone] = useState("acoustic");
+    const [playing, setPlaying] = useState(false);
+    const [curIdx, setCurIdx] = useState(-1);
+    const [recording, setRecording] = useState(false);
+    const [sweep, setSweep] = useState({ id: 0, dir: "D", spread: 0.02, strings: [] });
+    const [toast, setToast] = useState("");
+    const [strumKey, setStrumKey] = useState("roll");
+    const [drumKey, setDrumKey] = useState("rock");
+    const [bassKey, setBassKey] = useState("fifth");
+    const [vols, setVols] = useState({ guitar: 0.3, piano: 1.6, bass: 0.8, drum: 0.8 });
+    const [autoMix, setAutoMix] = useState(true);
+    const [ampOpen, setAmpOpen] = useState(false);
+    const [head, setHead] = useState("clean");
+    const [drive, setDrive] = useState(1.6);
+    const [cab, setCab] = useState("combo212");
+    const [mic, setMic] = useState("dyn57");
+    const [micPos, setMicPos] = useState(0.35);
+    const [micDist, setMicDist] = useState(2);
+    useEffect(() => {
+      const eng = engineRef.current;
+      if (eng && eng.ready && eng.setHead) eng.setHead(head, drive);
+    }, [head, drive, booted, gtone]);
+    useEffect(() => {
+      const eng = engineRef.current;
+      if (eng && eng.ready && eng.setCab) eng.setCab(cab, mic, micPos, micDist);
+    }, [cab, mic, micPos, micDist, booted, gtone]);
+    const [master, setMaster] = useState(1);
+    const [on, setOn] = useState({ guitar: true, piano: false, bass: true, drum: true });
+    const useFlats = FLAT_KEYS.includes(keyPc) || mode === "minor" && FLAT_KEYS.includes((keyPc + 3) % 12);
+    const engineRef = useRef(null);
+    const partRef = useRef(null);
+    const recRef = useRef(null);
+    const dragRef = useRef(null);
+    const sweepId = useRef(0);
+    const startAtRef = useRef({ tick: 0, idx: -1 });
+    const histRef = useRef({ past: [], future: [], last: null, skip: false });
+
+    const scale = scaleOf(mode);
+    const triads = triadsOf(mode);
+    const sevenths = seventhsOf(mode);
+    const romans = romanOf(mode);
+    const notify = (m) => {
+      setToast(m);
+      setTimeout(() => setToast(""), 2200);
+    };
+    useEffect(() => {
+      const h = histRef.current;
+      if (h.last === null) { h.last = prog; return; }
+      if (h.last === prog) return;
+      if (h.skip) { h.skip = false; h.last = prog; return; }
+      h.past.push(h.last);
+      if (h.past.length > 120) h.past.shift();
+      h.future = [];
+      h.last = prog;
+    }, [prog]);
+    const undo = useCallback(() => {
+      const h = histRef.current;
+      if (!h.past.length) { notify("沒有可以復原的步驟"); return; }
+      const prev = h.past.pop();
+      h.future.push(h.last);
+      h.skip = true;
+      h.last = prev;
+      setProg(prev);
+      notify("已復原");
+    }, []);
+    const redo = useCallback(() => {
+      const h = histRef.current;
+      if (!h.future.length) { notify("沒有可以重做的步驟"); return; }
+      const next = h.future.pop();
+      h.past.push(h.last);
+      h.skip = true;
+      h.last = next;
+      setProg(next);
+      notify("已重做");
+    }, []);
+    const progV = useMemo(
+      () => prog.map((c) => {
+        const cfg = voiceMap[VKEY(c)] || { shapeIdx: c.voiceIdx || 0 };
+        const v = buildVoice(c.rootPc, c.quality, capo, cfg);
+        return {
+          ...c,
+          cfg,
+          voiceIdx: (cfg.shapeIdx || 0) % v.allShapes.length,
+          voicing: v,
+          allVoicings: v.allShapes,
+          info: voiceInfo(c.rootPc, c.quality, v.frets, capo, useFlats)
+        };
+      }),
+      [prog, capo, voiceMap, useFlats]
+    );
+    const selected = progV.find((c) => c.id === selId) || null;
+    const starts = useMemo(() => {
+      let b = 0;
+      return progV.map((c) => { const at = b; b += SIX(beatsOf(c)); return at; });
+    }, [progV]);
+    const selIdx = progV.findIndex((c) => c.id === selId);
+    startAtRef.current = { tick: selIdx >= 0 ? starts[selIdx] || 0 : 0, idx: selIdx };
+    const barMap = useMemo(() => {
+      let b = 0;
+      return progV.map((c) => {
+        const off = b % 16;
+        b += SIX(beatsOf(c));
+        const over = off + SIX(beatsOf(c)) > 16 && off !== 0;
+        return { off, over, beats: beatsOf(c), barStart: off === 0 };
+      });
+    }, [progV]);
+    const suggestions = useMemo(
+      () => suggestNext(prog.length ? prog[prog.length - 1] : null, keyPc, mode),
+      [prog, keyPc, mode]
+    );
+    useEffect(() => {
+      let alive = true;
+      const eng = new Engine();
+      engineRef.current = eng;
+      eng.boot((st) => {
+        if (alive) setStatus((p) => ({ ...p, ...st }));
+      }).then(() => {
+        if (!alive) return;
+        eng.setVolumes(vols);
+        getTransport().bpm.value = bpm;
+      });
+      return () => {
+        alive = false;
+      };
+    }, []);
+    const unlock = useCallback(() => {
+      try {
+        Tone.start();
+      } catch (e) {
+      }
+    }, []);
+    const enterBench = useCallback(() => {
+      unlock();
+      setBooted(true);
+    }, [unlock]);
+    useEffect(() => {
+      if (engineRef.current) getTransport().bpm.value = bpm;
+      setBpmText(String(bpm));
+    }, [bpm]);
+    useEffect(() => {
+      if (!engineRef.current) return;
+      const T = getTransport();
+      T.swingSubdivision = "8n";
+      T.swing = swing;
+    }, [swing]);
+    const commitBpm = () => {
+      const n = parseInt(bpmText, 10);
+      if (isNaN(n)) { setBpmText(String(bpm)); return; }
+      setBpm(Math.min(220, Math.max(40, n)));
+    };
+    useEffect(() => {
+      if (engineRef.current && engineRef.current.ready) engineRef.current.setVolumes(vols);
+    }, [vols]);
+    useEffect(() => {
+      const eng = engineRef.current;
+      if (eng && eng.ready && eng.setMaster) eng.setMaster(master);
+    }, [master, booted]);
+    useEffect(() => {
+      const eng = engineRef.current;
+      if (eng && eng.ready && eng.setMix) eng.setMix(autoMix);
+    }, [autoMix, booted]);
+    const fireSweep = useCallback((dir, spread, strings) => {
+      sweepId.current += 1;
+      setSweep({ id: sweepId.current, dir, spread, strings });
+    }, []);
+    useEffect(() => {
+      const eng = engineRef.current;
+      if (!eng || !eng.ready) return;
+      const T = getTransport();
+      if (partRef.current) {
+        partRef.current.dispose();
+        partRef.current = null;
+      }
+      if (!progV.length) {
+        T.stop();
+        setPlaying(false);
+        return;
+      }
+      const { events, totalBars: totalBars2 } = buildSchedule(progV, {
+        strumKey,
+        drumKey,
+        bassKey,
+        capo,
+        useGuitar: on.guitar,
+        usePiano: on.piano,
+        useBass: on.bass,
+        useDrum: on.drum,
+        useClick: metro
+      });
+      const part = new Tone.Part((time, ev) => {
+        if (ev.kind === "strum") {
+          if (ev.dead) {
+            eng.deadStroke(time, ev.vel, ev.strings);
+          } else {
+            eng.strum(ev.voicing, {
+              time, dir: ev.dir, vel: ev.vel, chordChange: ev.chordChange,
+              strings: ev.strings, mute: ev.mute, ghost: ev.ghost,
+              acc: ev.acc, spreadMs: ev.spreadMs, ring: ev.ring
+            });
+          }
+          getDraw().schedule(() => fireSweep(ev.dir, 0.02, ev.strings || null), time);
+        } else if (ev.kind === "pick") {
+          eng.pick(ev.voicing, ev.strings ? ev.strings[0] : 0, time, ev.vel);
+          getDraw().schedule(() => fireSweep("P", 0, ev.strings), time);
+        } else if (ev.kind === "piano") {
+          eng.playPiano(ev.notes, time, ev.dur, ev.vel);
+        } else if (ev.kind === "bass") {
+          eng.playBass(ev.midi, time, ev.dur, ev.vel);
+        } else if (ev.kind === "drum") {
+          eng.playDrum(ev.drum, time, ev.vel);
+          if (ev.duck) eng.duck(time, ev.vel);
+        } else if (ev.kind === "click") {
+          eng.playClick(ev.accent, time);
+        } else if (ev.kind === "mark") {
+          getDraw().schedule(() => setCurIdx(ev.chordIdx), time);
+        }
+      }, events);
+      part.loop = true;
+      part.loopStart = 0;
+      part.loopEnd = totalBars2 + "m";
+      part.start(0);
+      T.loop = false;
+      partRef.current = part;
+      return () => {
+        if (partRef.current === part) partRef.current = null;
+        try { part.dispose(); } catch (e) {}
+      };
+    }, [booted, engineRef.current && engineRef.current.ready, progV, strumKey, drumKey, bassKey, capo, on, metro, fireSweep]);
+    const togglePlay = useCallback(async () => {
+      if (!engineRef.current || !engineRef.current.ready) return;
+      const T = getTransport();
+      if (T.state === "started") {
+        T.stop();
+        engineRef.current.releaseAll(Tone.now());
+        setPlaying(false);
+        setCurIdx(-1);
+      } else {
+        await Tone.start();
+        const sa = startAtRef.current || { tick: 0, idx: -1 };
+        const st = sa.tick || 0;
+        T.position = `${Math.floor(st / 16)}:${Math.floor(st % 16 / 4)}:${st % 4}`;
+        T.start();
+        setCurIdx(sa.idx >= 0 ? sa.idx : -1);
+        setPlaying(true);
+      }
+    }, []);
+    useEffect(() => {
+      const onKey = (e) => {
+        if (e.target && ["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+        if (e.target && e.target.isContentEditable) return;
+        if ((e.metaKey || e.ctrlKey) && e.key && e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          if (e.shiftKey) redo(); else undo();
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key && e.key.toLowerCase() === "y") {
+          e.preventDefault();
+          redo();
+          return;
+        }
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (document.querySelector(".pick-menu, .exp-menu")) return;
+        if (e.code === "Space") {
+          e.preventDefault();
+          togglePlay();
+          return;
+        }
+        if (e.key >= "1" && e.key <= "9" && !e.shiftKey) {
+          const s = suggestions[+e.key - 1];
+          if (s) {
+            e.preventDefault();
+            addChord(s.rootPc, s.quality);
+          }
+          return;
+        }
+        if (!progV.length) return;
+        const i = progV.findIndex((c) => c.id === selId);
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault();
+          const d = e.key === "ArrowLeft" ? -1 : 1;
+          const ni = i < 0
+            ? (d < 0 ? progV.length - 1 : 0)
+            : Math.min(progV.length - 1, Math.max(0, i + d));
+          setSelId(progV[ni].id);
+          return;
+        }
+        if (e.key === "Delete" || e.key === "Backspace") {
+          if (i < 0) return;
+          e.preventDefault();
+          removeChordAt(i);
+          return;
+        }
+      };
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }, [togglePlay, progV, selId, undo, redo, suggestions]);
+    useEffect(() => {
+      if (selId == null) return;
+      const el = document.querySelector('.card[data-cid="' + selId + '"]');
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    }, [selId]);
+    const addChord = (rootPc, quality) => {
+      const c = mkChord(rootPc, quality);
+      setProg((p) => [...p, c]);
+      setSelId(c.id);
+    };
+    const patchSel = (patch) => setProg((p) => p.map((c) => c.id === selId ? { ...c, ...patch } : c));
+    const patchById = (id, patch) => setProg((p) => p.map((c) => c.id === id ? { ...c, ...patch } : c));
+    const patchVoice = (ch, patch) => {
+      const k = VKEY(ch);
+      const resets = "shapeIdx" in patch || "win" in patch;
+      setVoiceMap((m) => ({ ...m, [k]: { shapeIdx: 0, win: null, ov: {}, ...(m[k] || { shapeIdx: ch.voiceIdx || 0 }), ...patch, ...(resets ? { ov: {} } : {}) } }));
+    };
+    const resetVoice = (ch) => setVoiceMap((m) => {
+      const n = { ...m };
+      delete n[VKEY(ch)];
+      return n;
+    });
+    const toggleNote = (ch, stringIdx, relFret) => {
+      const ov = { ...((ch.cfg && ch.cfg.ov) || {}) };
+      ov[stringIdx] = ch.voicing.frets[stringIdx] === relFret ? -1 : relFret;
+      if (ov[stringIdx] === ch.voicing.baseFrets[stringIdx]) delete ov[stringIdx];
+      setVoiceMap((m) => {
+        const k = VKEY(ch);
+        return { ...m, [k]: { shapeIdx: 0, win: null, ...(m[k] || { shapeIdx: ch.voiceIdx || 0 }), ov } };
+      });
+    };
+    const clearOne = (ch, stringIdx) => {
+      const ov = { ...((ch.cfg && ch.cfg.ov) || {}) };
+      delete ov[stringIdx];
+      patchVoice(ch, { ov });
+    };
+    const removeChordAt = (i) => {
+      const c = prog[i];
+      if (!c) return;
+      const nb = prog[i + 1] || prog[i - 1] || null;
+      if (selId === c.id) setSelId(nb ? nb.id : null);
+      setProg((p) => p.filter((x) => x.id !== c.id));
+    };
+    const removeChord = (id) => removeChordAt(prog.findIndex((c) => c.id === id));
+    const dupChord = (id) => {
+      const nid = UID++;
+      setVoiceMap((m) => {
+        const src = m["c" + id];
+        if (!src) return m;
+        return { ...m, ["c" + nid]: { ...src, ov: { ...(src.ov || {}) } } };
+      });
+      setProg((p) => {
+        const i = p.findIndex((c) => c.id === id);
+        if (i < 0) return p;
+        const copy = { ...p[i], id: nid };
+        return [...p.slice(0, i + 1), copy, ...p.slice(i + 1)];
+      });
+    };
+    const onDrop = (targetId) => {
+      const from = dragRef.current;
+      dragRef.current = null;
+      if (from == null || from === targetId) return;
+      setProg((p) => {
+        const a = p.findIndex((c) => c.id === from);
+        if (a < 0) return p;
+        const next = p.slice();
+        const [m] = next.splice(a, 1);
+        if (targetId == null) { next.push(m); return next; }
+        const b = next.findIndex((c) => c.id === targetId);
+        if (b < 0) return p;
+        next.splice(b, 0, m);
+        return next;
+      });
+    };
+    const transposeTo = (newKey) => {
+      const d = ((newKey - keyPc) % 12 + 12) % 12;
+      setProg((p) => p.map((c) => ({
+        ...c,
+        rootPc: (c.rootPc + d) % 12,
+        bassPc: c.bassPc == null ? null : (c.bassPc + d) % 12
+      })));
+      setKeyPc(newKey);
+    };
+    const applyTone = async (key) => {
+      const eng = engineRef.current;
+      setGtone(key);
+      if (!eng || !eng.ready) return;
+      if (TONES[key] && TONES[key].src === "electric") {
+        setStatus((st) => st.electric === "ready" ? st : { ...st, electric: "loading" });
+        await eng.loadElectric((r) => setStatus((st) => ({ ...st, electric: r })));
+      }
+      eng.setGuitarTone(key);
+    };
+    const applyTemplate = (t) => {
+      const md = t.mode || mode;
+      const sc = md === "minor" ? MINOR_SCALE : MAJOR_SCALE;
+      const tri = md === "minor" ? MINOR_TRIADS : MAJOR_TRIADS;
+      const sev = md === "minor" ? MINOR_SEVENTHS : MAJOR_SEVENTHS;
+      const chords = t.chords.map((c) => {
+        const off = c.pc != null ? c.pc : sc[c.d];
+        const rootPc = (keyPc + off) % 12;
+        const q = c.q || (seventhMode ? sev[c.d] : tri[c.d]);
+        return mkChord(rootPc, q, c.bars || 1);
+      });
+      if (md !== mode) setMode(md);
+      setProg(chords);
+      setSelId(null);
+      setVoiceMap({});
+      if (t.bpm) setBpm(t.bpm);
+      if (t.strum) setStrumKey(t.strum);
+      if (t.drum) setDrumKey(t.drum);
+      if (t.bass) setBassKey(t.bass);
+      setSwing(t.swing || 0);
+      if (t.tone) applyTone(t.tone);
+      notify("已套用「" + t.name + "」（連音色與節奏）");
+    };
+    const addSevenths = () => setProg((p) => p.map((c) => {
+      const rel = ((c.rootPc - keyPc) % 12 + 12) % 12;
+      const i = scale.indexOf(rel);
+      if (i < 0) return c;
+      return { ...c, quality: sevenths[i] };
+    }));
+    const toggleRec = async () => {
+      const eng = engineRef.current;
+      if (!eng) return;
+      if (!recording) {
+        const rec = new Tone.Recorder();
+        getDest().connect(rec);
+        recRef.current = rec;
+        rec.start();
+        setRecording(true);
+        if (getTransport().state !== "started") togglePlay();
+      } else {
+        const rec = recRef.current;
+        setRecording(false);
+        const blob = await rec.stop();
+        try {
+          getDest().disconnect(rec);
+        } catch (e) {
+        }
+        rec.dispose();
+        download(blob, "chord-lab-" + Date.now() + ".webm");
+        notify("音檔已下載 (.webm)");
+      }
+    };
+    const download = (blob, name) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4e3);
+    };
+    const EXPORTS = [
+      { k: "mid", n: "MIDI (.mid)", s: "含刷弦時間差，拖進 DAW 就能用" },
+      { k: "musicxml", n: "MusicXML (.musicxml)", s: "給 MuseScore、Sibelius、Finale 開樂譜" },
+      { k: "cho", n: "ChordPro (.cho)", s: "和弦譜標準格式，演出 App 通用" },
+      { k: "tab", n: "六線譜 (.txt)", s: "純文字 tab，貼到哪都能看" },
+      { k: "json", n: "專案檔 (.json)", s: "完整設定，之後可以弄回來" }
+    ];
+    const doExportXml = () => {
+      const DIV = 4;
+      let body = "", bar = 1, filled = 0, open = false;
+      progV.forEach((c, idx) => {
+        const ms = voicingToMidi(c.voicing.frets, capo);
+        let left = beatsOf(c);
+        while (left > 0) {
+          if (!open) {
+            body += '    <measure number="' + bar + '">\n';
+            if (bar === 1)
+              body += "      <attributes><divisions>" + DIV + "</divisions>" +
+                "<key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time>" +
+                '<clef><sign>G</sign><line>2</line></clef></attributes>\n';
+            open = true;
+          }
+          const take = Math.min(left, 4 - filled);
+          const typ = take >= 4 ? "whole" : take >= 2 ? "half" : take >= 1 ? "quarter" : "eighth";
+          ms.forEach((m, ni) => {
+            const nm = SHARP_NAMES[m % 12];
+            body += "      <note>" + (ni ? "<chord/>" : "") +
+              "<pitch><step>" + nm[0] + "</step>" +
+              (nm.length > 1 ? "<alter>1</alter>" : "") +
+              "<octave>" + (Math.floor(m / 12) - 1) + "</octave></pitch>" +
+              "<duration>" + Math.round(take * DIV) + "</duration><type>" + typ + "</type></note>\n";
+          });
+          filled += take;
+          left -= take;
+          if (filled >= 4) { body += "    </measure>\n"; bar++; filled = 0; open = false; }
+        }
+        if (idx === progV.length - 1 && open) { body += "    </measure>\n"; open = false; }
+      });
+      const out = '<?xml version="1.0" encoding="UTF-8"?>\n<score-partwise version="3.1">\n' +
+        '  <part-list><score-part id="P1"><part-name>Guitar</part-name></score-part></part-list>\n' +
+        '  <part id="P1">\n' + body + "  </part>\n</score-partwise>\n";
+      return new Blob([out], { type: "application/vnd.recordare.musicxml+xml" });
+    };
+    const doExportCho = () => {
+      const lines = [
+        "{title: Chord Lab}",
+        "{key: " + pcName(keyPc, useFlats) + (mode === "minor" ? "m" : "") + "}",
+        "{tempo: " + bpm + "}",
+        "{capo: " + capo + "}",
+        ""
+      ];
+      let filled = 0, row = [];
+      progV.forEach((c) => {
+        row.push("[" + c.info.name + "]");
+        filled += beatsOf(c);
+        if (filled >= 4) { lines.push(row.join(" ") + " |"); row = []; filled = 0; }
+      });
+      if (row.length) lines.push(row.join(" ") + " |");
+      return new Blob([lines.join("\n")], { type: "text/plain" });
+    };
+    const doExportTab = () => {
+      const names = ["e", "B", "G", "D", "A", "E"];
+      const rows = ["", "", "", "", "", ""];
+      let head = "  ";
+      progV.forEach((c) => {
+        const w = Math.max(5, Math.round(beatsOf(c)) * 2);
+        head += c.info.name.padEnd(w + 1).slice(0, w + 1);
+        for (let st = 0; st < 6; st++) {
+          const f = c.voicing.frets[5 - st];
+          rows[st] += (f < 0 ? "x" : String(f + capo)).padEnd(w, "-") + "|";
+        }
+      });
+      const txt = [
+        "Chord Lab   " + pcName(keyPc, useFlats) + (mode === "minor" ? " minor" : " major") +
+          "   " + bpm + " BPM   capo " + capo,
+        "",
+        head
+      ].concat(names.map((n, i) => n + " |" + rows[i])).join("\n");
+      return new Blob([txt], { type: "text/plain" });
+    };
+    const doExportJson = () => new Blob([JSON.stringify({
+      app: "chord-lab", version: 2,
+      keyPc, mode, capo, bpm, strumKey, drumKey, bassKey, gtone,
+      vols, master, autoMix, voiceMap,
+      prog: prog.map((c) => ({ rootPc: c.rootPc, quality: c.quality, bars: c.bars, beats: c.beats }))
+    }, null, 2)], { type: "application/json" });
+    const doExport = (kind) => {
+      if (!progV.length) { notify("進行軌是空的，先放幾個和弦"); return; }
+      const stamp = "chord-lab-" + Date.now();
+      try {
+        if (kind === "mid") { doExportMidi(); return; }
+        if (kind === "musicxml") download(doExportXml(), stamp + ".musicxml");
+        else if (kind === "cho") download(doExportCho(), stamp + ".cho");
+        else if (kind === "tab") download(doExportTab(), stamp + ".txt");
+        else if (kind === "json") download(doExportJson(), stamp + ".json");
+        notify("已下載");
+      } catch (e) {
+        notify("匯出失敗：" + e.message);
+      }
+    };
+    const doExportMidi = () => {
+      if (!progV.length) return;
+      const gEvents = [];
+      const bEvents = [];
+      const spreadBeats = 0.019 * bpm / 60;
+      const { events } = buildSchedule(progV, {
+        strumKey,
+        drumKey,
+        bassKey,
+        capo,
+        useGuitar: true,
+        usePiano: false,
+        useBass: true,
+        useDrum: false,
+        useClick: false
+      });
+      events.forEach((ev) => {
+        if (ev.kind === "strum") {
+          const played = [];
+          ev.voicing.frets.forEach((f, i) => {
+            if (f >= 0) played.push(i);
+          });
+          let order = ev.dir === "U" ? played.slice().reverse().slice(0, Math.max(3, played.length - 2)) : played;
+          const sp = ev.dir === "R" ? spreadBeats * 3 : ev.dir === "U" ? spreadBeats * 0.7 : spreadBeats;
+          order.forEach((k, n) => {
+            gEvents.push({
+              beat: ev.beat + n * sp,
+              midi: STRING_MIDI[k] + capo + ev.voicing.frets[k],
+              dur: ev.dir === "X" ? 0.12 : 0.95,
+              vel: ev.vel * (ev.dir === "X" ? 0.45 : 1)
+            });
+          });
+        } else if (ev.kind === "pick") {
+          const k = ev.strings ? ev.strings[0] : 0;
+          if (ev.voicing.frets[k] >= 0)
+            gEvents.push({ beat: ev.beat, midi: STRING_MIDI[k] + capo + ev.voicing.frets[k], dur: 0.9, vel: ev.vel });
+        } else if (ev.kind === "bass") {
+          bEvents.push({ beat: ev.beat, midi: ev.midi, dur: ev.dur, vel: ev.vel });
+        }
+      });
+      const tracks = [
+        buildTrack(gEvents, 480, 25, 0, "Guitar"),
+        buildTrack(bEvents, 480, 33, 1, "Bass")
+      ];
+      download(exportMidi(tracks, bpm), "chord-lab-" + Date.now() + ".mid");
+      notify("MIDI 已下載，可直接拖進 DAW");
+    };
+    const totalBars = progV.reduce((s, c) => s + (c.bars || 1), 0);
+    const sampleReady = status.guitar === "sample";
+    const keyName = pcName(keyPc, useFlats) + (mode === "minor" ? "m" : "");
+    const liveChord = playing && curIdx >= 0 ? progV[curIdx] || null : null;
+    const viewChord = liveChord || selected;
+    const editChord = selected || liveChord;
+    const neckRoot = viewChord ? viewChord.rootPc : keyPc;
+    const neckQ = viewChord ? viewChord.quality : "maj";
+    const scaleOk = neckScale && SCALES[neckScale] && (!SCALES[neckScale].q || SCALES[neckScale].q.includes(neckQ));
+    const effScale = scaleOk ? neckScale : defaultScale(neckRoot, neckQ, keyPc, mode);
+    const neckScaleSet = new Set(SCALES[effScale].iv.map((x) => (neckRoot + x) % 12));
+    const scaleOpts = (() => {
+      const q = viewChord ? viewChord.quality : "maj";
+      return Object.keys(SCALES).filter((k) => !SCALES[k].q || SCALES[k].q.includes(q))
+        .map((k) => ({ v: k, l: SCALES[k].n, s: SCALES[k].s }));
+    })();
+    const jumpTo = async (i, c) => {
+      setSelId(c.id);
+      if (!playing) previewVoicing(c.voicing, "R");
+      const eng = engineRef.current;
+      if (!eng || !eng.ready) return;
+      const T = getTransport();
+      if (T.state !== "started") return;
+      await Tone.start();
+      eng.releaseAll(Tone.now());
+      const st = starts[i] || 0;
+      T.position = `${Math.floor(st / 16)}:${Math.floor(st % 16 / 4)}:${st % 4}`;
+      setCurIdx(i);
+    };
+    const previewVoicing = (v, dir) => {
+      const eng = engineRef.current;
+      if (eng && eng.ready) eng.strum(v, { time: Tone.now() + 0.03, dir: dir || "R", vel: 0.85, chordChange: true });
+      fireSweep(dir || "R", 0.055, null);
+    };
+    const keyOptions = Array.from({ length: 12 }, (_, i) => ({
+      v: i,
+      l: pcName(i, FLAT_KEYS.includes(i)),
+      s: null
+    }));
+    const bassOptions = [{ v: "", l: "跟隨根音", s: "一般和弦" }].concat(
+      scale.map((sd) => ({
+        v: (keyPc + sd) % 12,
+        l: "/ " + pcName((keyPc + sd) % 12, useFlats),
+        s: null
+      }))
+    );
+    return /* @__PURE__ */ React.createElement("div", { className: "cl-root" }, !booted && /* @__PURE__ */ React.createElement(
+      Landing,
+      {
+        onEnter: enterBench,
+        onUnlock: unlock,
+        ready: status.guitar === "sample" || status.guitar === "synth",
+        sampled: status.guitar === "sample",
+        onPluck: (i, midi) => engineRef.current && engineRef.current.playString(i, midi, 0.9),
+        onStrum: (v) => engineRef.current && engineRef.current.strum(v, {
+          time: Tone.now() + 0.04,
+          dir: "D",
+          vel: 0.88,
+          chordChange: true
+        }),
+        gtone,
+        onToggleTone: async () => {
+          const eng = engineRef.current;
+          if (!eng || !eng.ready) return;
+          unlock();
+          await applyTone(gtone === "acoustic" ? "clean" : "acoustic");
+        }
+      }
+    ), /* @__PURE__ */ React.createElement("header", { className: "bar top" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement("span", { className: "brand-name" }, "CHORD LAB")), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "速度"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.max(40, b - 1)) }, "−"), /* @__PURE__ */ React.createElement("input", { className: "num", type: "text", inputMode: "numeric", "aria-label": "每分鐘拍數", value: bpmText, onChange: (e) => setBpmText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)), onBlur: commitBpm, onKeyDown: (e) => { if (e.key === "Enter") e.currentTarget.blur(); } }), /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.min(220, b + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "移調夾"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.max(0, c - 1)) }, "−"), /* @__PURE__ */ React.createElement("span", { className: "num" }, capo === 0 ? "無" : capo + " 格"), /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.min(9, c + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "btn-toggle" + (metro ? " on" : ""),
+        onClick: () => setMetro((v) => !v),
+        title: "節拍器只有你自己聽得到，錄音與匯出都不會收進去"
+      },
+      /* @__PURE__ */ React.createElement("span", { className: "metro-dot" }),
+      "節拍器"
+    ), /* @__PURE__ */ React.createElement("button", { className: "btn-rec" + (recording ? " on" : ""), onClick: toggleRec }, /* @__PURE__ */ React.createElement("span", { className: "dot" }), recording ? "停止錄音" : "錄音"), /* @__PURE__ */ React.createElement("button", { className: "btn-primary" + (playing ? " playing" : ""), onClick: togglePlay }, playing ? "■ 停止" : "▶ 播放"), /* @__PURE__ */ React.createElement("div", { className: "pick exp" + (expOpen ? " open" : "") }, /* @__PURE__ */ React.createElement("button", { className: "btn-exp" + (expOpen ? " on" : ""), onClick: () => setExpOpen((v) => !v), title: "匯出成各種音樂檔案格式" }, "匯出 ▾"), expOpen && /* @__PURE__ */ React.createElement("div", { className: "exp-menu" }, EXPORTS.map((x) => /* @__PURE__ */ React.createElement("button", { key: x.k, className: "exp-item", onClick: () => { setExpOpen(false); doExport(x.k); } }, /* @__PURE__ */ React.createElement("b", null, x.n), /* @__PURE__ */ React.createElement("i", null, x.s)))))), /* @__PURE__ */ React.createElement("main", { className: "mid" }, /* @__PURE__ */ React.createElement("section", { className: "col left" }, /* @__PURE__ */ React.createElement("div", { className: "key-row" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "調性"), /* @__PURE__ */ React.createElement(Picker, { value: keyPc, options: keyOptions, onChange: transposeTo, width: 74, cls: "key" }), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: mode,
+        width: 76,
+        options: [{ v: "major", l: "大調" }, { v: "minor", l: "小調" }],
+        onChange: setMode
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, keyName, " 調內和弦"), /* @__PURE__ */ React.createElement("div", { className: "seg" }, /* @__PURE__ */ React.createElement("button", { className: !seventhMode ? "on" : "", onClick: () => setSeventhMode(false) }, "三和弦"), /* @__PURE__ */ React.createElement("button", { className: seventhMode ? "on" : "", onClick: () => setSeventhMode(true) }, "七和弦"))), /* @__PURE__ */ React.createElement("div", { className: "palette" }, romans.map((r, i) => {
+      const rootPc = (keyPc + scale[i]) % 12;
+      const q = seventhMode ? sevenths[i] : triads[i];
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: i,
+          className: "pad",
+          onClick: () => addChord(rootPc, q)
+        },
+        /* @__PURE__ */ React.createElement("span", { className: "pad-deg" }, r),
+        /* @__PURE__ */ React.createElement("span", { className: "pad-name" }, chordLabel(rootPc, q, null, useFlats))
+      );
+    })), /* @__PURE__ */ React.createElement("div", { className: "sub-head" }, "借用與副屬和弦"), /* @__PURE__ */ React.createElement("div", { className: "spice" }, SPICE.map((s, i) => {
+      const rootPc = (keyPc + s.semi) % 12;
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: i,
+          className: "chip spice-chip",
+          title: s.note,
+          onClick: () => addChord(rootPc, s.q)
+        },
+        chordLabel(rootPc, s.q, null, useFlats),
+        /* @__PURE__ */ React.createElement("em", null, s.tag.split("・")[0])
+      );
+    })), /* @__PURE__ */ React.createElement("div", { className: "sub-head" }, "進行範本", /* @__PURE__ */ React.createElement("span", { className: "genre-count" }, TEMPLATES.length)), /* @__PURE__ */ React.createElement("div", { className: "tmpl-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "tmpl-list" }, TEMPLATES.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, className: "tmpl-row", onClick: () => applyTemplate(t) }, /* @__PURE__ */ React.createElement("span", { className: "tmpl-name" }, t.name, t.mode === "minor" ? /* @__PURE__ */ React.createElement("i", { className: "tmpl-mode" }, "小調") : null), /* @__PURE__ */ React.createElement("span", { className: "tmpl-sub" }, t.sub), /* @__PURE__ */ React.createElement("span", { className: "tmpl-meta" }, t.style + " ・ " + t.bpm + " BPM")))))), /* @__PURE__ */ React.createElement("section", { className: "col center" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "和弦進行", /* @__PURE__ */ React.createElement("span", { className: "bars-badge" }, totalBars, " 小節")), /* @__PURE__ */ React.createElement("div", { className: "head-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: addSevenths }, "全部加七度"), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => {
+      setProg([]);
+      setSelId(null);
+    } }, "清空"))), /* @__PURE__ */ React.createElement("div", {
+      className: "track",
+      onDragOver: (e) => e.preventDefault(),
+      onDrop: () => onDrop(null)
+    }, progV.map((c, i) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: c.id,
+        "data-cid": c.id,
+        className: "card" + (c.id === selId ? " sel" : "") + (i === curIdx && playing ? " live" : "") + (barMap[i] && barMap[i].barStart ? " barline" : "") + (barMap[i] && barMap[i].over ? " over" : ""),
+        draggable: true,
+        onDragStart: () => {
+          dragRef.current = c.id;
+        },
+        onDragOver: (e) => e.preventDefault(),
+        onDrop: (e) => { e.stopPropagation(); onDrop(c.id); },
+        title: playing ? "從這一格接著播" : "選取後按播放會從這一格開始（← → 換格、Del 刪除）",
+        onClick: () => jumpTo(i, c)
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "card-top" }, /* @__PURE__ */ React.createElement("span", { className: "deg" }, degreeLabel(c.rootPc, c.quality, keyPc, mode)), /* @__PURE__ */ React.createElement("div", { className: "card-top-r" }, /* @__PURE__ */ React.createElement("span", { className: "card-bars" }, barMap[i] && barMap[i].barStart ? "小節 " + (Math.floor(starts[i] / 16) + 1) : ""), /* @__PURE__ */ React.createElement("button", { className: "card-del", title: "刪除這個和弦", "aria-label": "刪除這個和弦", onClick: (e) => { e.stopPropagation(); removeChordAt(i); } }, "✕"))),
+      /* @__PURE__ */ React.createElement("div", { className: "card-name" }, c.info.name),
+      /* @__PURE__ */ React.createElement("div", { className: "card-hint" }, (c.mG || c.mP) ? /* @__PURE__ */ React.createElement("em", { className: "card-mute" }, (c.mG ? "無吉他" : "") + (c.mG && c.mP ? " " : "") + (c.mP ? "無鋼琴" : "")) : null, c.voicing.tag, /* @__PURE__ */ React.createElement("em", { className: "card-len" }, (NOTE_LENS.find((n) => Math.abs(n.b - beatsOf(c)) < 0.01) || { g: beatsOf(c) + "拍" }).g))
+    )), !progV.length && /* @__PURE__ */ React.createElement("div", { className: "empty" }, "從左邊的和弦盤點一個和弦，或直接套用一組進行範本開始。")), /* @__PURE__ */ React.createElement("div", { className: "dock" + (neckOpen && viewChord ? " open" : "") }, /* @__PURE__ */ React.createElement("div", { className: "sug" }, /* @__PURE__ */ React.createElement("div", { className: "sug-head" }, /* @__PURE__ */ React.createElement("div", { className: "sug-label" }, "接下來可以走"), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "btn-neck" + (neckOpen ? " on" : ""),
+        disabled: !viewChord,
+        title: viewChord ? "" : "先選一個和弦",
+        onClick: () => setNeckOpen((v) => !v)
+      },
+      /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 40 16", width: "26", height: "11", "aria-hidden": "true" }, [0, 1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ React.createElement(
+        "line",
+        {
+          key: i,
+          x1: "0",
+          y1: 1.6 + i * 2.6,
+          x2: "40",
+          y2: 1.6 + i * 2.6,
+          stroke: "currentColor",
+          strokeWidth: 0.5 + i * 0.16,
+          opacity: ".7"
+        }
+      )), [10, 20, 30].map((x) => /* @__PURE__ */ React.createElement("line", { key: x, x1: x, y1: "0", x2: x, y2: "16", stroke: "currentColor", strokeWidth: "1", opacity: ".45" }))),
+      neckOpen ? "收起指板總覽" : "看整個指板還能怎麼彈"
+    )), /* @__PURE__ */ React.createElement("div", { className: "sug-row" }, suggestions.map((s, i) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: i,
+        className: "sug-chip" + (s.spice ? " spice" : ""),
+        title: "快捷鍵 " + (i + 1),
+        onClick: () => addChord(s.rootPc, s.quality)
+      },
+      i < 9 && /* @__PURE__ */ React.createElement("span", { className: "sug-key", "aria-hidden": "true" }, i + 1),
+      /* @__PURE__ */ React.createElement("span", { className: "sug-name" }, chordLabel(s.rootPc, s.quality, null, useFlats)),
+      /* @__PURE__ */ React.createElement("span", { className: "sug-tag" }, s.tag)
+    )))), /* @__PURE__ */ React.createElement("div", { className: "neck-slot", "aria-hidden": !(neckOpen && viewChord) }, viewChord && /* @__PURE__ */ React.createElement("div", { className: "neck-drawer" }, /* @__PURE__ */ React.createElement("div", { className: "nd-head" }, /* @__PURE__ */ React.createElement("span", { className: "nd-title" }, chordLabel(viewChord.rootPc, viewChord.quality, viewChord.bassPc, useFlats)), /* @__PURE__ */ React.createElement("span", { className: "nd-sub" }, playing && curIdx >= 0 ? "跟著播放中的和弦走" : "上方標籤換把位，指板裡點音加減，兩者不會按錯"), /* @__PURE__ */ React.createElement("div", { className: "head-actions" }, /* @__PURE__ */ React.createElement(Picker, { value: effScale, options: scaleOpts, onChange: setNeckScale, width: 176, cls: "sm" }), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "btn-ghost sm" + (showScale ? " on" : ""),
+        onClick: () => setShowScale((v) => !v)
+      },
+      showScale ? "隱藏調內音" : "顯示調內音"
+    ), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
+      NeckView,
+      {
+        chord: viewChord,
+        ovMap: (viewChord.cfg && viewChord.cfg.ov) || {},
+        scaleSet: neckScaleSet,
+        labelMode,
+        capo,
+        keyPc,
+        scale,
+        useFlats,
+        showScale,
+        onPickNote: (stringIdx, relFret, midi) => {
+          const eng = engineRef.current;
+          if (eng && eng.ready) {
+            eng._attackString(stringIdx, midi, Tone.now() + 0.02, 0.85);
+            fireSweep("P", 0, [stringIdx]);
+          }
+          toggleNote(viewChord, stringIdx, relFret);
+        },
+        onPickVoicing: (idx) => {
+          patchVoice(viewChord, { shapeIdx: idx });
+          previewVoicing({ ...viewChord.allVoicings[idx], capo }, "R");
+        }
+      }
+    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["solfa", "唱名"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, useFlats, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, WINDOWS.map((w, wi) => {
+      const fr = viewChord.voicing.shape.frets;
+      const sub = w ? fr.map((f, si) => si >= w[0] && si <= w[1] ? f : -1) : fr;
+      const ms = voicingToMidi(sub, capo);
+      if (ms.length < 3) return null;
+      const semis = ms.map((m) => semiOf(m % 12, viewChord.rootPc));
+      const iv3 = QUALITIES[viewChord.quality].iv.slice(0, 3).map((x) => ((x % 12) + 12) % 12);
+      const ok = iv3.every((x) => semis.includes(x));
+      const nums = [];
+      if (w) for (let si = w[0]; si <= w[1]; si++) nums.push(6 - si);
+      const cur = JSON.stringify((viewChord.cfg && viewChord.cfg.win) || null) === JSON.stringify(w || null);
+      return /* @__PURE__ */ React.createElement("button", { key: wi, className: "win-btn" + (cur ? " on" : "") + (ok ? "" : " weak"),
+        onClick: () => { patchVoice(viewChord, { win: w }); } },
+        /* @__PURE__ */ React.createElement("b", null, w ? nums.join("-") : "整型"),
+        /* @__PURE__ */ React.createElement("i", null, semis.map((sm) => IV_LABEL[sm]).join("-")));
+    })), (function(){ const ov = (viewChord.cfg && viewChord.cfg.ov) || {}; const ks = Object.keys(ov);
+      const cfg = viewChord.cfg || {};
+      if (!ks.length && !cfg.win && !cfg.shapeIdx) return null;
+      return /* @__PURE__ */ React.createElement("div", { className: "mods" },
+        ks.map((k) => /* @__PURE__ */ React.createElement("button", { key: k, className: "mod " + (ov[k] < 0 ? "drop" : "add"), title: "取消這條弦的手動設定",
+          onClick: () => clearOne(viewChord, +k) },
+          (6 - k) + "弦 " + (ov[k] < 0 ? "消音" : ov[k] === 0 ? "空弦" : ov[k] + capo + "格") + " ✕")),
+        /* @__PURE__ */ React.createElement("button", { className: "mod reset", onClick: () => resetVoice(viewChord) }, "還原"));
+    })(), React.createElement("div", { className: "notes" }, voicingToMidi(viewChord.voicing.frets, capo).map((m, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "note-pill" }, pcName(m % 12, useFlats), /* @__PURE__ */ React.createElement("em", null, Math.floor(m / 12) - 1))))) : /* @__PURE__ */ React.createElement("div", { className: "empty tall" }, "點進行軌上的任一個和弦，這裡會顯示真實按法、組成音，以及刷弦時每條弦亮起的順序。"), editChord && (() => {
+      const c = editChord;
+      const ci = progV.findIndex((x) => x.id === c.id);
+      return /* @__PURE__ */ React.createElement(
+        "div",
+        { className: "cprop" },
+        /* @__PURE__ */ React.createElement(
+          "div",
+          { className: "cprop-head" },
+          /* @__PURE__ */ React.createElement("span", { className: "cprop-title" }, chordLabel(c.rootPc, c.quality, c.bassPc, useFlats)),
+          /* @__PURE__ */ React.createElement("span", { className: "cprop-deg" }, degreeLabel(c.rootPc, c.quality, keyPc, mode)),
+          !selected && liveChord ? /* @__PURE__ */ React.createElement("span", { className: "cprop-live" }, "播放中") : null
+        ),
+        /* @__PURE__ */ React.createElement(
+          "div",
+          { className: "cprop-keys" },
+          /* @__PURE__ */ React.createElement("kbd", null, "\u2190"),
+          /* @__PURE__ */ React.createElement("kbd", null, "\u2192"),
+          "\u63db\u548c\u5f26\u3000",
+          /* @__PURE__ */ React.createElement("kbd", null, "Del"),
+          "\u522a\u9664\u3000",
+          /* @__PURE__ */ React.createElement("kbd", null, "Space"),
+          "\u64ad\u653e\u3000",
+          /* @__PURE__ */ React.createElement("kbd", null, "Ctrl+Z"),
+          "\u5fa9\u539f\u3000",
+          /* @__PURE__ */ React.createElement("kbd", null, "1-9"),
+          "\u63a5\u548c\u5f26"
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "和弦性質"),
+        /* @__PURE__ */ React.createElement("div", { className: "quals" }, [
+          "maj",
+          "min",
+          "dom7",
+          "min7",
+          "maj7",
+          "sixth",
+          "m6",
+          "sus2",
+          "sus4",
+          "sus7",
+          "add9",
+          "dom9",
+          "maj9",
+          "min9",
+          "dom13",
+          "dim",
+          "dim7",
+          "m7b5",
+          "aug"
+        ].map((q) => /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            key: q,
+            title: QUALITIES[q].full,
+            className: "chip q" + (c.quality === q ? " on" : ""),
+            onClick: () => {
+              setVoiceMap((m) => { const n = { ...m }; delete n["c" + c.id]; return n; });
+              setProg((p) => p.map((x) => x.id === c.id ? { ...x, quality: q, voiceIdx: 0 } : x));
+              const vs = getVoicings(c.rootPc, q, capo);
+              previewVoicing({ ...vs[0], capo }, "R");
+            }
+          },
+          QUALITIES[q].label || "大三"
+        ))),
+        /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "低音"),
+        /* @__PURE__ */ React.createElement("div", { className: "cprop-row" }, /* @__PURE__ */ React.createElement(
+          Picker,
+          {
+            value: c.bassPc == null ? "" : c.bassPc,
+            options: bassOptions,
+            width: 150,
+            up: true,
+            onChange: (v) => setProg((p) => p.map((x) => x.id === c.id ? { ...x, bassPc: v === "" ? null : v } : x))
+          }
+        )),
+        /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "這一格的聲部"), /* @__PURE__ */ React.createElement("div", { className: "mute-row" }, [["mG", "吉他"], ["mP", "鋼琴"]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("button", {
+          key: k,
+          className: "mute-btn" + (c[k] ? " off" : ""),
+          title: c[k] ? lbl + "：這一格不發聲" : lbl + "：這一格正常發聲",
+          onClick: () => setProg((pp) => pp.map((x) => x.id === c.id ? { ...x, [k]: !x[k] } : x))
+        }, /* @__PURE__ */ React.createElement("b", null, c[k] ? "⊘" : "●"), lbl))), /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "長度"),
+        /* @__PURE__ */ React.createElement("div", { className: "len-row" }, NOTE_LENS.map((n) => /* @__PURE__ */ React.createElement("button", { key: n.b, className: "len-btn" + (Math.abs(beatsOf(c) - n.b) < 0.01 ? " on" : ""), title: n.t, onClick: () => setProg((p) => p.map((x) => x.id === c.id ? { ...x, beats: n.b, bars: Math.max(1, Math.round(n.b / 4)) } : x)) }, /* @__PURE__ */ React.createElement("span", { className: "len-gl" }, n.g), /* @__PURE__ */ React.createElement("i", null, n.n)))),
+        /* @__PURE__ */ React.createElement(
+          "div",
+          { className: "cprop-row end" },
+          /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => previewVoicing(c.voicing, "R") }, "試聽"),
+          /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => dupChord(c.id) }, "複製"),
+          /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm danger", onClick: () => removeChordAt(ci) }, "刪除")
+        )
+      );
+    })(), /* @__PURE__ */ React.createElement("div", { className: "rack" }, /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "刷弦節奏"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: strumKey,
+        up: true,
+        grow: true,
+        onChange: setStrumKey,
+        options: Object.entries(STRUM_PATTERNS).map(([k, v]) => ({ v: k, l: v.name, s: v.hint }))
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "音色"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: gtone,
+        up: true,
+        width: 138,
+        onChange: applyTone,
+        options: Object.entries(TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "音箱模擬", /* @__PURE__ */ React.createElement("button", { className: "lbl-btn" + (ampOpen ? " on" : ""), onClick: () => setAmpOpen((v) => !v) }, ampOpen ? "收起" : "展開")), ampOpen && /* @__PURE__ */ React.createElement("div", { className: "amp-panel" }, /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "機頭"), /* @__PURE__ */ React.createElement(Picker, { value: head, up: true, width: 150, onChange: setHead, options: Object.entries(AMP_HEADS).map(([k, v]) => ({ v: k, l: v.n, s: v.s })) })), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "增益"), /* @__PURE__ */ React.createElement("input", { type: "range", min: "1", max: "5", step: "0.05", value: drive, onChange: (e) => setDrive(+e.target.value) }), /* @__PURE__ */ React.createElement("i", null, drive.toFixed(2))), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "箱體"), /* @__PURE__ */ React.createElement(Picker, { value: cab, up: true, width: 150, onChange: setCab, options: Object.entries(CABS).map(([k, v]) => ({ v: k, l: v.n, s: v.s })) })), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "麥克風"), /* @__PURE__ */ React.createElement(Picker, { value: mic, up: true, width: 150, onChange: setMic, options: Object.entries(MICS).map(([k, v]) => ({ v: k, l: v.n, s: v.s })) })), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "收音位置"), /* @__PURE__ */ React.createElement("input", { type: "range", min: "0", max: "1", step: "0.02", value: micPos, onChange: (e) => setMicPos(+e.target.value) }), /* @__PURE__ */ React.createElement("i", null, micPos < 0.33 ? "中心" : micPos < 0.66 ? "中間" : "邊緣")), /* @__PURE__ */ React.createElement("div", { className: "amp-row" }, /* @__PURE__ */ React.createElement("span", null, "麥克風距離"), /* @__PURE__ */ React.createElement("input", { type: "range", min: "0", max: "12", step: "0.5", value: micDist, onChange: (e) => setMicDist(+e.target.value) }), /* @__PURE__ */ React.createElement("i", null, micDist + " cm")))), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鼓組"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: drumKey,
+        up: true,
+        width: 128,
+        onChange: setDrumKey,
+        options: Object.entries(DRUM_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "貝斯"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: bassKey,
+        up: true,
+        width: 118,
+        onChange: setBassKey,
+        options: Object.entries(BASS_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
+      }
+    )), /* @__PURE__ */ React.createElement("button", {
+      className: "btn-ghost sm" + (autoMix ? " on" : ""),
+      title: "自動混音：高低頻分工、左右分離、底鼓閃避、總線限幅",
+      onClick: () => setAutoMix((v) => !v)
+    }, "混音"), /* @__PURE__ */ React.createElement("div", { className: "mixer" }, [
+      ["guitar", "吉他", status.guitar, 0.6],
+      ["piano", "鋼琴", status.piano, 3.2],
+      ["bass", "貝斯", status.bass, 1.6],
+      ["drum", "鼓", status.drum, 1.6]
+    ].map(([k, label, st, mx]) => /* @__PURE__ */ React.createElement("div", { key: k, className: "ch" + (on[k] ? "" : " off") }, /* @__PURE__ */ React.createElement("div", { className: "ch-top" }, /* @__PURE__ */ React.createElement("button", { className: "ch-name", onClick: () => setOn((o) => ({ ...o, [k]: !o[k] })) }, label, /* @__PURE__ */ React.createElement("i", { className: "ch-led " + (st === "sample" ? "s" : st === "loading" ? "l" : "y") })), /* @__PURE__ */ React.createElement("span", { className: "ch-val" }, Math.round(vols[k] / mx * 100) + "%")), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: String(mx),
+        step: String(mx / 100),
+        "aria-label": label + "音量",
+        value: vols[k],
+        onChange: (e) => setVols((v) => ({ ...v, [k]: +e.target.value }))
+      }
+    ))), /* @__PURE__ */ React.createElement("div", { className: "ch master" }, /* @__PURE__ */ React.createElement("div", { className: "ch-top" }, /* @__PURE__ */ React.createElement("span", { className: "ch-name" }, "總音量"), /* @__PURE__ */ React.createElement("span", { className: "ch-val" }, Math.round(master * 100) + "%")), /* @__PURE__ */ React.createElement("input", {
+      type: "range", min: "0", max: "1", step: "0.02",
+      "aria-label": "總音量",
+      value: master,
+      onChange: (e) => setMaster(+e.target.value)
+    })))))), toast && /* @__PURE__ */ React.createElement("div", { className: "toast" }, toast));
+  }
+  const HERO_STRINGS = ["E2", "A2", "D3", "G3", "B3", "E4"];
+  const HERO_MARKS = [
+    { t: "Cmaj7", pc: 0, q: "maj7", fret: 2, x: 30 },
+    { t: "Am9", pc: 9, q: "min9", fret: 5, x: 66 },
+    { t: "B♭13", pc: 10, q: "dom13", fret: 8, x: 34 },
+    { t: "Dsus4", pc: 2, q: "sus4", fret: 11, x: 64 },
+    { t: "F♯m7♭5", pc: 6, q: "m7b5", fret: 14, x: 36 }
+  ];
+  const CRAFT = [
+    { n: "01", h: "逐弦錯開 10–30 毫秒", p: "六條弦不是同時響。撥片掃過去要花時間，這段時間差就是「像不像真人」的第一道分水嶺。" },
+    { n: "02", h: "上擊反向，而且掃得少", p: "手往上回來時是從高音弦開始，通常只擦到三到四條弦，速度也比下擊快。" },
+    { n: "03", h: "力度決定手速", p: "刷得重，手就過得快，弦與弦的間隔自動縮短；刷得輕則拉開。每一下的時間與音量都再加一點隨機。" },
+    { n: "04", h: "換和弦前那一下摩擦聲", p: "左手在指板上移動會擦出聲音。少了它，聽起來就是機器；補上它，耳朵才會相信這是一把木吉他。" }
+  ];
+  const BENCH = [
+    { k: "進行軌", h: "先組，再聽", p: "點級數就加一個和弦，拖曳排序，每格自訂小節數。點卡片會就地展開和弦性質、分數低音與長度。下方永遠給你六個可以接的下一步，包含借用與副屬和弦。" },
+    { k: "指板總覽", h: "看得到才寫得出來", p: "攤開整支十五格指板，標出這個和弦的音落在哪、哪些是三度哪些是延伸音，並列出 CAGED 五型全部可彈的把位。點任何一個點都會發聲。" },
+    { k: "輸出", h: "帶得走的靈感", p: "匯出的 MIDI 保留每條弦的時間差，拖進 DAW 就是有人味的刷弦，而不是死板的塊狀和弦。也可以直接錄成音檔。" }
+  ];
+  const FRET_POS = Array.from(
+    { length: 16 },
+    (_, i) => (1 - Math.pow(2, -i / 12)) / (1 - Math.pow(2, -15 / 12)) * 100
+  );
+  const INLAY = [3, 5, 7, 9];
+  const TONE_DEMO = { t: "E5", pc: 4, q: "maj", fret: 0, x: 0 };
+  function Landing({ onEnter, onUnlock, onPluck, onStrum, ready, sampled, gtone, onToggleTone }) {
+    const scRef = useRef(null);
+    const layers = useRef([]);
+    const st = useRef({ px: 0, py: 0, tx: 0, ty: 0, sy: 0 });
+    const [live, setLive] = useState({ ids: [], step: 0 });
+    const scatter = useMemo(() => {
+      const rnd = (a, b) => a + Math.random() * (b - a);
+      const zones = [
+        { y0: 11, y1: 28 },
+        { y0: 73, y1: 89 }
+      ];
+      const marks = HERO_MARKS.slice();
+      for (let i = marks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = marks[i];
+        marks[i] = marks[j];
+        marks[j] = t;
+      }
+      const top = Math.random() < 0.5 ? 2 : 3;
+      const perZone = [marks.slice(0, top), marks.slice(top)];
+      const out = [];
+      perZone.forEach((list, zi) => {
+        const z = zones[zi];
+        const span = 68 / Math.max(1, list.length);
+        list.forEach((m, i) => {
+          out.push({
+            m,
+            x: rnd(3 + i * span, 3 + (i + 0.4) * span),
+            y: rnd(z.y0, z.y1),
+            s: rnd(0.8, 1.2),
+            o: rnd(0.42, 0.78)
+          });
+        });
+      });
+      return out;
+    }, []);
+    const reg = (i, mp, sp) => (el) => {
+      layers.current[i] = el ? { el, mp, sp } : null;
+    };
+    useEffect(() => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const wrap = scRef.current;
+      if (!wrap) return;
+      let raf = 0;
+      if (!reduce) {
+        const onMove = (e) => {
+          st.current.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+          st.current.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+        };
+        window.addEventListener("mousemove", onMove);
+        const tick = () => {
+          const s = st.current;
+          s.px += (s.tx - s.px) * 0.055;
+          s.py += (s.ty - s.py) * 0.055;
+          layers.current.forEach((l) => {
+            if (!l) return;
+            l.el.style.transform = "translate3d(" + (-s.px * l.mp * 12).toFixed(2) + "px," + (-s.py * l.mp * 8 - s.sy * l.sp).toFixed(2) + "px,0)";
+          });
+          raf = requestAnimationFrame(tick);
+        };
+        tick();
+        return () => {
+          cancelAnimationFrame(raf);
+          window.removeEventListener("mousemove", onMove);
+        };
+      }
+    }, []);
+    const pluck = (i) => {
+      if (!ready) return;
+      setLive({ ids: [i], step: 0 });
+      window.setTimeout(() => setLive((v) => v.ids.length === 1 && v.ids[0] === i ? { ids: [], step: 0 } : v), 820);
+      onPluck(i, STRING_MIDI[i]);
+    };
+    const strumMark = (m) => {
+      if (!ready) return;
+      const v = getVoicings(m.pc, m.q, 0)[0];
+      if (!v) return;
+      const played = [];
+      v.frets.forEach((f, i) => {
+        if (f >= 0) played.push(i);
+      });
+      setLive({ ids: played, step: 22 });
+      window.setTimeout(() => setLive({ ids: [], step: 0 }), 950);
+      onStrum({ ...v, capo: 0 });
+    };
+    const markY = (fret) => FRET_POS[fret] - (FRET_POS[fret] - FRET_POS[Math.max(0, fret - 1)]) / 2;
+    return /* @__PURE__ */ React.createElement("div", { className: "lp", ref: scRef, onPointerDown: onUnlock }, /* @__PURE__ */ React.createElement("section", { className: "lp-hero" }, /* @__PURE__ */ React.createElement("div", { className: "lp-glow" }), /* @__PURE__ */ React.createElement("div", { className: "lp-left" }, /* @__PURE__ */ React.createElement("div", { className: "lp-scatter", ref: reg(3, 2.1, 0.3) }, scatter.map((p, i) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: i,
+        className: "cmark",
+        style: { left: p.x + "%", top: p.y + "%", fontSize: p.s + "em", opacity: p.o },
+        onPointerDown: () => strumMark(p.m)
+      },
+      p.m.t
+    ))), /* @__PURE__ */ React.createElement("div", { className: "lp-left-in" }, /* @__PURE__ */ React.createElement("h1", { className: "lp-title", ref: reg(0, 0.5, 0.26) }, "CHORD LA", /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "b-wrap" + (gtone !== "acoustic" ? " on" : ""),
+        onPointerDown: () => {
+          if (ready) {
+            onToggleTone();
+            strumMark(TONE_DEMO);
+          }
+        },
+        "aria-label": gtone !== "acoustic" ? "切回原聲吉他音色" : "切換成電吉他音色",
+        title: gtone !== "acoustic" ? "點一下切回原聲吉他" : "點一下換成電吉他"
+      },
+      "B",
+      /* @__PURE__ */ React.createElement("span", { className: "b-stem", "aria-hidden": "true" })
+    )), /* @__PURE__ */ React.createElement("div", { className: "lp-meta" }, /* @__PURE__ */ React.createElement("p", { className: "lp-lede", ref: reg(1, 0.95, 0.4) }, "和弦實驗室 ・ 組進行、聽刷弦、找靈感"), /* @__PURE__ */ React.createElement("div", { className: "lp-ctawrap", ref: reg(2, 1.35, 0.52) }, /* @__PURE__ */ React.createElement("button", { className: "lp-cta", onClick: onEnter }, "進入工作台", /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 20 10", width: "22", height: "11", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement(
+      "path",
+      {
+        d: "M0 5h17M13 1l4 4-4 4",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "1.5",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }
+    ))))))), /* @__PURE__ */ React.createElement("div", { className: "lp-neckpanel" }, /* @__PURE__ */ React.createElement("div", { className: "lp-neckin" }, /* @__PURE__ */ React.createElement("svg", { className: "lp-frets", viewBox: "0 0 100 100", preserveAspectRatio: "none", "aria-hidden": "true" }, FRET_POS.map((y, i) => /* @__PURE__ */ React.createElement(
+      "line",
+      {
+        key: i,
+        x1: "0",
+        y1: y,
+        x2: "100",
+        y2: y,
+        stroke: i === 0 ? "var(--bone)" : "var(--fret)",
+        strokeWidth: i === 0 ? 1.4 : 0.35,
+        opacity: i === 0 ? 0.85 : 0.5,
+        vectorEffect: "non-scaling-stroke"
+      }
+    ))), /* @__PURE__ */ React.createElement("div", { className: "lp-inlays", "aria-hidden": "true" }, INLAY.map((f) => /* @__PURE__ */ React.createElement("span", { key: f, className: "inlay", style: { top: markY(f) + "%" } })), /* @__PURE__ */ React.createElement("span", { className: "inlay dbl a", style: { top: markY(12) + "%" } }), /* @__PURE__ */ React.createElement("span", { className: "inlay dbl b", style: { top: markY(12) + "%" } })), /* @__PURE__ */ React.createElement("div", { className: "lp-vstrings" }, HERO_STRINGS.map((n, i) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: i,
+        className: "vstr" + (live.ids.includes(i) ? " live" : "") + (ready ? " armed" : ""),
+        style: { "--w": 1 + (5 - i) * 0.5 + "px", "--d": Math.max(0, live.ids.indexOf(i)) * live.step + "ms" },
+        onPointerDown: () => pluck(i),
+        onPointerEnter: (e) => {
+          if (e.buttons || ready) pluck(i);
+        },
+        "aria-label": "試彈 " + n + " 弦"
+      },
+      /* @__PURE__ */ React.createElement("span", { className: "vstr-line" }),
+      /* @__PURE__ */ React.createElement("span", { className: "vstr-name" }, n)
+    )))), !sampled && /* @__PURE__ */ React.createElement("span", { className: "lp-loading" }, "載入原聲吉他取樣…")), /* @__PURE__ */ React.createElement("div", { className: "lp-grain", "aria-hidden": "true" })));
+  }
+  function Picker({ value, options, onChange, width, up, grow, cls }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+      if (!open) return;
+      const away = (e) => {
+        if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      };
+      const esc = (e) => {
+        if (e.key === "Escape") setOpen(false);
+      };
+      document.addEventListener("mousedown", away);
+      document.addEventListener("keydown", esc);
+      return () => {
+        document.removeEventListener("mousedown", away);
+        document.removeEventListener("keydown", esc);
+      };
+    }, [open]);
+    const [pos, setPos] = useState(null);
+    useEffect(() => {
+      if (!open) { setPos(null); return; }
+      const place = () => {
+        const el = ref.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const gap = 6, edge = 10;
+        const below = window.innerHeight - r.bottom - gap - edge;
+        const above = r.top - gap - edge;
+        const useUp = up ? above > 150 || above > below : below < 200 && above > below;
+        const maxH = Math.max(130, Math.min(330, useUp ? above : below));
+        const w = Math.max(r.width, 150);
+        let left = r.left;
+        if (left + w > window.innerWidth - edge) left = window.innerWidth - edge - w;
+        if (left < edge) left = edge;
+        setPos({ left, w, maxH, up: useUp, top: r.bottom + gap, bot: window.innerHeight - r.top + gap });
+      };
+      place();
+      window.addEventListener("resize", place);
+      window.addEventListener("scroll", place, true);
+      return () => {
+        window.removeEventListener("resize", place);
+        window.removeEventListener("scroll", place, true);
+      };
+    }, [open, up]);
+    const cur = options.find((o) => String(o.v) === String(value));
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "pick" + (grow ? " grow" : "") + (cls ? " " + cls : ""),
+        ref,
+        style: width ? { width } : void 0
+      },
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "pick-btn" + (open ? " open" : ""),
+          onClick: () => setOpen((o) => !o),
+          "aria-haspopup": "listbox",
+          "aria-expanded": open
+        },
+        /* @__PURE__ */ React.createElement("span", { className: "pick-val" }, cur ? cur.l : "選擇…"),
+        /* @__PURE__ */ React.createElement("svg", { className: "pick-caret", viewBox: "0 0 10 6", width: "9", height: "6", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d: "M1 1l4 4 4-4", fill: "none", stroke: "currentColor", strokeWidth: "1.4", strokeLinecap: "round" }))
+      ),
+      open && /* @__PURE__ */ React.createElement("div", {
+        className: "pick-menu" + (pos && pos.up ? " up" : ""),
+        role: "listbox",
+        style: pos ? {
+          left: pos.left,
+          width: pos.w,
+          maxHeight: pos.maxH,
+          top: pos.up ? "auto" : pos.top,
+          bottom: pos.up ? pos.bot : "auto"
+        } : { visibility: "hidden" }
+      }, options.map((o) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: String(o.v),
+          role: "option",
+          "aria-selected": String(o.v) === String(value),
+          className: "pick-item" + (String(o.v) === String(value) ? " on" : ""),
+          onClick: () => {
+            onChange(o.v);
+            setOpen(false);
+          }
+        },
+        /* @__PURE__ */ React.createElement("span", { className: "pi-l" }, o.l),
+        o.s && /* @__PURE__ */ React.createElement("span", { className: "pi-s" }, o.s)
+      )))
+    );
+  }
+  function Fretboard({ voicing, sweep, capo, ovMap, rootPc, keyPc, useFlats, labelMode }) {
+    const frets = voicing.frets;
+    const fretted = frets.filter((f) => f > 0);
+    const maxF = fretted.length ? Math.max(...fretted) : 0;
+    const minF = fretted.length ? Math.min(...fretted) : 1;
+    const base = !fretted.length || maxF <= 4 ? 1 : minF;
+    const showNut = base === 1;
+    const W = 268, H = 136, X0 = 30, X1 = 260;
+    const SLOTS = Math.max(5, maxF - (!fretted.length || maxF <= 4 ? 1 : minF) + 1);
+    const sw = (X1 - X0) / SLOTS;
+    const yOf = (i) => 114 - i * 20;
+    const played = [];
+    frets.forEach((f, i) => {
+      if (f >= 0) played.push(i);
+    });
+    const delayOf = (i) => {
+      if (sweep.strings) return sweep.strings.includes(i) ? 0 : -1;
+      const order = sweep.dir === "U" ? played.slice().reverse() : played;
+      const n = order.indexOf(i);
+      return n < 0 ? -1 : n * (sweep.dir === "R" ? 62 : sweep.dir === "U" ? 16 : 24);
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "fb-wrap" }, /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 " + W + " " + H, className: "fb", role: "img", "aria-label": "吉他和弦按法圖" }, /* @__PURE__ */ React.createElement("rect", { x: X0, y: "4", width: X1 - X0, height: H - 26, rx: "2", fill: "var(--wood)" }), Array.from({ length: SLOTS + 1 }, (_, k) => /* @__PURE__ */ React.createElement(
+      "line",
+      {
+        key: k,
+        x1: X0 + k * sw,
+        y1: "4",
+        x2: X0 + k * sw,
+        y2: H - 22,
+        stroke: "var(--fret)",
+        strokeWidth: k === 0 && showNut ? 0 : 2
+      }
+    )), showNut && /* @__PURE__ */ React.createElement("rect", { x: X0 - 5, y: "2", width: "6", height: H - 22, rx: "1.5", fill: "var(--bone)" }), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: X0 - 3, y: "0", width: "7", height: H - 18, rx: "3", fill: "var(--rust)", opacity: "0.85" }), [2, 4].map((s) => /* @__PURE__ */ React.createElement("circle", { key: s, cx: X0 + (s - 0.5) * sw, cy: (4 + H - 22) / 2, r: "5", fill: "var(--dot)", opacity: "0.5" })), [0, 1, 2, 3, 4, 5].map((i) => {
+      const d = delayOf(i);
+      return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement(
+        "line",
+        {
+          x1: X0 - 6,
+          y1: yOf(i),
+          x2: X1,
+          y2: yOf(i),
+          stroke: "var(--string)",
+          strokeWidth: 2.4 - i * 0.28,
+          opacity: frets[i] < 0 ? 0.28 : 0.9
+        }
+      ), d >= 0 && /* @__PURE__ */ React.createElement(
+        "line",
+        {
+          key: sweep.id + "-" + i,
+          className: "fb-glow",
+          x1: X0 - 6,
+          y1: yOf(i),
+          x2: X1,
+          y2: yOf(i),
+          stroke: "var(--jade)",
+          strokeWidth: "3",
+          style: { animationDelay: d + "ms" }
+        }
+      ));
+    }), frets.map((f, i) => {
+      if (f < 0) return /* @__PURE__ */ React.createElement("text", { key: i, x: 14, y: yOf(i) + 4, className: "fb-mark" }, "✕");
+      const lbl = (fr) => {
+        const pc = (STRING_MIDI[i] + capo + fr) % 12;
+        return labelMode === "solfa" ? solfaOf(pc, keyPc || 0, useFlats) : DEG_LABEL[semiOf(pc, rootPc || 0)];
+      };
+      if (f === 0) return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: 14, cy: yOf(i), r: "8.5", fill: "none", stroke: "var(--brass)", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("text", { x: 14, y: yOf(i) + 3.4, className: "fb-fnum open" }, lbl(0)));
+      const slot = f - base;
+      if (slot < 0 || slot >= SLOTS) return null;
+      const isAdd = ovMap && ovMap[i] === f;
+      return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: X0 + (slot + 0.5) * sw, cy: yOf(i), r: "8.5", fill: isAdd ? "var(--jade)" : "var(--brass)" }), /* @__PURE__ */ React.createElement("text", { x: X0 + (slot + 0.5) * sw, y: yOf(i) + 3.6, className: "fb-fnum" + (lbl(f).length > 2 ? " long" : "") }, lbl(f)));
+    }), !showNut && /* @__PURE__ */ React.createElement("text", { x: X0 + sw * 0.5, y: H - 8, className: "fb-pos" }, base + capo, " fr")));
+  }
+  const IV_LABEL = { 0: "R", 1: "♭9", 2: "9", 3: "♭3", 4: "3", 5: "11", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
+  const DEG_LABEL = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
+  const SOLFA_SHARP = ["Do", "♯Do", "Re", "♯Re", "Mi", "Fa", "♯Fa", "So", "♯So", "La", "♯La", "Si"];
+  const SOLFA_FLAT = ["Do", "♭Re", "Re", "♭Mi", "Mi", "Fa", "♭So", "So", "♭La", "La", "♭Si", "Si"];
+  const solfaOf = (pc, keyPc, useFlats) => (useFlats ? SOLFA_FLAT : SOLFA_SHARP)[((pc - keyPc) % 12 + 12) % 12];
+  const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
+  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode }) {
+    const NF = 22;
+    const W = 980, H = 250, NUT = 58, END = 962;
+    const fw = (END - NUT) / NF;
+    const yOf = (i) => 178 - i * 27;
+    const xLine = (f) => NUT + f * fw;
+    const xSlot = (f) => f === 0 ? NUT - 24 : NUT + (f - 0.5) * fw;
+    const ivMap = {};
+    QUALITIES[chord.quality].iv.forEach((iv) => {
+      const semi = (iv % 12 + 12) % 12;
+      const pc = (chord.rootPc + semi) % 12;
+      if (ivMap[pc] === void 0) ivMap[pc] = semi;
+    });
+    const scalePcs = scaleSet || new Set(scale.map((s) => (keyPc + s) % 12));
+    const scaleSemis = new Set([...scalePcs].map((pc) => semiOf(pc, chord.rootPc)));
+    const aug = scaleSemis.has(4) && !scaleSemis.has(7);
+    const degOf = (sm) => {
+      if (sm === 6 && scaleSemis.has(6) && !scaleSemis.has(5)) return "♯4";
+      if (sm === 8) return aug ? "♯5" : "♭6";
+      return DEG_LABEL[sm];
+    };
+    const labelFor = (sm, pc) => labelMode === "solfa" ? solfaOf(pc, keyPc, useFlats) : degOf(sm);
+    const activeAbs = chord.voicing.frets.map((f) => f < 0 ? -1 : f + capo);
+    const brackets = chord.allVoicings.map((v, vi) => {
+      const fs = v.frets.filter((f) => f > 0).map((f) => f + capo);
+      const hasOpen = v.frets.some((f) => f === 0);
+      const lo = fs.length ? Math.min(...fs) : capo + 1;
+      const hi = fs.length ? Math.max(...fs) : capo + 1;
+      return { vi, tag: v.tag, lo, hi, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(hi) - 3, active: vi === chord.voiceIdx };
+    });
+    return /* @__PURE__ */ React.createElement("div", { className: "neck-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "brk-bar" }, /* @__PURE__ */ React.createElement("span", { className: "brk-lbl" }, "把位"), brackets.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.vi, className: "brk-btn" + (b.active ? " on" : ""), onClick: () => onPickVoicing(b.vi) }, /* @__PURE__ */ React.createElement("b", null, b.tag), /* @__PURE__ */ React.createElement("i", null, b.hasOpen ? "空弦" : b.lo + " 品")))), /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 " + W + " " + H, className: "neck", role: "img", "aria-label": "整支指板的和弦音位置" }, /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: END - NUT, height: "180", fill: "var(--wood)", rx: "3" }), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: xLine(capo) - NUT, height: "180", fill: "#0E0C08", opacity: ".72" }), Array.from({ length: NF + 1 }, (_, f) => /* @__PURE__ */ React.createElement(
+      "line",
+      {
+        key: f,
+        x1: xLine(f),
+        y1: "24",
+        x2: xLine(f),
+        y2: "204",
+        stroke: f === 0 ? "var(--bone)" : "var(--fret)",
+        strokeWidth: f === 0 ? 5 : 2
+      }
+    )), [3, 5, 7, 9, 15, 17, 19, 21].map((f) => /* @__PURE__ */ React.createElement("circle", { key: f, cx: xSlot(f), cy: "114", r: "6", fill: "var(--dot)", opacity: ".55" })), [[12, 78], [12, 150], [24, 78], [24, 150]].filter(([f]) => f <= 22).map(([f, y], i) => /* @__PURE__ */ React.createElement("circle", { key: i, cx: xSlot(f), cy: y, r: "6", fill: "var(--dot)", opacity: ".55" })), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: xLine(capo) - 4, y: "20", width: "8", height: "188", rx: "4", fill: "var(--rust)", opacity: ".9" }), brackets.filter((b) => b.active).map((b) => /* @__PURE__ */ React.createElement("rect", { key: b.vi, className: "brk-body", x: b.x1, y: "20", width: Math.max(30, b.x2 - b.x1), height: "188", rx: "8" })), [0, 1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ React.createElement(
+      "line",
+      {
+        key: i,
+        x1: NUT - 46,
+        y1: yOf(i),
+        x2: END,
+        y2: yOf(i),
+        stroke: "var(--string)",
+        strokeWidth: 2.6 - i * 0.3,
+        opacity: ".85"
+      }
+    )), [0, 1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ React.createElement("g", { key: "s" + i }, Array.from({ length: NF + 1 }, (_, f) => {
+      if (f > 0 && f < capo) return null;
+      if (f === 0 && capo > 0) return null;
+      const pc = (STRING_MIDI[i] + f) % 12;
+      const semi = ivMap[pc];
+      const inScale = scalePcs.has(pc);
+      const cx = xSlot(f), cy = yOf(i);
+      const isActive = activeAbs[i] === f;
+      const rel = f - capo;
+      const isManual = ovMap && ovMap[i] !== void 0 && ovMap[i] === rel;
+      const isCut = ovMap && ovMap[i] === -1 && chord.voicing.baseFrets[i] === rel;
+      const sm = semi !== void 0 ? semi : semiOf(pc, chord.rootPc);
+      if (!(semi !== void 0 || showScale && inScale || isActive || isManual || isCut))
+        return /* @__PURE__ */ React.createElement("circle", { key: i + "-" + f, cx, cy, r: "11", className: "nk-hit", onClick: () => onPickNote(i, rel, STRING_MIDI[i] + f) });
+      return /* @__PURE__ */ React.createElement(
+        "g",
+        {
+          key: i + "-" + f,
+          className: "nk-dot " + (semi !== void 0 ? roleOf(semi) : inScale ? "outside" : "chrom") + (isActive ? " active" : "") + (isManual ? " manual" : "") + (isCut ? " cut" : ""),
+          onClick: () => onPickNote(i, rel, STRING_MIDI[i] + f)
+        },
+        isActive && /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "14", className: "nk-ring" }),
+        /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "10.5" }),
+        /* @__PURE__ */ React.createElement("text", { x: cx, y: cy + 3.6, className: labelMode === "solfa" ? "sf" : "" }, semi === 9 && chord.quality === "dim7" && labelMode !== "solfa" ? "°7" : labelFor(sm, pc))
+      );
+    }))), Array.from(
+      { length: NF + 1 },
+      (_, f) => f === 0 ? null : /* @__PURE__ */ React.createElement("text", { key: f, x: xSlot(f), y: "224", className: "nk-fnum" }, f)
+    )), /* @__PURE__ */ React.createElement("div", { className: "neck-legend" }, /* @__PURE__ */ React.createElement("span", { className: "lg root" }, "R 根音"), /* @__PURE__ */ React.createElement("span", { className: "lg third" }, "3 決定大小調的三度"), /* @__PURE__ */ React.createElement("span", { className: "lg fifth" }, "5 五度"), /* @__PURE__ */ React.createElement("span", { className: "lg ext" }, "♭7 / 7 延伸音"), showScale && /* @__PURE__ */ React.createElement("span", { className: "lg sc" }, "灰色是選定音階的音"), /* @__PURE__ */ React.createElement("span", { className: "lg chrom" }, "藍色是音階外的半音")));
+  }
+  const rootEl = document.getElementById("root");
+  ReactDOM.createRoot(rootEl).render(React.createElement(ChordLab));
+})();
+
+};
+</script>
+
+<script>
+(function(){
+  var LIBS = [
+    { check: function(){ return window.React; }, urls: [
+      "https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"
+    ]},
+    { check: function(){ return window.ReactDOM && window.ReactDOM.createRoot; }, urls: [
+      "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"
+    ]},
+    { check: function(){ return window.Tone; }, urls: [
+      "https://cdnjs.cloudflare.com/ajax/libs/tone/15.5.27/Tone.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.js"
+    ]}
+  ];
+  function loadOne(urls, i, done){
+    if (i >= urls.length) return done(false);
+    var s = document.createElement("script");
+    s.src = urls[i];
+    s.crossOrigin = "anonymous";
+    s.onload = function(){ done(true); };
+    s.onerror = function(){ loadOne(urls, i + 1, done); };
+    document.head.appendChild(s);
+  }
+  function step(n){
+    if (n >= LIBS.length){
+      try { window.__CHORDLAB__(); }
+      catch (err) { console.error(err); document.getElementById("boot-fail").style.display = "grid"; }
+      return;
+    }
+    if (LIBS[n].check()) return step(n + 1);
+    loadOne(LIBS[n].urls, 0, function(ok){
+      if (!ok || !LIBS[n].check()){
+        document.getElementById("boot-fail").style.display = "grid";
+        return;
+      }
+      step(n + 1);
+    });
+  }
+  step(0);
+})();
+</script>
+</body>
+</html>
