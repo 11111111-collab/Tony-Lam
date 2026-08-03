@@ -1367,48 +1367,79 @@ window.__CHORDLAB__ = function(){
       attempt();
     });
   }
-  function loadSampler(folder, urls, opts) {
+  /**
+   * 取樣音檔的開頭幾乎都有一段靜音（mp3 編碼延遲加上錄音留白），長度從 23ms
+   * 到 49ms 不等。鼓是用 Player 播的、開頭 0ms，所以直接播會讓吉他、鋼琴、
+   * 貝斯全部聽起來比鼓晚半拍格。解碼後先把這段裁掉，音頭才會對齊。
+   */
+  function trimLeadingSilence(buf) {
+    let peak = 0;
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+    }
+    // 用峰值的 1% 當門檻。絕對門檻會把起音前那段 -60dB 的預備音留著，
+    // 那段聽不到但照樣佔時間，原聲鋼弦就是這樣多拖了十幾毫秒。
+    const thr = Math.max(3e-4, peak * 0.01);
+    let start = buf.length;
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < d.length; i++) {
+        if (Math.abs(d[i]) >= thr) {
+          if (i < start) start = i;
+          break;
+        }
+      }
+    }
+    if (start >= buf.length) return buf;
+    start = Math.max(0, start - Math.round(buf.sampleRate * 0.002));
+    if (!start) return buf;
+    const ctx = Tone.getContext().rawContext;
+    const out = ctx.createBuffer(buf.numberOfChannels, buf.length - start, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      out.getChannelData(c).set(buf.getChannelData(c).subarray(start));
+    }
+    return out;
+  }
+  async function fetchTrimmedBuffer(url, signal) {
+    const res = await fetch(url, { signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const raw = await Tone.getContext().rawContext.decodeAudioData(await res.arrayBuffer());
+    return new Tone.ToneAudioBuffer(trimLeadingSilence(raw));
+  }
+  // 限制同時在飛的請求數：解碼中的音檔會短暫佔兩份記憶體，取樣吉他有 71 個檔
+  async function mapLimit(items, limit, fn) {
+    const out = new Array(items.length);
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await fn(items[i]);
+      }
+    }));
+    return out;
+  }
+  async function loadSampler(folder, urls, opts) {
     const bases = opts && opts.bases || SAMPLE_BASES;
     const timeoutMs = opts && opts.timeout || 18e3;
-    return new Promise((resolve) => {
-      let idx = 0;
-      const attempt = () => {
-        if (idx >= bases.length) return resolve(null);
-        const base = bases[idx++] + (folder ? folder + "/" : "");
-        let settled = false;
-        const timer = setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          try {
-            s.dispose();
-          } catch (e) {
-          }
-          attempt();
-        }, timeoutMs);
-        const s = new Tone.Sampler({
-          urls,
-          baseUrl: base,
-          release: 1.2,
-          onload: () => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            resolve(s);
-          },
-          onerror: () => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            try {
-              s.dispose();
-            } catch (e) {
-            }
-            attempt();
-          }
-        });
-      };
-      attempt();
-    });
+    const notes = Object.keys(urls);
+    for (let i = 0; i < bases.length; i++) {
+      const dir = bases[i] + (folder ? folder + "/" : "");
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), timeoutMs);
+      try {
+        const bufs = await mapLimit(notes, 6, (n) =>
+          fetchTrimmedBuffer(dir + encodeURIComponent(urls[n]), ctl.signal));
+        const map = {};
+        notes.forEach((n, k) => { map[n] = bufs[k]; });
+        return new Tone.Sampler({ urls: map, release: 1.2 });
+      } catch (e) {
+        // 這個來源不通或逾時，換下一個
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return null;
   }
   class Engine {
     constructor() {
