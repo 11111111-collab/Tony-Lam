@@ -3,7 +3,8 @@
   Chord Lab
   音源授權 / Sample credits:
   - 貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
-  - 原聲鋼弦吉他：11111111-collab/1313
+  - 原聲鋼弦吉他：FSS Steel String Guitar — FlameStudios (Gary Campion) 錄製、
+    FreePats 整理，GPL-3.0 並附作品例外條款（用這些音色做出來的作品不受 GPL 感染）
   - 取樣吉他（四段力度）：11111111-collab/-1111
   - 西班牙古典吉他：11111111-collab/1212
   - 鋼琴（原生）：11111111-collab/-111
@@ -982,7 +983,7 @@ window.__CHORDLAB__ = function(){
   }
   const midiToName = (m) => SHARP_NAMES[m % 12] + (Math.floor(m / 12) - 1);
   const TONES = {
-    acoustic: { n: "原聲鋼弦", s: "木吉他，乾淨自然", src: "acoustic", gain: -3.5 },
+    acoustic: { n: "原聲鋼弦", s: "鋼弦木吉他，兩段力度", src: "acoustic", gain: -6.9, release: 0.9 },
     studio: { n: "取樣吉他", s: "四段力度真實取樣", src: "layered", gain: -3 },
     spanish: {
       n: "西班牙古典吉他", s: "尼龍弦，圓潤溫暖", src: "sampled", gain: -3.6,
@@ -1293,23 +1294,33 @@ window.__CHORDLAB__ = function(){
     "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/"
   ];
   const ACOUSTIC_BASES = [
-    "https://raw.githubusercontent.com/11111111-collab/1313/main/",
-    "https://cdn.jsdelivr.net/gh/11111111-collab/1313@main/"
+    "https://raw.githubusercontent.com/11111111-collab/1414/main/",
+    "https://cdn.jsdelivr.net/gh/11111111-collab/1414@main/"
   ];
-  // 48 個取樣涵蓋 G1–C6。檔名的音高逐一用頻譜驗證過；
-  // Cs.mp3 沒有八度數字，實測是 C#5。
-  const GUITAR_URLS = {
-   G1: "G1.mp3", "G#1": "Gs1.mp3", A1: "A1.mp3", "A#1": "As1.mp3", B1: "B1.mp3",
-   C2: "C2.mp3", "C#2": "Cs2.mp3", D2: "D2.mp3", "D#2": "Ds2.mp3", E2: "E2.mp3",
-   F2: "F2.mp3", G2: "G2.mp3", A2: "A2.mp3", B2: "B2.mp3", C3: "C3.mp3", D3: "D3.mp3",
-   E3: "E3.mp3", F3: "F3.mp3", "F#3": "Fs3.mp3", G3: "G3.mp3", "G#3": "Gs3.mp3",
-   A3: "A3.mp3", "A#3": "As3.mp3", B3: "B3.mp3", C4: "C4.mp3", "C#4": "Cs4.mp3",
-   D4: "D4.mp3", "D#4": "Ds4.mp3", E4: "E4.mp3", F4: "F4.mp3", "F#4": "Fs4.mp3",
-   G4: "G4.mp3", A4: "A4.mp3", "A#4": "As4.mp3", B4: "B4.mp3", C5: "C5.mp3",
-   "C#5": "Cs.mp3", D5: "D5.mp3", "D#5": "Ds5.mp3", E5: "E5.mp3", F5: "F5.mp3",
-   "F#5": "Fs5.mp3", G5: "G5.mp3", "G#5": "Gs5.mp3", A5: "A5.mp3", "A#5": "As5.mp3",
-   B5: "B5.mp3", C6: "C6.mp3"
+  /**
+   * FSS Steel String Guitar（FreePats，GPL-3.0）。檔名的數字就是 MIDI 音高，
+   * HV / MV 是兩段力度。取樣涵蓋 MIDI 40–84，但力度層是稀疏的：多數音只錄了 HV，
+   * 54、81、84 只有 MV，其餘 14 個音兩層都有。缺的那一層用另一層頂上——
+   * sfz 裡沒有 lovel/hivel 的 region 本來就是整個力度範圍通吃，行為一致。
+   */
+  const ACOUSTIC_LO = 40, ACOUSTIC_HI = 84;
+  const ACOUSTIC_NO_HV = [54, 81, 84];
+  const ACOUSTIC_HAS_MV = [40, 43, 44, 45, 50, 51, 54, 55, 56, 72, 73, 78, 80, 81, 82, 83, 84];
+  // 兩層都有的音才需要切換門檻，數值取自 sfz 的 hivel（1–127）。多數是 82，但不統一。
+  const ACOUSTIC_VEL = {
+    40: 82, 43: 89, 44: 82, 45: 99, 50: 82, 51: 82, 55: 82,
+    56: 82, 72: 82, 73: 82, 78: 93, 80: 82, 82: 82, 83: 94
   };
+  function acousticUrls(layer) {
+    const urls = {};
+    for (let m = ACOUSTIC_LO; m <= ACOUSTIC_HI; m++) {
+      const hv = ACOUSTIC_NO_HV.indexOf(m) < 0;
+      const mv = ACOUSTIC_HAS_MV.indexOf(m) >= 0;
+      const use = layer === "MV" ? (mv ? "MV" : "HV") : (hv ? "HV" : "MV");
+      urls[m] = use + "_" + m + ".mp3";
+    }
+    return urls;
+  }
   /**
    * 鋼琴音色。兩組都逐一量測過基頻，檔名與實際音高相符，直接照檔名對應。
    * 鋼琴實際只用到 MIDI 48–71（C3–B4），兩組都完整涵蓋。
@@ -1515,6 +1526,38 @@ window.__CHORDLAB__ = function(){
     }
     return null;
   }
+  /**
+   * 原聲鋼弦的兩個力度層合計只有 59 個不重複檔案，但兩個 sampler 各自要 45 個音，
+   * 各載各的會重複下載並解碼 31 個檔。改成先抓齊不重複的檔，再讓兩層共用同一份緩衝。
+   */
+  async function loadAcousticGuitar(opts) {
+    const maps = { hard: acousticUrls("HV"), soft: acousticUrls("MV") };
+    const files = [];
+    Object.keys(maps).forEach((k) => Object.keys(maps[k]).forEach((n) => {
+      if (files.indexOf(maps[k][n]) < 0) files.push(maps[k][n]);
+    }));
+    for (let i = 0; i < ACOUSTIC_BASES.length; i++) {
+      const dir = ACOUSTIC_BASES[i];
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), opts && opts.timeout || 6e4);
+      try {
+        const bufs = await mapLimit(files, 6, (f) => fetchAny(dir, [f], ctl.signal));
+        const byFile = {};
+        files.forEach((f, k) => { byFile[f] = bufs[k]; });
+        const build = (map) => {
+          const urls = {};
+          Object.keys(map).forEach((n) => { urls[n] = byFile[map[n]]; });
+          return new Tone.Sampler({ urls, release: opts && opts.release || 1.2 });
+        };
+        return { hard: build(maps.hard), soft: build(maps.soft) };
+      } catch (e) {
+        // 這個來源不通或逾時，換下一個
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return null;
+  }
   class Engine {
     constructor() {
       this.ready = false;
@@ -1607,10 +1650,12 @@ window.__CHORDLAB__ = function(){
       this.toneSrc = "acoustic";
       this.ready = true;
       report && report({ guitar: "loading", piano: "loading", bass: "loading", drum: "loading" });
-      const g = await loadSampler("", GUITAR_URLS, { bases: ACOUSTIC_BASES, timeout: 6e4 });
+      const spec = TONES.acoustic;
+      const aGain = () => new Tone.Volume(spec.gain == null ? 0 : spec.gain).connect(this.gGuitar);
+      const g = await loadAcousticGuitar({ timeout: 6e4, release: spec.release });
       if (g) {
-        const ga = TONES.acoustic.gain;
-        this.guitar = g.connect(new Tone.Volume(ga == null ? 0 : ga).connect(this.gGuitar));
+        this.guitar = g.hard.connect(aGain());
+        this.guitarSoft = g.soft.connect(aGain());
         this.mode.guitar = "sample";
       }
       report && report({ guitar: g ? "sample" : "synth" });
@@ -1768,14 +1813,19 @@ window.__CHORDLAB__ = function(){
     _layerFor(vel) {
       return vel < 0.3 ? 0 : vel < 0.55 ? 1 : vel < 0.8 ? 2 : 3;
     }
-    _sampler(vel) {
+    _sampler(vel, midi) {
       if (this.toneSrc === "layered" && this.layered) return this.layered[this._layerFor(vel)];
       if (this.toneSrc === "sampled") return this.guitarTones[this.tone] || null;
-      return this.mode.guitar === "sample" ? this.guitar : null;
+      if (this.mode.guitar !== "sample") return null;
+      if (this.guitarSoft && midi != null) {
+        const th = ACOUSTIC_VEL[midi];
+        if (th != null && vel * 127 <= th) return this.guitarSoft;
+      }
+      return this.guitar;
     }
     _attackString(k, midi, time, vel) {
       const note = midiToName(midi);
-      const smp = this._sampler(vel);
+      const smp = this._sampler(vel, midi);
       if (smp) {
         const prev = this.ringing[k];
         if (prev) prev.smp.triggerRelease(prev.note, time);
