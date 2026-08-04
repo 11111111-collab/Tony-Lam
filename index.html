@@ -2,9 +2,10 @@
 <!--
   Chord Lab
   音源授權 / Sample credits:
-  - 原聲鋼弦吉他、鋼琴、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 原聲鋼弦吉他、鋼琴：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
   - 取樣吉他（四段力度）：11111111-collab/-1111
-  - 原聲套鼓：Tonejs/audio (drum-samples/acoustic-kit)
+  - 貝斯：Finger Bass YR by Andrea Biasior（Yamaha RBX）— FreePats、CC0 公眾領域
+  - 鼓組（多力度多變化）：11111111-collab/-222
   - Tone.js — MIT
   以 CC-BY 授權的素材需要標示出處，公開發布時請保留這段註解，或在網站的任一處（關於頁、頁尾等）標註。
 -->
@@ -1329,14 +1330,31 @@ window.__CHORDLAB__ = function(){
     hat: { file: "hihatClosed", rr: [20, 20], lo: 0.33, hi: 0.66, trim: 0.5 }
   };
   const DRUM_PIECES = Object.keys(DRUM_KIT);
+  // 這組取樣比原本的 bass-electric 大 5.2 dB（實測 RMS），扣回去混音比例才不會跑掉
+  const BASS_DB = -14.2;
+  const BASS_BASES = [
+    "https://raw.githubusercontent.com/11111111-collab/-/main/",
+    "https://cdn.jsdelivr.net/gh/11111111-collab/-@main/"
+  ];
+  /**
+   * Finger Bass YR（FreePats，CC0）。檔名的八度標示不可信：C1/Cs1/D1/Ds1 實際
+   * 發的是 C2/C#2/D2/D#2，其餘八個音才與檔名相符。對應以隨附的 sfz 為準，
+   * 並逐一量測基頻驗證過（C1.mp3 = 65.5 Hz = C2）。照檔名對會低一個八度。
+   * 取樣只到 D#2，再上去由 Sampler 移調；sfz 本身也是把 D# 延伸到 A2。
+   */
   const BASS_URLS = {
     E1: "E1.mp3",
+    F1: "F1.mp3",
+    "F#1": "Fs1.mp3",
     G1: "G1.mp3",
+    "G#1": "Gs1.mp3",
+    A1: "A1.mp3",
     "A#1": "As1.mp3",
-    "C#2": "Cs2.mp3",
-    E2: "E2.mp3",
-    G2: "G2.mp3",
-    "A#2": "As2.mp3"
+    B1: "B1.mp3",
+    C2: "C1.mp3",
+    "C#2": "Cs1.mp3",
+    D2: "D1.mp3",
+    "D#2": "Ds1.mp3"
   };
   const getTransport = () => Tone.getTransport ? Tone.getTransport() : Tone.Transport;
   const getDest = () => Tone.getDestination ? Tone.getDestination() : Tone.Destination;
@@ -1426,6 +1444,7 @@ window.__CHORDLAB__ = function(){
   async function loadSampler(folder, urls, opts) {
     const bases = opts && opts.bases || SAMPLE_BASES;
     const timeoutMs = opts && opts.timeout || 18e3;
+    const release = opts && opts.release || 1.2;
     const notes = Object.keys(urls);
     for (let i = 0; i < bases.length; i++) {
       const dir = bases[i] + (folder ? folder + "/" : "");
@@ -1436,7 +1455,7 @@ window.__CHORDLAB__ = function(){
           fetchTrimmedBuffer(dir + encodeURIComponent(urls[n]), ctl.signal));
         const map = {};
         notes.forEach((n, k) => { map[n] = bufs[k]; });
-        return new Tone.Sampler({ urls: map, release: 1.2 });
+        return new Tone.Sampler({ urls: map, release });
       } catch (e) {
         // 這個來源不通或逾時，換下一個
       } finally {
@@ -1476,7 +1495,7 @@ window.__CHORDLAB__ = function(){
       this.mixNodes = {};
       this.gGuitar = new Tone.Volume(-4).connect(bus("guitar", -0.22, 110, 0));
       this.gPiano = new Tone.Volume(-13).connect(bus("piano", 0.26, 160, 0));
-      this.gBass = new Tone.Volume(-9).connect(bus("bass", 0, 0, 900));
+      this.gBass = new Tone.Volume(BASS_DB).connect(bus("bass", 0, 0, 900));
       this.gDrum = new Tone.Volume(-11).connect(bus("drum", 0.05, 0, 0));
       this.gNoise = new Tone.Volume(-26).connect(this.gGuitar);
       this.reverb = new Tone.Reverb({ decay: 1.6, wet: 0.13 }).connect(this.glue);
@@ -1545,7 +1564,7 @@ window.__CHORDLAB__ = function(){
         }
         report && report({ piano: p ? "sample" : "synth" });
       });
-      loadSampler("bass-electric", BASS_URLS).then((b) => {
+      loadSampler("", BASS_URLS, { bases: BASS_BASES, release: 0.5 }).then((b) => {
         if (b) {
           this.bass = b.connect(this.gBass);
           this.mode.bass = "sample";
@@ -1638,7 +1657,7 @@ window.__CHORDLAB__ = function(){
       this.lastGuitarVol = v.guitar;
       this.gGuitar.volume.value = db(v.guitar) - 4;
       this.gPiano.volume.value = db(v.piano) - 13;
-      this.gBass.volume.value = db(v.bass) - 9;
+      this.gBass.volume.value = db(v.bass) + BASS_DB;
       this.gDrum.volume.value = db(v.drum) - 11;
     }
     // 0–1 的力度切成四段，對到取樣的四層力度
