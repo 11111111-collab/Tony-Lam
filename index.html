@@ -2,7 +2,8 @@
 <!--
   Chord Lab
   音源授權 / Sample credits:
-  - 原聲鋼弦吉他、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 原聲鋼弦吉他：11111111-collab/1313
   - 取樣吉他（四段力度）：11111111-collab/-1111
   - 西班牙古典吉他：11111111-collab/1212
   - 鋼琴（原生）：11111111-collab/-111
@@ -981,7 +982,7 @@ window.__CHORDLAB__ = function(){
   }
   const midiToName = (m) => SHARP_NAMES[m % 12] + (Math.floor(m / 12) - 1);
   const TONES = {
-    acoustic: { n: "原聲鋼弦", s: "木吉他，乾淨自然", src: "acoustic" },
+    acoustic: { n: "原聲鋼弦", s: "木吉他，乾淨自然", src: "acoustic", gain: -3.5 },
     studio: { n: "取樣吉他", s: "四段力度真實取樣", src: "layered", gain: -3 },
     spanish: {
       n: "西班牙古典吉他", s: "尼龍弦，圓潤溫暖", src: "sampled", gain: -3.6,
@@ -1291,19 +1292,23 @@ window.__CHORDLAB__ = function(){
     "https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/",
     "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/"
   ];
+  const ACOUSTIC_BASES = [
+    "https://raw.githubusercontent.com/11111111-collab/1313/main/",
+    "https://cdn.jsdelivr.net/gh/11111111-collab/1313@main/"
+  ];
+  // 48 個取樣涵蓋 G1–C6。檔名的音高逐一用頻譜驗證過；
+  // Cs.mp3 沒有八度數字，實測是 C#5。
   const GUITAR_URLS = {
-    E2: "E2.mp3",
-    G2: "G2.mp3",
-    "A#2": "As2.mp3",
-    "C#3": "Cs3.mp3",
-    E3: "E3.mp3",
-    G3: "G3.mp3",
-    "A#3": "As3.mp3",
-    "C#4": "Cs4.mp3",
-    E4: "E4.mp3",
-    G4: "G4.mp3",
-    "A#4": "As4.mp3",
-    "C#5": "Cs5.mp3"
+   G1: "G1.mp3", "G#1": "Gs1.mp3", A1: "A1.mp3", "A#1": "As1.mp3", B1: "B1.mp3",
+   C2: "C2.mp3", "C#2": "Cs2.mp3", D2: "D2.mp3", "D#2": "Ds2.mp3", E2: "E2.mp3",
+   F2: "F2.mp3", G2: "G2.mp3", A2: "A2.mp3", B2: "B2.mp3", C3: "C3.mp3", D3: "D3.mp3",
+   E3: "E3.mp3", F3: "F3.mp3", "F#3": "Fs3.mp3", G3: "G3.mp3", "G#3": "Gs3.mp3",
+   A3: "A3.mp3", "A#3": "As3.mp3", B3: "B3.mp3", C4: "C4.mp3", "C#4": "Cs4.mp3",
+   D4: "D4.mp3", "D#4": "Ds4.mp3", E4: "E4.mp3", F4: "F4.mp3", "F#4": "Fs4.mp3",
+   G4: "G4.mp3", A4: "A4.mp3", "A#4": "As4.mp3", B4: "B4.mp3", C5: "C5.mp3",
+   "C#5": "Cs.mp3", D5: "D5.mp3", "D#5": "Ds5.mp3", E5: "E5.mp3", F5: "F5.mp3",
+   "F#5": "Fs5.mp3", G5: "G5.mp3", "G#5": "Gs5.mp3", A5: "A5.mp3", "A#5": "As5.mp3",
+   B5: "B5.mp3", C6: "C6.mp3"
   };
   /**
    * 鋼琴音色。兩組都逐一量測過基頻，檔名與實際音高相符，直接照檔名對應。
@@ -1602,9 +1607,10 @@ window.__CHORDLAB__ = function(){
       this.toneSrc = "acoustic";
       this.ready = true;
       report && report({ guitar: "loading", piano: "loading", bass: "loading", drum: "loading" });
-      const g = await loadSampler("guitar-acoustic", GUITAR_URLS);
+      const g = await loadSampler("", GUITAR_URLS, { bases: ACOUSTIC_BASES, timeout: 6e4 });
       if (g) {
-        this.guitar = g.connect(this.gGuitar);
+        const ga = TONES.acoustic.gain;
+        this.guitar = g.connect(new Tone.Volume(ga == null ? 0 : ga).connect(this.gGuitar));
         this.mode.guitar = "sample";
       }
       report && report({ guitar: g ? "sample" : "synth" });
