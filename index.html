@@ -4,7 +4,8 @@
   音源授權 / Sample credits:
   - 原聲鋼弦吉他、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
   - 取樣吉他（四段力度）：11111111-collab/-1111
-  - 鋼琴：11111111-collab/-111
+  - 鋼琴（原生）：11111111-collab/-111
+  - 鋼琴（合成）：FM Piano 2 by Roberto（模擬 Yamaha DX7）— FreePats、CC0 公眾領域
   - 鼓組（多力度多變化）：11111111-collab/-222
   - Tone.js — MIT
   以 CC-BY 授權的素材需要標示出處，公開發布時請保留這段註解，或在網站的任一處（關於頁、頁尾等）標註。
@@ -1282,26 +1283,42 @@ window.__CHORDLAB__ = function(){
     "A#4": "As4.mp3",
     "C#5": "Cs5.mp3"
   };
-  const PIANO_BASES = [
-    "https://raw.githubusercontent.com/11111111-collab/-111/main/",
-    "https://cdn.jsdelivr.net/gh/11111111-collab/-111@main/"
-  ];
-  // 12 個取樣，涵蓋 F#2–C5，間距約三個半音。鋼琴實際只用到 MIDI 48–71（C3–B4），
-  // 整段都在取樣範圍內。檔名與實際音高逐一量測驗證過，全部相符。
-  const PIANO_URLS = {
-    "F#2": "Fs2.mp3",
-    B2: "B2.mp3",
-    C3: "C3.mp3",
-    "D#3": "Ds3.mp3",
-    "F#3": "Fs3.mp3",
-    A3: "A3.mp3",
-    B3: "B3.mp3",
-    "D#4": "Ds4.mp3",
-    "F#4": "Fs4.mp3",
-    A4: "A4.mp3",
-    B4: "B4.mp3",
-    C5: "C5.mp3"
+  /**
+   * 鋼琴音色。兩組都逐一量測過基頻，檔名與實際音高相符，直接照檔名對應。
+   * 鋼琴實際只用到 MIDI 48–71（C3–B4），兩組都完整涵蓋。
+   */
+  const PIANO_TONES = {
+    natural: {
+      n: "原生鋼琴", s: "取樣原音，溫暖自然",
+      bases: [
+        "https://raw.githubusercontent.com/11111111-collab/-111/main/",
+        "https://cdn.jsdelivr.net/gh/11111111-collab/-111@main/"
+      ],
+      // 涵蓋 F#2–C5，間距約三個半音
+      urls: {
+        "F#2": "Fs2.mp3", B2: "B2.mp3", C3: "C3.mp3", "D#3": "Ds3.mp3",
+        "F#3": "Fs3.mp3", A3: "A3.mp3", B3: "B3.mp3", "D#4": "Ds4.mp3",
+        "F#4": "Fs4.mp3", A4: "A4.mp3", B4: "B4.mp3", C5: "C5.mp3"
+      }
+    },
+    fm: {
+      n: "合成鋼琴", s: "DX7 風格電鋼琴，亮且延音長",
+      bases: [
+        "https://raw.githubusercontent.com/11111111-collab/-11/main/",
+        "https://cdn.jsdelivr.net/gh/11111111-collab/-11@main/"
+      ],
+      // 涵蓋 F#1–C7，三全音間距；release 依隨附 sfz 的 ampeg_release
+      urls: {
+        "F#1": "Fs1.mp3", C2: "C2.mp3", "F#2": "Fs2.mp3", C3: "C3.mp3",
+        "F#3": "Fs3.mp3", C4: "C4.mp3", "F#4": "Fs4.mp3", C5: "C5.mp3",
+        "F#5": "Fs5.mp3", C6: "C6.mp3", "F#6": "Fs6.mp3", C7: "C7.mp3"
+      },
+      release: 1.9,
+      // 這組比原生鋼琴大 4.2 dB（實測 RMS），扣回去兩個音色切換時音量才一致
+      gain: -4.2
+    }
   };
+  const PIANO_DEFAULT = "natural";
   const LAYERED_BASES = [
     "https://raw.githubusercontent.com/11111111-collab/-1111/main/",
     "https://cdn.jsdelivr.net/gh/11111111-collab/-1111@main/"
@@ -1462,6 +1479,9 @@ window.__CHORDLAB__ = function(){
       this.ready = false;
       this.mode = { guitar: "synth", piano: "synth", bass: "synth", drum: "synth" };
       this.ringing = {};
+      this.pianos = {};
+      this.pianoLoading = {};
+      this.pianoTone = PIANO_DEFAULT;
       this.onStrum = null;
     }
     async boot(report) {
@@ -1550,11 +1570,7 @@ window.__CHORDLAB__ = function(){
         this.mode.guitar = "sample";
       }
       report && report({ guitar: g ? "sample" : "synth" });
-      loadSampler("", PIANO_URLS, { bases: PIANO_BASES }).then((p) => {
-        if (p) {
-          this.piano = p.connect(this.gPiano);
-          this.mode.piano = "sample";
-        }
+      this.loadPianoTone(PIANO_DEFAULT).then((p) => {
         report && report({ piano: p ? "sample" : "synth" });
       });
       loadSampler("bass-electric", BASS_URLS).then((b) => {
@@ -1571,6 +1587,33 @@ window.__CHORDLAB__ = function(){
         }
         report && report({ drum: kit ? "sample" : "synth" });
       });
+    }
+    /**
+     * 鋼琴音色各自獨立載入並快取，切換時不用重載。每個音色接自己的音量節點，
+     * 這樣校準值寫在 PIANO_TONES 裡就好，不必動到 gPiano 與 setVolumes。
+     */
+    async loadPianoTone(key, report) {
+      if (this.pianos[key]) return this.pianos[key];
+      if (this.pianoLoading[key]) return this.pianoLoading[key];
+      const spec = PIANO_TONES[key] || PIANO_TONES[PIANO_DEFAULT];
+      report && report("loading");
+      const job = loadSampler("", spec.urls, { bases: spec.bases, release: spec.release }).then((s) => {
+        this.pianoLoading[key] = null;
+        if (!s) {
+          report && report("failed");
+          return null;
+        }
+        const g = new Tone.Volume(spec.gain == null ? 0 : spec.gain).connect(this.gPiano);
+        this.pianos[key] = s.connect(g);
+        this.mode.piano = "sample";
+        report && report("ready");
+        return s;
+      });
+      this.pianoLoading[key] = job;
+      return job;
+    }
+    setPianoTone(key) {
+      this.pianoTone = PIANO_TONES[key] ? key : PIANO_DEFAULT;
     }
     /**
      * 載入四段力度的取樣吉他。四層各是一整組音，所以四個 Sampler 平行載，
@@ -1775,7 +1818,8 @@ window.__CHORDLAB__ = function(){
     }
     playPiano(midis, time, dur, vel) {
       const notes = midis.map(midiToName);
-      if (this.mode.piano === "sample" && this.piano) this.piano.triggerAttackRelease(notes, dur, time, vel);
+      const smp = this.pianos[this.pianoTone];
+      if (smp) smp.triggerAttackRelease(notes, dur, time, vel);
       else this.polyFallback.triggerAttackRelease(notes, dur, time, vel * 0.5);
     }
     playBass(midi, time, dur, vel) {
@@ -2000,6 +2044,7 @@ window.__CHORDLAB__ = function(){
     const [swing, setSwing] = useState(0);
     const [metro, setMetro] = useState(false);
     const [gtone, setGtone] = useState("acoustic");
+    const [ptone, setPtone] = useState(PIANO_DEFAULT);
     const [playing, setPlaying] = useState(false);
     const [curIdx, setCurIdx] = useState(-1);
     const [recording, setRecording] = useState(false);
@@ -2381,6 +2426,20 @@ window.__CHORDLAB__ = function(){
       }
       eng.setGuitarTone(key);
     };
+    const applyPianoTone = async (key) => {
+      const eng = engineRef.current;
+      const prev = ptone;
+      setPtone(key);
+      if (!eng || !eng.ready) return;
+      if (!eng.pianos[key]) notify("「" + PIANO_TONES[key].n + "」載入中…");
+      const smp = await eng.loadPianoTone(key, (r) => setStatus((st) => ({ ...st, piano: r === "ready" ? "sample" : r })));
+      if (!smp) {
+        notify(PIANO_TONES[key].n + "載不下來，維持原本的音色");
+        setPtone(prev);
+        return;
+      }
+      eng.setPianoTone(key);
+    };
     const applyTemplate = (t) => {
       const md = t.mode || mode;
       const sc = md === "minor" ? MINOR_SCALE : MAJOR_SCALE;
@@ -2523,7 +2582,7 @@ window.__CHORDLAB__ = function(){
     };
     const doExportJson = () => new Blob([JSON.stringify({
       app: "chord-lab", version: 2,
-      keyPc, mode, capo, bpm, strumKey, drumKey, bassKey, gtone,
+      keyPc, mode, capo, bpm, strumKey, drumKey, bassKey, gtone, ptone,
       vols, master, autoMix, voiceMap,
       prog: prog.map((c) => ({ rootPc: c.rootPc, quality: c.quality, bars: c.bars, beats: c.beats }))
     }, null, 2)], { type: "application/json" });
@@ -2919,6 +2978,15 @@ window.__CHORDLAB__ = function(){
         width: 138,
         onChange: applyTone,
         options: Object.entries(TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鋼琴音色"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: ptone,
+        up: true,
+        width: 138,
+        onChange: applyPianoTone,
+        options: Object.entries(PIANO_TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
       }
     )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鼓組"), /* @__PURE__ */ React.createElement(
       Picker,
