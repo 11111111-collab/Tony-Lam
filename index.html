@@ -1313,10 +1313,22 @@ window.__CHORDLAB__ = function(){
     return urls;
   }
   const DRUM_BASES = [
-    "https://raw.githubusercontent.com/Tonejs/audio/master/drum-samples/acoustic-kit/",
-    "https://cdn.jsdelivr.net/gh/Tonejs/audio@master/drum-samples/acoustic-kit/"
+    "https://raw.githubusercontent.com/11111111-collab/-222/main/",
+    "https://cdn.jsdelivr.net/gh/11111111-collab/-222@main/"
   ];
-  const DRUM_PIECES = ["kick", "snare", "hihat", "tom1", "tom2"];
+  /**
+   * 鼓組取樣：檔名是「音色_力度層_變化」，力度層由輕到重，同一層下的變化用來輪替。
+   * lo/hi 是這個音色在節奏型裡實際會出現的力度範圍（見 METRIC_W 與 drumAt 的設定）。
+   * 力度落在 0.84–0.95 這種窄區間，直接乘上層數只會永遠打到最重那層，
+   * 所以先用 lo/hi 正規化，重拍與弱拍才會真的落在不同層。
+   * 音色代號沿用節奏型送出的 kick / snare / hat。
+   */
+  const DRUM_KIT = {
+    kick: { file: "kick", rr: [9, 11, 12], lo: 0.84, hi: 0.95, trim: 1.2 },
+    snare: { file: "snare", rr: [10, 14, 12, 9], lo: 0.75, hi: 0.82, trim: 1.35 },
+    hat: { file: "hihatClosed", rr: [20, 20], lo: 0.33, hi: 0.66, trim: 0.5 }
+  };
+  const DRUM_PIECES = Object.keys(DRUM_KIT);
   const BASS_URLS = {
     E1: "E1.mp3",
     G1: "G1.mp3",
@@ -1329,43 +1341,35 @@ window.__CHORDLAB__ = function(){
   const getTransport = () => Tone.getTransport ? Tone.getTransport() : Tone.Transport;
   const getDest = () => Tone.getDestination ? Tone.getDestination() : Tone.Destination;
   const getDraw = () => Tone.getDraw ? Tone.getDraw() : Tone.Draw;
-  function loadDrumKit() {
-    return new Promise((resolve) => {
-      let idx = 0;
-      const attempt = () => {
-        if (idx >= DRUM_BASES.length) return resolve(null);
-        const base = DRUM_BASES[idx++];
-        const players = {};
-        let left = DRUM_PIECES.length, failed = false;
-        const done = () => {
-          if (failed) return;
-          if (--left === 0) resolve(players);
-        };
-        const fail = () => {
-          if (failed) return;
-          failed = true;
-          Object.values(players).forEach((p) => {
-            try {
-              p.dispose();
-            } catch (e) {
+  async function loadDrumKit(opts) {
+    const timeoutMs = opts && opts.timeout || 6e4;
+    for (let i = 0; i < DRUM_BASES.length; i++) {
+      const base = DRUM_BASES[i];
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), timeoutMs);
+      try {
+        const jobs = [];
+        DRUM_PIECES.forEach((kind) => {
+          DRUM_KIT[kind].rr.forEach((count, li) => {
+            for (let v = 1; v <= count; v++) {
+              jobs.push({ kind, li, url: base + DRUM_KIT[kind].file + "_" + (li + 1) + "_" + v + ".mp3" });
             }
           });
-          attempt();
-        };
-        const timer = setTimeout(fail, 15e3);
-        DRUM_PIECES.forEach((name) => {
-          players[name] = new Tone.Player({
-            url: base + name + ".mp3",
-            onload: () => {
-              if (left === 1) clearTimeout(timer);
-              done();
-            },
-            onerror: fail
-          });
         });
-      };
-      attempt();
-    });
+        const bufs = await mapLimit(jobs, 8, (j) => fetchTrimmedBuffer(j.url, ctl.signal));
+        const kit = {};
+        DRUM_PIECES.forEach((kind) => {
+          kit[kind] = { layers: DRUM_KIT[kind].rr.map(() => []), last: DRUM_KIT[kind].rr.map(() => -1) };
+        });
+        jobs.forEach((j, k) => kit[j.kind].layers[j.li].push(bufs[k]));
+        return kit;
+      } catch (e) {
+        // 這個來源不通或逾時，換下一個
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return null;
   }
   /**
    * 取樣音檔的開頭幾乎都有一段靜音（mp3 編碼延遲加上錄音留白），長度從 23ms
@@ -1551,7 +1555,6 @@ window.__CHORDLAB__ = function(){
       loadDrumKit().then((kit) => {
         if (kit) {
           this.drums = kit;
-          DRUM_PIECES.forEach((n) => kit[n].connect(this.drumGains[n]));
           this.mode.drum = "sample";
         }
         report && report({ drum: kit ? "sample" : "synth" });
@@ -1773,12 +1776,28 @@ window.__CHORDLAB__ = function(){
       this.click.triggerAttackRelease(accent ? "C7" : "C6", 0.03, time, accent ? 0.75 : 0.42);
     }
     playDrum(kind, time, vel) {
-      if (this.mode.drum === "sample" && this.drums && this.drums[kind]) {
-        const g = this.drumGains[kind];
-        g.gain.cancelScheduledValues(time);
-        g.gain.setValueAtTime(Math.max(0.04, vel * (kind === "hihat" ? 0.62 : 1)), time);
+      const k = this.drums && this.drums[kind];
+      if (this.mode.drum === "sample" && k) {
+        const spec = DRUM_KIT[kind];
+        const n = k.layers.length;
+        const t = Math.max(0, Math.min(1, (vel - spec.lo) / (spec.hi - spec.lo)));
+        const li = Math.min(n - 1, Math.floor(t * n));
+        const bank = k.layers[li];
+        // 輪替：同一層裡不連著用同一個取樣，連續的 hi-hat 才不會像機關槍
+        let pick = Math.floor(Math.random() * bank.length);
+        if (bank.length > 1 && pick === k.last[li]) pick = (pick + 1) % bank.length;
+        k.last[li] = pick;
+        // 取樣每一層都做過峰值正規化，層跟層之間沒有音量差，只有音色差（重擊的殘響
+        // 較長）。所以動態還是得靠 vel，不然重拍弱拍會一樣大聲、groove 會被壓平。
+        // trim 是拿舊鼓組的 RMS 校準出來的，換音色後混音比例才不會跑掉。
+        const level = spec.trim * vel;
         try {
-          this.drums[kind].start(time);
+          const g = new Tone.Gain(level).connect(this.drumGains[kind]);
+          const src = new Tone.ToneBufferSource(bank[pick]).connect(g);
+          src.onended = () => {
+            try { src.dispose(); g.dispose(); } catch (e) {}
+          };
+          src.start(time);
         } catch (e) {
         }
         return;
