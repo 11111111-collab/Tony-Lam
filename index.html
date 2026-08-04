@@ -983,7 +983,14 @@ window.__CHORDLAB__ = function(){
   }
   const midiToName = (m) => SHARP_NAMES[m % 12] + (Math.floor(m / 12) - 1);
   const TONES = {
-    acoustic: { n: "原聲鋼弦", s: "鋼弦木吉他，兩段力度", src: "acoustic", gain: -6.9, release: 0.9 },
+    // 這組取樣的高音區比一般木吉他亮很多（MIDI 59–76 的頻譜重心 4700Hz，
+    // 4kHz 以上的能量是舊音源的三十倍），刷和弦時高音聲部會刺耳。
+    // eq 是這個音色專屬的修飾，掛在它自己的鏈路上，不影響其他吉他音色。
+    // gain 已把 eq 削掉的約 0.5dB 補回來，切換音色時音量才不會掉。
+    acoustic: {
+      n: "原聲鋼弦", s: "鋼弦木吉他，兩段力度", src: "acoustic", gain: -6.4, release: 0.9,
+      eq: { harshHz: 3200, harshQ: 1, harshDb: -4.5, topHz: 7000, topDb: -3.5 }
+    },
     studio: { n: "取樣吉他", s: "四段力度真實取樣", src: "layered", gain: -3 },
     spanish: {
       n: "西班牙古典吉他", s: "尼龍弦，圓潤溫暖", src: "sampled", gain: -3.6,
@@ -1651,11 +1658,14 @@ window.__CHORDLAB__ = function(){
       this.ready = true;
       report && report({ guitar: "loading", piano: "loading", bass: "loading", drum: "loading" });
       const spec = TONES.acoustic;
-      const aGain = () => new Tone.Volume(spec.gain == null ? 0 : spec.gain).connect(this.gGuitar);
+      const eq = spec.eq || {};
+      const aTop = new Tone.Filter({ type: "highshelf", frequency: eq.topHz || 7000, gain: eq.topDb || 0 }).connect(this.gGuitar);
+      const aHarsh = new Tone.Filter({ type: "peaking", frequency: eq.harshHz || 3200, Q: eq.harshQ || 1, gain: eq.harshDb || 0 }).connect(aTop);
+      const aVol = new Tone.Volume(spec.gain == null ? 0 : spec.gain).connect(aHarsh);
       const g = await loadAcousticGuitar({ timeout: 6e4, release: spec.release });
       if (g) {
-        this.guitar = g.hard.connect(aGain());
-        this.guitarSoft = g.soft.connect(aGain());
+        this.guitar = g.hard.connect(aVol);
+        this.guitarSoft = g.soft.connect(aVol);
         this.mode.guitar = "sample";
       }
       report && report({ guitar: g ? "sample" : "synth" });
