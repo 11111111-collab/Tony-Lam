@@ -2,9 +2,10 @@
 <!--
   Chord Lab
   音源授權 / Sample credits:
-  - 原聲鋼弦吉他、鋼琴、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
+  - 原聲鋼弦吉他、貝斯：nbrosowsky/tonejs-instruments — 取樣 CC-BY 3.0、程式 MIT
   - 取樣吉他（四段力度）：11111111-collab/-1111
-  - 原聲套鼓：Tonejs/audio (drum-samples/acoustic-kit)
+  - 鋼琴：11111111-collab/-111
+  - 鼓組（多力度多變化）：11111111-collab/-222
   - Tone.js — MIT
   以 CC-BY 授權的素材需要標示出處，公開發布時請保留這段註解，或在網站的任一處（關於頁、頁尾等）標註。
 -->
@@ -1281,13 +1282,24 @@ window.__CHORDLAB__ = function(){
     "A#4": "As4.mp3",
     "C#5": "Cs5.mp3"
   };
+  const PIANO_BASES = [
+    "https://raw.githubusercontent.com/11111111-collab/-111/main/",
+    "https://cdn.jsdelivr.net/gh/11111111-collab/-111@main/"
+  ];
+  // 12 個取樣，涵蓋 F#2–C5，間距約三個半音。鋼琴實際只用到 MIDI 48–71（C3–B4），
+  // 整段都在取樣範圍內。檔名與實際音高逐一量測驗證過，全部相符。
   const PIANO_URLS = {
+    "F#2": "Fs2.mp3",
+    B2: "B2.mp3",
     C3: "C3.mp3",
-    E3: "E3.mp3",
-    "G#3": "Gs3.mp3",
-    C4: "C4.mp3",
-    E4: "E4.mp3",
-    "G#4": "Gs4.mp3",
+    "D#3": "Ds3.mp3",
+    "F#3": "Fs3.mp3",
+    A3: "A3.mp3",
+    B3: "B3.mp3",
+    "D#4": "Ds4.mp3",
+    "F#4": "Fs4.mp3",
+    A4: "A4.mp3",
+    B4: "B4.mp3",
     C5: "C5.mp3"
   };
   const LAYERED_BASES = [
@@ -1538,7 +1550,7 @@ window.__CHORDLAB__ = function(){
         this.mode.guitar = "sample";
       }
       report && report({ guitar: g ? "sample" : "synth" });
-      loadSampler("piano", PIANO_URLS).then((p) => {
+      loadSampler("", PIANO_URLS, { bases: PIANO_BASES }).then((p) => {
         if (p) {
           this.piano = p.connect(this.gPiano);
           this.mode.piano = "sample";
