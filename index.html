@@ -2132,9 +2132,16 @@ window.__CHORDLAB__ = function(){
    * 改成順著音階走：每條弦都從「前一條弦最後那個音的下一個音階音」接下去，
    * 中間就不會有缺口。
    *   caged：每弦 2–3 音，跨度壓在 5 格內，對應傳統的五個把位
-   *   3nps ：每弦固定 3 音，讀起來是 R 2 3｜4 5 6｜7 R 2，但跨度到 6–7 格
+   *   3nps ：每弦固定音數，讀起來是 R 2 3｜4 5 6｜7 R 2，但跨度到 6–7 格
    * 回傳每條弦要納入的格數陣列。
    */
+  /**
+   * 3nps 每弦要幾個音。名字叫一弦三音，但三音是給七聲音階的：
+   * 相鄰弦差五個半音，七聲音階平均 1.7 半音一個音，三個音剛好接得上。
+   * 五聲音階拿三個音會拉到十幾格，八音以上的減音階／半音階拿三個音又接不到
+   * 下一條弦，所以照密度分級——減音階本來的標準指法就是一弦四音。
+   */
+  const npsFor = (size) => size <= 5 ? 2 : size <= 7 ? 3 : 4;
   function scaleBoxFrets(scalePcs, anchor, sys, capo, nf) {
     const cols = STRING_MIDI.map((base) => {
       const arr = [];
@@ -2145,8 +2152,7 @@ window.__CHORDLAB__ = function(){
       }
       return arr;
     });
-    // 五聲音階一弦三音會拉到十幾格，手根本按不到，這種就退回一弦兩音
-    const want = sys === "3nps" ? (scalePcs.size >= 6 ? 3 : 2) : 3;
+    const want = sys === "3nps" ? npsFor(scalePcs.size) : 3;
     const picked = STRING_MIDI.map(() => []);
     const nextOn = (i, above) => {
       const base = STRING_MIDI[i], list = cols[i];
@@ -2177,6 +2183,8 @@ window.__CHORDLAB__ = function(){
       // 不補的話音階就會斷一格——和聲小調的增二度最容易踩到。
       if (i + 1 < STRING_MIDI.length) {
         for (let guard = 0; guard < 4; guard++) {
+          // 3nps 每弦音數是硬規則，補洞不能把某一條弦撐成四音、其他還是三音
+          if (sys === "3nps" && picked[i].length >= want) break;
           const mine = nextOn(i, prevMidi), theirs = nextOn(i + 1, prevMidi);
           if (!mine || !theirs || mine.midi >= theirs.midi) break;
           picked[i].push(mine.f);
@@ -3308,7 +3316,7 @@ window.__CHORDLAB__ = function(){
       "模塊"
     ),/* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
       ["caged", "CAGED", "每弦 2–3 音，跨度約 5 格"],
-      ["3nps", "三音一弦", "每弦固定三音，讀起來最整齊"]
+      ["3nps", "三音一弦", "每條弦音數一樣多，讀起來最整齊；五聲退成兩音、減音階是四音"]
     ].map(([v, l, t]) => /* @__PURE__ */ React.createElement("button", {
       key: v,
       // 一直顯示，不然使用者不會知道有這個選項；直接點系統就順手開啟模塊
