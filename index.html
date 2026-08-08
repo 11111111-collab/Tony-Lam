@@ -344,6 +344,8 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .nk-dot.outside text{fill:var(--dim)}
 .nk-dot.manual circle{stroke:var(--jade);stroke-width:2.2}
 .nk-dot.cut{opacity:.5}
+/* 實色模式：把平常半透明的音點打亮，方便看整個把位的形狀 */
+.nk-dot.lit,.nk-dot.lit:hover{opacity:1}
 .nk-dot.cut circle{stroke:var(--rust);stroke-width:1.6;stroke-dasharray:2.5 2}
 .nk-dot text{font-size:9.5px;text-anchor:middle;font-family:var(--mono);font-weight:700;pointer-events:none}
 .nk-dot.root circle{fill:var(--brass);stroke:none}
@@ -2317,6 +2319,8 @@ window.__CHORDLAB__ = function(){
     const [neckOpen, setNeckOpen] = useState(false);
     const [expOpen, setExpOpen] = useState(false);
     const [showScale, setShowScale] = useState(true);
+    // 指板音點的實色模式：off 維持半透明、all 全指板打亮、pos 只打亮目前把位
+    const [neckSolid, setNeckSolid] = useState("off");
     const [neckScale, setNeckScale] = useState(null);
     const [labelMode, setLabelMode] = useState("deg");
     const [swing, setSwing] = useState(0);
@@ -3227,10 +3231,27 @@ window.__CHORDLAB__ = function(){
         onClick: () => setShowScale((v) => !v)
       },
       showScale ? "隱藏調內音" : "顯示調內音"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "btn-ghost sm" + (neckSolid === "all" ? " on" : ""),
+        title: "整個指板的音都用實色顯示",
+        onClick: () => setNeckSolid((v) => v === "all" ? "off" : "all")
+      },
+      "全指板實色"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "btn-ghost sm" + (neckSolid === "pos" ? " on" : ""),
+        title: "只把目前把位範圍內的音用實色顯示",
+        onClick: () => setNeckSolid((v) => v === "pos" ? "off" : "pos")
+      },
+      "把位實色"
     ), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
       NeckView,
       {
         chord: viewChord,
+        solid: neckSolid,
         ovMap: (viewChord.cfg && viewChord.cfg.ov) || {},
         scaleSet: neckScaleSet,
         labelMode,
@@ -3794,7 +3815,7 @@ window.__CHORDLAB__ = function(){
   const SOLFA_FLAT = ["Do", "♭Re", "Re", "♭Mi", "Mi", "Fa", "♭So", "So", "♭La", "La", "♭Si", "Si"];
   const solfaOf = (pc, keyPc, useFlats) => (useFlats ? SOLFA_FLAT : SOLFA_SHARP)[((pc - keyPc) % 12 + 12) % 12];
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
-  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode }) {
+  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid }) {
     const NF = 22;
     const W = 980, H = 250, NUT = 58, END = 962;
     const fw = (END - NUT) / NF;
@@ -3824,6 +3845,7 @@ window.__CHORDLAB__ = function(){
       const hi = fs.length ? Math.max(...fs) : capo + 1;
       return { vi, tag: v.tag, lo, hi, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(hi) - 3, active: vi === chord.voiceIdx };
     });
+    const box = brackets.find((b) => b.active);
     return /* @__PURE__ */ React.createElement("div", { className: "neck-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "brk-bar" }, /* @__PURE__ */ React.createElement("span", { className: "brk-lbl" }, "把位"), brackets.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.vi, className: "brk-btn" + (b.active ? " on" : ""), onClick: () => onPickVoicing(b.vi) }, /* @__PURE__ */ React.createElement("b", null, b.tag), /* @__PURE__ */ React.createElement("i", null, b.hasOpen ? "空弦" : b.lo + " 品")))), /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 " + W + " " + H, className: "neck", role: "img", "aria-label": "整支指板的和弦音位置" }, /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: END - NUT, height: "180", fill: "var(--wood)", rx: "3" }), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: xLine(capo) - NUT, height: "180", fill: "#0E0C08", opacity: ".72" }), Array.from({ length: NF + 1 }, (_, f) => /* @__PURE__ */ React.createElement(
       "line",
       {
@@ -3859,13 +3881,16 @@ window.__CHORDLAB__ = function(){
       const isManual = ovMap && ovMap[i] !== void 0 && ovMap[i] === rel;
       const isCut = ovMap && ovMap[i] === -1 && chord.voicing.baseFrets[i] === rel;
       const sm = semi !== void 0 ? semi : semiOf(pc, chord.rootPc);
+      // 實色：全指板一律打亮，或只打亮目前把位涵蓋的格數（開放弦看這個把位有沒有用到）
+      const inBox = !!box && (f === 0 ? box.hasOpen : f >= box.lo && f <= box.hi);
+      const lit = !isCut && (solid === "all" || solid === "pos" && inBox);
       if (!(semi !== void 0 || showScale && inScale || isActive || isManual || isCut))
         return /* @__PURE__ */ React.createElement("circle", { key: i + "-" + f, cx, cy, r: "11", className: "nk-hit", onClick: () => onPickNote(i, rel, STRING_MIDI[i] + f) });
       return /* @__PURE__ */ React.createElement(
         "g",
         {
           key: i + "-" + f,
-          className: "nk-dot " + (semi !== void 0 ? roleOf(semi) : inScale ? "outside" : "chrom") + (isActive ? " active" : "") + (isManual ? " manual" : "") + (isCut ? " cut" : ""),
+          className: "nk-dot " + (semi !== void 0 ? roleOf(semi) : inScale ? "outside" : "chrom") + (isActive ? " active" : "") + (isManual ? " manual" : "") + (isCut ? " cut" : "") + (lit ? " lit" : ""),
           onClick: () => onPickNote(i, rel, STRING_MIDI[i] + f)
         },
         isActive && /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "14", className: "nk-ring" }),
