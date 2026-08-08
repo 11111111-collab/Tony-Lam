@@ -3817,6 +3817,7 @@ window.__CHORDLAB__ = function(){
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
   function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid }) {
     const NF = 22;
+    const BOX_MIN = 4;
     const W = 980, H = 250, NUT = 58, END = 962;
     const fw = (END - NUT) / NF;
     const yOf = (i) => 178 - i * 27;
@@ -3843,7 +3844,12 @@ window.__CHORDLAB__ = function(){
       const hasOpen = v.frets.some((f) => f === 0);
       const lo = fs.length ? Math.min(...fs) : capo + 1;
       const hi = fs.length ? Math.max(...fs) : capo + 1;
-      return { vi, tag: v.tag, lo, hi, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(hi) - 3, active: vi === chord.voiceIdx };
+      // 吉他的「把位」是四格的區塊，但和弦本身常常只跨兩三格——A 大調開放把位
+      // 甚至只按第 2 格。框只取和弦的跨距的話，同一個把位模型裡其他的音會落在
+      // 框外，看起來像不見了。所以往上補到至少 BOX_MIN 格；lo 保持原值，
+      // 上方的把位標籤還要用它顯示品數。
+      const bHi = Math.min(NF, Math.max(hi, lo + BOX_MIN - 1));
+      return { vi, tag: v.tag, lo, hi, bHi, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(bHi) - 3, active: vi === chord.voiceIdx };
     });
     const box = brackets.find((b) => b.active);
     return /* @__PURE__ */ React.createElement("div", { className: "neck-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "brk-bar" }, /* @__PURE__ */ React.createElement("span", { className: "brk-lbl" }, "把位"), brackets.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.vi, className: "brk-btn" + (b.active ? " on" : ""), onClick: () => onPickVoicing(b.vi) }, /* @__PURE__ */ React.createElement("b", null, b.tag), /* @__PURE__ */ React.createElement("i", null, b.hasOpen ? "空弦" : b.lo + " 品")))), /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 " + W + " " + H, className: "neck", role: "img", "aria-label": "整支指板的和弦音位置" }, /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: END - NUT, height: "180", fill: "var(--wood)", rx: "3" }), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: xLine(capo) - NUT, height: "180", fill: "#0E0C08", opacity: ".72" }), Array.from({ length: NF + 1 }, (_, f) => /* @__PURE__ */ React.createElement(
@@ -3882,7 +3888,7 @@ window.__CHORDLAB__ = function(){
       const isCut = ovMap && ovMap[i] === -1 && chord.voicing.baseFrets[i] === rel;
       const sm = semi !== void 0 ? semi : semiOf(pc, chord.rootPc);
       // 實色：全指板一律打亮，或只打亮目前把位涵蓋的格數（開放弦看這個把位有沒有用到）
-      const inBox = !!box && (f === 0 ? box.hasOpen : f >= box.lo && f <= box.hi);
+      const inBox = !!box && (f === 0 ? box.hasOpen : f >= box.lo && f <= box.bHi);
       const lit = !isCut && (solid === "all" || solid === "pos" && inBox);
       if (!(semi !== void 0 || showScale && inScale || isActive || isManual || isCut))
         return /* @__PURE__ */ React.createElement("circle", { key: i + "-" + f, cx, cy, r: "11", className: "nk-hit", onClick: () => onPickNote(i, rel, STRING_MIDI[i] + f) });
