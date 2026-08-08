@@ -3312,11 +3312,15 @@ window.__CHORDLAB__ = function(){
         onClick: () => setNeckSolid((v) => v === "pos" ? "off" : "pos")
       },
       "把位實色"
-    ), neckSolid === "pos" && /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
+    ), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
       ["caged", "CAGED", "每弦 2–3 音，跨度約 5 格"],
       ["3nps", "三音一弦", "每弦固定三音，讀起來最整齊"]
     ].map(([v, l, t]) => /* @__PURE__ */ React.createElement("button", {
-      key: v, className: posSys === v ? "on" : "", title: t, onClick: () => setPosSys(v)
+      key: v,
+      // 一直顯示，不然使用者不會知道有這個選項；直接點系統就順手開啟把位實色
+      className: neckSolid === "pos" && posSys === v ? "on" : "",
+      title: t,
+      onClick: () => { setPosSys(v); setNeckSolid("pos"); }
     }, l))), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
       NeckView,
       {
