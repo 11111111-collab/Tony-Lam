@@ -2125,6 +2125,69 @@ window.__CHORDLAB__ = function(){
   const VKEY = (ch) => "c" + ch.id;
   const semiOf = (pc, rootPc) => ((pc - rootPc) % 12 + 12) % 12;
   const WINDOWS = [null, [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5]];
+  /**
+   * 音階把位模型。矩形的格數視窗會切斷音階——C 大調 A 型框第 3–6 格時，
+   * 6 弦停在 A、5 弦卻從 C 開始，中間的 B 落在框外，讀起來就不是 5 6 7 R。
+   *
+   * 改成順著音階走：每條弦都從「前一條弦最後那個音的下一個音階音」接下去，
+   * 中間就不會有缺口。
+   *   caged：每弦 2–3 音，跨度壓在 5 格內，對應傳統的五個把位
+   *   3nps ：每弦固定 3 音，讀起來是 R 2 3｜4 5 6｜7 R 2，但跨度到 6–7 格
+   * 回傳每條弦要納入的格數陣列。
+   */
+  function scaleBoxFrets(scalePcs, anchor, sys, capo, nf) {
+    const cols = STRING_MIDI.map((base) => {
+      const arr = [];
+      for (let f = 0; f <= nf; f++) {
+        if (f > 0 && f < capo) continue;
+        if (f === 0 && capo > 0) continue;
+        if (scalePcs.has((base + f) % 12)) arr.push(f);
+      }
+      return arr;
+    });
+    // 五聲音階一弦三音會拉到十幾格，手根本按不到，這種就退回一弦兩音
+    const want = sys === "3nps" ? (scalePcs.size >= 6 ? 3 : 2) : 3;
+    const picked = STRING_MIDI.map(() => []);
+    const nextOn = (i, above) => {
+      const base = STRING_MIDI[i], list = cols[i];
+      for (let k = 0; k < list.length; k++) if (base + list[k] > above) return { f: list[k], midi: base + list[k] };
+      return null;
+    };
+    let prevMidi = -1, lo = Infinity;
+    for (let i = 0; i < STRING_MIDI.length; i++) {
+      const base = STRING_MIDI[i], list = cols[i];
+      let k = 0;
+      if (prevMidi < 0) {
+        while (k < list.length && list[k] < anchor) k++;
+        if (k >= list.length) k = Math.max(0, list.length - 1);
+        // 錨點常常落在兩個音階音中間，往回一個才不會把把位整個推高
+        if (k > 0 && list[k] > anchor) k--;
+      } else {
+        while (k < list.length && base + list[k] <= prevMidi) k++;
+      }
+      for (let n = 0; n < want && k + n < list.length; n++) {
+        const f = list[k + n];
+        // CAGED 的跨度限制：已經有兩個音之後就不再往外撐
+        if (sys !== "3nps" && picked[i].length >= 2 && f - Math.min(lo, list[k]) > 4) break;
+        picked[i].push(f);
+        lo = Math.min(lo, f);
+        prevMidi = base + f;
+      }
+      // 換弦前先確認下一條弦接得上。接不上代表中間那個音只有這條弦有，
+      // 不補的話音階就會斷一格——和聲小調的增二度最容易踩到。
+      if (i + 1 < STRING_MIDI.length) {
+        for (let guard = 0; guard < 4; guard++) {
+          const mine = nextOn(i, prevMidi), theirs = nextOn(i + 1, prevMidi);
+          if (!mine || !theirs || mine.midi >= theirs.midi) break;
+          picked[i].push(mine.f);
+          lo = Math.min(lo, mine.f);
+          prevMidi = mine.midi;
+        }
+      }
+    }
+    return picked;
+  }
+
   function buildVoice(rootPc, quality, capo, cfg) {
     const vs = getVoicings(rootPc, quality, capo);
     const shape = vs[(cfg.shapeIdx || 0) % vs.length];
@@ -2321,6 +2384,8 @@ window.__CHORDLAB__ = function(){
     const [showScale, setShowScale] = useState(true);
     // 指板音點的實色模式：off 維持半透明、all 全指板打亮、pos 只打亮目前把位
     const [neckSolid, setNeckSolid] = useState("off");
+    // 把位模型的系統：caged 每弦 2–3 音、3nps 每弦固定三音
+    const [posSys, setPosSys] = useState("caged");
     const [neckScale, setNeckScale] = useState(null);
     const [labelMode, setLabelMode] = useState("deg");
     const [swing, setSwing] = useState(0);
@@ -3247,11 +3312,17 @@ window.__CHORDLAB__ = function(){
         onClick: () => setNeckSolid((v) => v === "pos" ? "off" : "pos")
       },
       "把位實色"
-    ), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
+    ), neckSolid === "pos" && /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
+      ["caged", "CAGED", "每弦 2–3 音，跨度約 5 格"],
+      ["3nps", "三音一弦", "每弦固定三音，讀起來最整齊"]
+    ].map(([v, l, t]) => /* @__PURE__ */ React.createElement("button", {
+      key: v, className: posSys === v ? "on" : "", title: t, onClick: () => setPosSys(v)
+    }, l))), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
       NeckView,
       {
         chord: viewChord,
         solid: neckSolid,
+        posSys,
         ovMap: (viewChord.cfg && viewChord.cfg.ov) || {},
         scaleSet: neckScaleSet,
         labelMode,
@@ -3815,7 +3886,7 @@ window.__CHORDLAB__ = function(){
   const SOLFA_FLAT = ["Do", "♭Re", "Re", "♭Mi", "Mi", "Fa", "♭So", "So", "♭La", "La", "♭Si", "Si"];
   const solfaOf = (pc, keyPc, useFlats) => (useFlats ? SOLFA_FLAT : SOLFA_SHARP)[((pc - keyPc) % 12 + 12) % 12];
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
-  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid }) {
+  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys }) {
     const NF = 22;
     const BOX_MIN = 4;
     const W = 980, H = 250, NUT = 58, END = 962;
@@ -3852,6 +3923,16 @@ window.__CHORDLAB__ = function(){
       return { vi, tag: v.tag, lo, hi, bHi, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(bHi) - 3, active: vi === chord.voiceIdx };
     });
     const box = brackets.find((b) => b.active);
+    // 把位實色改成順著音階走的模型，不是切一塊矩形
+    const boxKeys = new Set();
+    let boxLo = null, boxHi = null;
+    if (solid === "pos" && box) {
+      scaleBoxFrets(scalePcs, box.lo, posSys, capo, NF).forEach((fs, si) => fs.forEach((f) => {
+        boxKeys.add(si + ":" + f);
+        if (boxLo == null || f < boxLo) boxLo = f;
+        if (boxHi == null || f > boxHi) boxHi = f;
+      }));
+    }
     return /* @__PURE__ */ React.createElement("div", { className: "neck-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "brk-bar" }, /* @__PURE__ */ React.createElement("span", { className: "brk-lbl" }, "把位"), brackets.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.vi, className: "brk-btn" + (b.active ? " on" : ""), onClick: () => onPickVoicing(b.vi) }, /* @__PURE__ */ React.createElement("b", null, b.tag), /* @__PURE__ */ React.createElement("i", null, b.hasOpen ? "空弦" : b.lo + " 品")))), /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 " + W + " " + H, className: "neck", role: "img", "aria-label": "整支指板的和弦音位置" }, /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: END - NUT, height: "180", fill: "var(--wood)", rx: "3" }), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: xLine(capo) - NUT, height: "180", fill: "#0E0C08", opacity: ".72" }), Array.from({ length: NF + 1 }, (_, f) => /* @__PURE__ */ React.createElement(
       "line",
       {
@@ -3863,7 +3944,11 @@ window.__CHORDLAB__ = function(){
         stroke: f === 0 ? "var(--bone)" : "var(--fret)",
         strokeWidth: f === 0 ? 5 : 2
       }
-    )), [3, 5, 7, 9, 15, 17, 19, 21].map((f) => /* @__PURE__ */ React.createElement("circle", { key: f, cx: xSlot(f), cy: "114", r: "6", fill: "var(--dot)", opacity: ".55" })), [[12, 78], [12, 150], [24, 78], [24, 150]].filter(([f]) => f <= 22).map(([f, y], i) => /* @__PURE__ */ React.createElement("circle", { key: i, cx: xSlot(f), cy: y, r: "6", fill: "var(--dot)", opacity: ".55" })), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: xLine(capo) - 4, y: "20", width: "8", height: "188", rx: "4", fill: "var(--rust)", opacity: ".9" }), brackets.filter((b) => b.active).map((b) => /* @__PURE__ */ React.createElement("rect", { key: b.vi, className: "brk-body", x: b.x1, y: "20", width: Math.max(30, b.x2 - b.x1), height: "188", rx: "8" })), [0, 1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ React.createElement(
+    )), [3, 5, 7, 9, 15, 17, 19, 21].map((f) => /* @__PURE__ */ React.createElement("circle", { key: f, cx: xSlot(f), cy: "114", r: "6", fill: "var(--dot)", opacity: ".55" })), [[12, 78], [12, 150], [24, 78], [24, 150]].filter(([f]) => f <= 22).map(([f, y], i) => /* @__PURE__ */ React.createElement("circle", { key: i, cx: xSlot(f), cy: y, r: "6", fill: "var(--dot)", opacity: ".55" })), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: xLine(capo) - 4, y: "20", width: "8", height: "188", rx: "4", fill: "var(--rust)", opacity: ".9" }), brackets.filter((b) => b.active).map((b) => {
+      const x1 = solid === "pos" && boxLo != null ? xLine(boxLo - 1) + 3 : b.x1;
+      const x2 = solid === "pos" && boxHi != null ? xLine(boxHi) - 3 : b.x2;
+      return /* @__PURE__ */ React.createElement("rect", { key: b.vi, className: "brk-body", x: x1, y: "20", width: Math.max(30, x2 - x1), height: "188", rx: "8" });
+    }), [0, 1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ React.createElement(
       "line",
       {
         key: i,
@@ -3888,7 +3973,7 @@ window.__CHORDLAB__ = function(){
       const isCut = ovMap && ovMap[i] === -1 && chord.voicing.baseFrets[i] === rel;
       const sm = semi !== void 0 ? semi : semiOf(pc, chord.rootPc);
       // 實色：全指板一律打亮，或只打亮目前把位涵蓋的格數（開放弦看這個把位有沒有用到）
-      const inBox = !!box && (f === 0 ? box.hasOpen : f >= box.lo && f <= box.bHi);
+      const inBox = boxKeys.has(i + ":" + f);
       const lit = !isCut && (solid === "all" || solid === "pos" && inBox);
       if (!(semi !== void 0 || showScale && inScale || isActive || isManual || isCut))
         return /* @__PURE__ */ React.createElement("circle", { key: i + "-" + f, cx, cy, r: "11", className: "nk-hit", onClick: () => onPickNote(i, rel, STRING_MIDI[i] + f) });
