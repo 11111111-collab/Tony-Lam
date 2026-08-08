@@ -2381,7 +2381,8 @@ window.__CHORDLAB__ = function(){
     const [selId, setSelId] = useState(null);
     const [neckOpen, setNeckOpen] = useState(false);
     const [expOpen, setExpOpen] = useState(false);
-    const [showScale, setShowScale] = useState(true);
+    // 調內音一律顯示：原本的隱藏按鈕跟「透明顯示」看起來差不多，功能重疊
+    const showScale = true;
     // 指板音點的實色模式：off 維持半透明、all 全指板打亮、pos 只打亮目前把位
     const [neckSolid, setNeckSolid] = useState("off");
     // 把位模型的系統：caged 每弦 2–3 音、3nps 每弦固定三音
@@ -3292,18 +3293,11 @@ window.__CHORDLAB__ = function(){
     )))), /* @__PURE__ */ React.createElement("div", { className: "neck-slot", "aria-hidden": !(neckOpen && viewChord) }, viewChord && /* @__PURE__ */ React.createElement("div", { className: "neck-drawer" }, /* @__PURE__ */ React.createElement("div", { className: "nd-head" }, /* @__PURE__ */ React.createElement("span", { className: "nd-title" }, chordLabel(viewChord.rootPc, viewChord.quality, viewChord.bassPc, useFlats)), /* @__PURE__ */ React.createElement("span", { className: "nd-sub" }, playing && curIdx >= 0 ? "跟著播放中的和弦走" : "上方標籤換把位，指板裡點音加減，兩者不會按錯"), /* @__PURE__ */ React.createElement("div", { className: "head-actions" }, /* @__PURE__ */ React.createElement(Picker, { value: effScale, options: scaleOpts, onChange: setNeckScale, width: 176, cls: "sm" }), /* @__PURE__ */ React.createElement(
       "button",
       {
-        className: "btn-ghost sm" + (showScale ? " on" : ""),
-        onClick: () => setShowScale((v) => !v)
-      },
-      showScale ? "隱藏調內音" : "顯示調內音"
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
         className: "btn-ghost sm" + (neckSolid === "all" ? " on" : ""),
         title: "整個指板的音都用實色顯示",
         onClick: () => setNeckSolid((v) => v === "all" ? "off" : "all")
       },
-      "全指板實色"
+      "指板全音"
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -3311,13 +3305,13 @@ window.__CHORDLAB__ = function(){
         title: "只把目前把位範圍內的音用實色顯示",
         onClick: () => setNeckSolid((v) => v === "pos" ? "off" : "pos")
       },
-      "把位實色"
-    ), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
+      "模塊"
+    ),/* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
       ["caged", "CAGED", "每弦 2–3 音，跨度約 5 格"],
       ["3nps", "三音一弦", "每弦固定三音，讀起來最整齊"]
     ].map(([v, l, t]) => /* @__PURE__ */ React.createElement("button", {
       key: v,
-      // 一直顯示，不然使用者不會知道有這個選項；直接點系統就順手開啟把位實色
+      // 一直顯示，不然使用者不會知道有這個選項；直接點系統就順手開啟模塊
       className: neckSolid === "pos" && posSys === v ? "on" : "",
       title: t,
       onClick: () => { setPosSys(v); setNeckSolid("pos"); }
