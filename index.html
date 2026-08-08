@@ -2097,6 +2097,29 @@ window.__CHORDLAB__ = function(){
       else this.hat.triggerAttackRelease(0.03, time, vel * 0.55);
     }
   }
+  /**
+   * 編輯存檔。每個範本各自記住自己的編輯，切走再切回來不會變回預設；
+   * 混音類的設定（音量、頻道開關）則是全域的，換範本不該跟著變。
+   * 沒有套用任何範本時的自由編輯存在 FREE_KEY 底下。
+   */
+  const SAVE_KEY = "chordlab.save.v1";
+  const FREE_KEY = "__free";
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      const o = raw ? JSON.parse(raw) : null;
+      return o && typeof o === "object" ? { tpl: o.tpl || {}, mix: o.mix || null } : { tpl: {}, mix: null };
+    } catch (e) {
+      return { tpl: {}, mix: null };
+    }
+  }
+  function writeSave(data) {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (e) {
+      // 無痕模式或容量滿了就算了，不影響使用
+    }
+  }
   const VKEY = (ch) => "c" + ch.id;
   const semiOf = (pc, rootPc) => ((pc - rootPc) % 12 + 12) % 12;
   const WINDOWS = [null, [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5]];
@@ -2311,11 +2334,14 @@ window.__CHORDLAB__ = function(){
     const [pianoKey, setPianoKey] = useState(PIANO_PATTERN_DEFAULT);
     // 單點試聽要聽到哪些樂器。和混音區的頻道開關分開，才能「播放開吉他、試聽只聽鋼琴」。
     // 預設只開吉他，跟以前的行為一致。
-    const [previewOn, setPreviewOn] = useState({ guitar: true, piano: false, bass: false, drum: false });
-    const [vols, setVols] = useState({ guitar: 0.3, piano: 1.6, bass: 0.8, drum: 0.8 });
-    const [autoMix, setAutoMix] = useState(true);
-    const [master, setMaster] = useState(1);
-    const [on, setOn] = useState({ guitar: true, piano: false, bass: true, drum: true });
+    const savedRef = useRef(null);
+    if (savedRef.current == null) savedRef.current = loadSave();
+    const [tmplId, setTmplId] = useState(null);
+    const [previewOn, setPreviewOn] = useState(() => (savedRef.current.mix && savedRef.current.mix.previewOn) || { guitar: true, piano: false, bass: false, drum: false });
+    const [vols, setVols] = useState(() => (savedRef.current.mix && savedRef.current.mix.vols) || { guitar: 0.3, piano: 1.6, bass: 0.8, drum: 0.8 });
+    const [autoMix, setAutoMix] = useState(() => savedRef.current.mix ? !!savedRef.current.mix.autoMix : true);
+    const [master, setMaster] = useState(() => (savedRef.current.mix && savedRef.current.mix.master) != null ? savedRef.current.mix.master : 1);
+    const [on, setOn] = useState(() => (savedRef.current.mix && savedRef.current.mix.on) || { guitar: true, piano: false, bass: true, drum: true });
     const useFlats = FLAT_KEYS.includes(keyPc) || mode === "minor" && FLAT_KEYS.includes((keyPc + 3) % 12);
     const engineRef = useRef(null);
     const partRef = useRef(null);
@@ -2329,6 +2355,33 @@ window.__CHORDLAB__ = function(){
     const triads = triadsOf(mode);
     const sevenths = seventhsOf(mode);
     const romans = romanOf(mode);
+    // 開機第一輪不要存，不然還沒載入就把預設值蓋回存檔
+    const saveArmed = useRef(false);
+    useEffect(() => {
+      const t = setTimeout(() => { saveArmed.current = true; }, 0);
+      return () => clearTimeout(t);
+    }, []);
+    const persist = (mut) => {
+      const data = savedRef.current;
+      mut(data);
+      writeSave(data);
+    };
+    // 範本層：和弦、把位、節奏型、音色等，各範本各自記
+    useEffect(() => {
+      if (!saveArmed.current) return;
+      persist((d) => {
+        d.tpl[tmplId || FREE_KEY] = {
+          prog: prog.map((c) => ({ id: c.id, rootPc: c.rootPc, quality: c.quality, bars: c.bars, beats: c.beats, bassPc: c.bassPc, mG: c.mG, mP: c.mP, mB: c.mB, voiceIdx: c.voiceIdx })),
+          voiceMap, keyPc, mode, capo, bpm, swing, seventhMode,
+          strumKey, drumKey, bassKey, pianoKey, gtone, ptone
+        };
+      });
+    }, [tmplId, prog, voiceMap, keyPc, mode, capo, bpm, swing, seventhMode, strumKey, drumKey, bassKey, pianoKey, gtone, ptone]);
+    // 混音層：全域，換範本不跟著變
+    useEffect(() => {
+      if (!saveArmed.current) return;
+      persist((d) => { d.mix = { vols, on, previewOn, master, autoMix }; });
+    }, [vols, on, previewOn, master, autoMix]);
     const notify = (m) => {
       setToast(m);
       setTimeout(() => setToast(""), 2200);
@@ -2712,7 +2765,32 @@ window.__CHORDLAB__ = function(){
       }
       eng.setPianoTone(key);
     };
+    // 把一份存檔倒回各個狀態
+    const restoreSnap = (sn) => {
+      if (sn.mode) setMode(sn.mode);
+      if (sn.keyPc != null) setKeyPc(sn.keyPc);
+      if (sn.capo != null) setCapo(sn.capo);
+      if (sn.bpm != null) setBpm(sn.bpm);
+      setSwing(sn.swing || 0);
+      setSeventhMode(!!sn.seventhMode);
+      setProg(sn.prog || []);
+      setVoiceMap(sn.voiceMap || {});
+      setSelId(null);
+      if (sn.strumKey) setStrumKey(sn.strumKey);
+      if (sn.drumKey) setDrumKey(sn.drumKey);
+      if (sn.bassKey) setBassKey(sn.bassKey);
+      if (sn.pianoKey) setPianoKey(sn.pianoKey);
+      if (sn.gtone) applyTone(sn.gtone);
+      if (sn.ptone) applyPianoTone(sn.ptone);
+    };
     const applyTemplate = (t) => {
+      setTmplId(t.id);
+      const sn = savedRef.current.tpl[t.id];
+      if (sn && sn.prog && sn.prog.length) {
+        restoreSnap(sn);
+        notify("回到你上次編輯的「" + t.name + "」");
+        return;
+      }
       const md = t.mode || mode;
       const sc = md === "minor" ? MINOR_SCALE : MAJOR_SCALE;
       const tri = md === "minor" ? MINOR_TRIADS : MAJOR_TRIADS;
@@ -2735,6 +2813,40 @@ window.__CHORDLAB__ = function(){
       setSwing(t.swing || 0);
       if (t.tone) applyTone(t.tone);
       notify("已套用「" + t.name + "」（連音色與節奏）");
+    };
+    /**
+     * 一鍵回到預設。清掉目前範本的存檔後重新套一次它的原始設定；
+     * 沒有套範本時就回到開檔時的那組和弦。混音與試聽開關也一起還原。
+     */
+    const resetAll = () => {
+      const id = tmplId || FREE_KEY;
+      persist((d) => { delete d.tpl[id]; d.mix = null; });
+      setVols({ guitar: 0.3, piano: 1.6, bass: 0.8, drum: 0.8 });
+      setOn({ guitar: true, piano: false, bass: true, drum: true });
+      setPreviewOn({ guitar: true, piano: false, bass: false, drum: false });
+      setMaster(1);
+      setAutoMix(true);
+      setCapo(0);
+      setSwing(0);
+      setSeventhMode(false);
+      setSelId(null);
+      const t = tmplId ? TEMPLATES.find((x) => x.id === tmplId) : null;
+      if (t) {
+        applyTemplate(t);
+      } else {
+        setKeyPc(0);
+        setMode("major");
+        setBpm(92);
+        setStrumKey("roll");
+        setDrumKey("rock");
+        setBassKey("fifth");
+        setPianoKey(PIANO_PATTERN_DEFAULT);
+        setVoiceMap({});
+        setProg([mkChord(0, "maj"), mkChord(7, "maj"), mkChord(9, "min"), mkChord(5, "maj")]);
+        applyTone("acoustic");
+        applyPianoTone(PIANO_DEFAULT);
+      }
+      notify("已全部回到預設");
     };
     const addSevenths = () => setProg((p) => p.map((c) => {
       const rel = ((c.rootPc - keyPc) % 12 + 12) % 12;
@@ -3049,7 +3161,11 @@ window.__CHORDLAB__ = function(){
     })), /* @__PURE__ */ React.createElement("div", { className: "sub-head" }, "進行範本", /* @__PURE__ */ React.createElement("span", { className: "genre-count" }, TEMPLATES.length)), /* @__PURE__ */ React.createElement("div", { className: "tmpl-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "tmpl-list" }, TEMPLATES.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, className: "tmpl-row", onClick: () => applyTemplate(t) }, /* @__PURE__ */ React.createElement("span", { className: "tmpl-name" }, t.name, t.mode === "minor" ? /* @__PURE__ */ React.createElement("i", { className: "tmpl-mode" }, "小調") : null), /* @__PURE__ */ React.createElement("span", { className: "tmpl-sub" }, t.sub), /* @__PURE__ */ React.createElement("span", { className: "tmpl-meta" }, t.style + " ・ " + t.bpm + " BPM")))))), /* @__PURE__ */ React.createElement("section", { className: "col center" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "和弦進行", /* @__PURE__ */ React.createElement("span", { className: "bars-badge" }, totalBars, " 小節")), /* @__PURE__ */ React.createElement("div", { className: "head-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: addSevenths }, "全部加七度"), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => {
       setProg([]);
       setSelId(null);
-    } }, "清空"))), /* @__PURE__ */ React.createElement("div", {
+    } }, "清空"), /* @__PURE__ */ React.createElement("button", {
+      className: "btn-ghost sm",
+      title: "把和弦、把位、節奏、音色、混音全部回到預設值",
+      onClick: resetAll
+    }, "重設"))), /* @__PURE__ */ React.createElement("div", {
       className: "track",
       onDragOver: (e) => e.preventDefault(),
       onDrop: () => onDrop(null)
