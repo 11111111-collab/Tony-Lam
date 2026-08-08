@@ -389,6 +389,11 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .rack .pick{width:100%}
 .rack .pick .pick-btn{width:100%;height:30px}
 .rack > .btn-ghost.sm{align-self:flex-start}
+.prev-row{display:flex;align-items:center;gap:8px;padding-top:9px;margin-top:2px;
+  border-top:1px solid var(--line)}
+.prev-lbl{font-size:9.5px;letter-spacing:.16em;color:var(--dim);width:76px;flex-shrink:0}
+.prev-row .seg{flex:1}
+.prev-row .seg button{flex:1;padding:4px 2px}
 .mixer{display:flex;flex-direction:column;gap:7px;padding-top:9px;margin-top:2px;
   border-top:1px solid var(--line)}
 .mixer .ch{flex-direction:row;align-items:center;gap:8px;width:100%}
@@ -1014,7 +1019,83 @@ window.__CHORDLAB__ = function(){
       }
     }
   };
+  /**
+   * 鋼琴聲部。原本是 48 + (rootPc + i) % 24，那個取模會讓延伸音繞回底部
+   * （G13 的 13 音會掉到根音下方），而且整組聲部隨根音音高平移、沒有轉位。
+   *
+   * 改成：先取和弦的音級集合，再枚舉各種轉位與八度，挑頂音落在指定音域、
+   * 且離前一個和弦頂音最近的那個，聲部才會平順移動而不是整組跳來跳去。
+   * 有貝斯在場時省略根音（四音以上再省五度），避免和貝斯撞低頻——
+   * 這是爵士鋼琴的 rootless voicing 做法。
+   */
+  const PIANO_TOP_LO = 60, PIANO_TOP_HI = 74;
+  function pianoVoicing(rootPc, quality, prevTop, dropRoot) {
+    const iv = (QUALITIES[quality] || QUALITIES.maj).iv;
+    let tones = iv.slice();
+    if (dropRoot && tones.length >= 4) {
+      tones = tones.slice(1);
+      if (tones.length >= 4) {
+        const fifth = tones.indexOf(7);
+        if (fifth >= 0) tones.splice(fifth, 1);
+      }
+    }
+    const pcs = [];
+    tones.forEach((t) => {
+      const pc = ((rootPc + t) % 12 + 12) % 12;
+      if (pcs.indexOf(pc) < 0) pcs.push(pc);
+    });
+    let best = null;
+    for (let rot = 0; rot < pcs.length; rot++) {
+      for (let oct = 3; oct <= 6; oct++) {
+        const v = [];
+        let last = -1;
+        for (let k = 0; k < pcs.length; k++) {
+          let n = 12 * oct + pcs[(rot + k) % pcs.length];
+          while (n <= last) n += 12;
+          v.push(n);
+          last = n;
+        }
+        const top = v[v.length - 1];
+        if (top < PIANO_TOP_LO || top > PIANO_TOP_HI) continue;
+        const cost = prevTop == null ? Math.abs(top - 67) : Math.abs(top - prevTop);
+        if (!best || cost < best.cost) best = { v, cost };
+      }
+    }
+    return best ? best.v : pcs.map((pc, k) => 60 + pc + k * 12);
+  }
+  /**
+   * 鋼琴節奏。n 指定只彈聲部裡的第幾個音（分解和弦用），沒給就是整個和弦。
+   * len 的單位是十六分音符。
+   */
+  const PIANO_PATTERNS = {
+    pad: { name: "長音鋪底", hint: "整個和弦持續，最不干擾", events: [{ i: 0, len: 16, v: 0.55 }] },
+    block: { name: "四分和弦", hint: "每拍一下，穩定推進", events: [0, 4, 8, 12].map((i) => ({ i, len: 3, v: i === 0 ? 0.6 : 0.48 })) },
+    charleston: { name: "查爾斯頓", hint: "爵士 comp 最常用的切分", events: [{ i: 0, len: 5, v: 0.6 }, { i: 6, len: 6, v: 0.5 }] },
+    offbeat: { name: "反拍推進", hint: "落在反拍，流行與 R&B", events: [{ i: 2, len: 2, v: 0.46 }, { i: 6, len: 2, v: 0.54 }, { i: 10, len: 2, v: 0.46 }, { i: 14, len: 2, v: 0.52 }] },
+    arp: { name: "分解和弦", hint: "逐音展開，抒情曲常用", events: [{ i: 0, n: 0, len: 4, v: 0.58 }, { i: 4, n: 1, len: 4, v: 0.5 }, { i: 8, n: 2, len: 4, v: 0.52 }, { i: 12, n: 1, len: 4, v: 0.48 }] }
+  };
+  const PIANO_PATTERN_DEFAULT = "pad";
   const STRUM_PATTERNS = {
+    down4: {
+      name: "四分下刷",
+      hint: "每拍一下，最基本的伴奏",
+      events: [0, 4, 8, 12].map((i) => ({ i, d: "D", v: i === 0 ? 0.9 : 0.8 }))
+    },
+    pop8: {
+      name: "萬用八分 D-DU-UDU",
+      hint: "流行與民謠最常見的刷法",
+      events: [
+        { i: 0, d: "D", v: 0.92 }, { i: 4, d: "D", v: 0.82 }, { i: 6, d: "U", v: 0.62 },
+        { i: 10, d: "U", v: 0.6 }, { i: 12, d: "D", v: 0.84 }, { i: 14, d: "U", v: 0.6 }
+      ]
+    },
+    alt8: {
+      name: "八分交替",
+      hint: "上下不停，推進感強",
+      events: [0, 2, 4, 6, 8, 10, 12, 14].map((i) => ({
+        i, d: i % 4 === 0 ? "D" : "U", v: i % 4 === 0 ? 0.86 : 0.62
+      }))
+    },
     arp: {
       name: "分解琶音",
       hint: "指彈感，適合前奏",
@@ -1091,13 +1172,37 @@ window.__CHORDLAB__ = function(){
     halftime: { name: "半拍子", kick: [0, 10], snare: [8], hat: [0, 2, 4, 6, 8, 10, 12, 14] },
     neo: { name: "Neo Soul 懶拍", kick: [0, 7, 10], snare: [4, 12], hat: [0, 2, 3, 4, 6, 8, 10, 11, 12, 14] }
   };
+  /**
+   * 貝斯音高。deg 是固定的半音偏移（原本的做法），ct 取和弦的第幾個音級，
+   * app 是半音趨近下一個和弦的根音——走路貝斯的關鍵就在這個「看下一格」。
+   * 上下半音都能趨近，選離前一個音較近的方向，線條才不會亂跳。
+   */
+  function bassNote(e, rootMidi, quality, nextRoot, prevMidi) {
+    if (e.app) {
+      const ref = prevMidi == null ? rootMidi : prevMidi;
+      const below = nextRoot - 1, above = nextRoot + 1;
+      return Math.abs(below - ref) <= Math.abs(above - ref) ? below : above;
+    }
+    if (e.ct != null) {
+      const iv = (QUALITIES[quality] || QUALITIES.maj).iv;
+      return rootMidi + iv[e.ct % iv.length];
+    }
+    return rootMidi + (e.deg || 0);
+  }
   const BASS_PATTERNS = {
     none: { name: "不用貝斯", events: [] },
     root: { name: "根音長音", events: [{ i: 0, deg: 0, len: 4 }] },
     pulse: { name: "四分音符", events: [0, 4, 8, 12].map((i) => ({ i, deg: 0, len: 1 })) },
     fifth: { name: "根音 + 五度", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 7, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 12, deg: 7, len: 1 }] },
-    walk: { name: "八分律動", events: [0, 3, 6, 8, 11, 14].map((i, k) => ({ i, deg: k % 3 === 2 ? 7 : 0, len: 1 })) },
-    walkq: { name: "行走四分", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 7, len: 1 }, { i: 8, deg: 12, len: 1 }, { i: 12, deg: 7, len: 1 }] },
+    walk: {
+      name: "八分律動",
+      events: [
+        { i: 0, ct: 0, len: 1 }, { i: 3, ct: 0, len: 1 }, { i: 6, ct: 2, len: 1 },
+        { i: 8, ct: 0, len: 1 }, { i: 11, ct: 1, len: 1 }, { i: 14, app: 1, len: 1 }
+      ]
+    },
+    // 根音 → 三音 → 五音 → 半音趨近下一個和弦的根音，爵士走路貝斯的標準骨架
+    walkq: { name: "行走四分", events: [{ i: 0, ct: 0, len: 1 }, { i: 4, ct: 1, len: 1 }, { i: 8, ct: 2, len: 1 }, { i: 12, app: 1, len: 1 }] },
     funk: { name: "放克切分", events: [{ i: 0, deg: 0, len: 1 }, { i: 3, deg: 0, len: 1 }, { i: 6, deg: 12, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 11, deg: 7, len: 1 }, { i: 14, deg: 12, len: 1 }] },
     octave: { name: "根音 + 八度", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 12, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 12, deg: 12, len: 1 }] },
     drive8: { name: "八分根音衝", events: [0, 2, 4, 6, 8, 10, 12, 14].map((i) => ({ i, deg: 0, len: 1 })) }
@@ -2038,6 +2143,9 @@ window.__CHORDLAB__ = function(){
     swung: { depth: 0.6, back: 0.16, arc: 0.06 }
   };
   const STRUM_FEEL = {
+    down4: "straight",
+    pop8: "backbeat",
+    alt8: "drive",
     arp: "straight",
     jazzcomp: "swung",
     roll: "straight",
@@ -2056,13 +2164,18 @@ window.__CHORDLAB__ = function(){
   const SIX = (b) => Math.max(1, Math.round(b * 4));
   const beatsOf = (ch) => ch.beats != null ? ch.beats : (ch.bars || 1) * 4;
   function buildSchedule(prog, opts) {
-    const { strumKey, drumKey, bassKey, capo, useGuitar, usePiano, useBass, useDrum, useClick } = opts;
+    const { strumKey, drumKey, bassKey, pianoKey, capo, useGuitar, usePiano, useBass, useDrum, useClick } = opts;
     const events = [];
     const at = (abs) => `${Math.floor(abs / 16)}:${Math.floor(abs % 16 / 4)}:${abs % 4}`;
     const feel = STRUM_FEEL[strumKey] || "straight";
     const sp = STRUM_PATTERNS[strumKey] || STRUM_PATTERNS.roll || { events: [] };
     const bp = BASS_PATTERNS[bassKey];
-    const dp = drumKey !== "none" ? DRUM_PATTERNS[drumKey] : null;
+    const pp = PIANO_PATTERNS[pianoKey] || PIANO_PATTERNS[PIANO_PATTERN_DEFAULT];
+    // 貝斯在場時鋼琴讓出根音，兩者才不會在低頻打架
+    const dropRoot = !!useBass && bassKey !== "none";
+    let prevTop = null, prevBass = null;
+    // useDrum 原本被解構卻沒用到，關掉鼓的頻道仍然會排事件、照樣出聲
+    const dp = useDrum && drumKey !== "none" ? DRUM_PATTERNS[drumKey] : null;
     const drumAt = {};
     if (dp) {
       const put = (arr, kind, v, depth) => arr.forEach((i) => {
@@ -2082,14 +2195,11 @@ window.__CHORDLAB__ = function(){
       const span = SIX(beatsOf(ch));
       const voicing = ch.voicing;
       const rootMidi = 28 + ((ch.bassPc != null ? ch.bassPc : ch.rootPc) - 4 + 12) % 12;
-      const pianoNotes = QUALITIES[ch.quality].iv.map((i) => 48 + (ch.rootPc + i) % 24);
+      const nx = prog[(ci + 1) % prog.length] || ch;
+      const nextRoot = 28 + ((nx.bassPc != null ? nx.bassPc : nx.rootPc) - 4 + 12) % 12;
+      const voice = pianoVoicing(ch.rootPc, ch.quality, prevTop, dropRoot);
+      prevTop = voice[voice.length - 1];
       events.push({ time: at(cur), kind: "mark", chordIdx: ci, bar: Math.floor(cur / 16), beat: cur / 4 });
-      if (usePiano && !ch.mP) {
-        events.push({
-          time: at(cur), kind: "piano", notes: pianoNotes,
-          dur: Math.max(0.5, span / 4 * 0.9), vel: 0.55, chordIdx: ci, beat: cur / 4
-        });
-      }
       for (let k = 0; k < span; k++) {
         const abs = cur + k;
         const slot = abs % 16;
@@ -2108,11 +2218,27 @@ window.__CHORDLAB__ = function(){
             });
           });
         }
+        if (usePiano && !ch.mP) {
+          pp.events.forEach((e) => {
+            if (e.i !== slot) return;
+            // 長音鋪底要跨滿整個和弦，其他節奏型照自己的長度
+            const len = pp === PIANO_PATTERNS.pad ? span : e.len;
+            events.push({
+              time: at(abs), kind: "piano",
+              notes: e.n == null ? voice : [voice[e.n % voice.length]],
+              dur: Math.max(0.35, len / 4 * 0.9),
+              vel: (e.v == null ? 0.55 : e.v) * accentAt(e.i, feel, e.i / 16),
+              chordIdx: ci, beat: abs / 4
+            });
+          });
+        }
         if (useBass && bp.events.length) {
           bp.events.forEach((e) => {
             if (e.i !== slot) return;
+            const midi = bassNote(e, rootMidi, ch.quality, nextRoot, prevBass);
+            prevBass = midi;
             events.push({
-              time: at(abs), kind: "bass", midi: rootMidi + e.deg,
+              time: at(abs), kind: "bass", midi,
               dur: e.len * 0.55, vel: 0.8, chordIdx: ci, beat: abs / 4
             });
           });
@@ -2182,6 +2308,10 @@ window.__CHORDLAB__ = function(){
     const [strumKey, setStrumKey] = useState("roll");
     const [drumKey, setDrumKey] = useState("rock");
     const [bassKey, setBassKey] = useState("fifth");
+    const [pianoKey, setPianoKey] = useState(PIANO_PATTERN_DEFAULT);
+    // 單點試聽要聽到哪些樂器。和混音區的頻道開關分開，才能「播放開吉他、試聽只聽鋼琴」。
+    // 預設只開吉他，跟以前的行為一致。
+    const [previewOn, setPreviewOn] = useState({ guitar: true, piano: false, bass: false, drum: false });
     const [vols, setVols] = useState({ guitar: 0.3, piano: 1.6, bass: 0.8, drum: 0.8 });
     const [autoMix, setAutoMix] = useState(true);
     const [master, setMaster] = useState(1);
@@ -2341,6 +2471,7 @@ window.__CHORDLAB__ = function(){
         drumKey,
         bassKey,
         capo,
+        pianoKey,
         useGuitar: on.guitar,
         usePiano: on.piano,
         useBass: on.bass,
@@ -2385,7 +2516,7 @@ window.__CHORDLAB__ = function(){
         if (partRef.current === part) partRef.current = null;
         try { part.dispose(); } catch (e) {}
       };
-    }, [booted, engineRef.current && engineRef.current.ready, progV, strumKey, drumKey, bassKey, capo, on, metro, fireSweep]);
+    }, [booted, engineRef.current && engineRef.current.ready, progV, strumKey, drumKey, bassKey, pianoKey, capo, on, metro, fireSweep]);
     const togglePlay = useCallback(async () => {
       if (!engineRef.current || !engineRef.current.ready) return;
       const T = getTransport();
@@ -2600,6 +2731,7 @@ window.__CHORDLAB__ = function(){
       if (t.strum) setStrumKey(t.strum);
       if (t.drum) setDrumKey(t.drum);
       if (t.bass) setBassKey(t.bass);
+      if (t.piano) setPianoKey(t.piano);
       setSwing(t.swing || 0);
       if (t.tone) applyTone(t.tone);
       notify("已套用「" + t.name + "」（連音色與節奏）");
@@ -2723,7 +2855,7 @@ window.__CHORDLAB__ = function(){
     };
     const doExportJson = () => new Blob([JSON.stringify({
       app: "chord-lab", version: 2,
-      keyPc, mode, capo, bpm, strumKey, drumKey, bassKey, gtone, ptone,
+      keyPc, mode, capo, bpm, strumKey, drumKey, bassKey, pianoKey, gtone, ptone,
       vols, master, autoMix, voiceMap,
       prog: prog.map((c) => ({ rootPc: c.rootPc, quality: c.quality, bars: c.bars, beats: c.beats }))
     }, null, 2)], { type: "application/json" });
@@ -2806,7 +2938,7 @@ window.__CHORDLAB__ = function(){
     })();
     const jumpTo = async (i, c) => {
       setSelId(c.id);
-      if (!playing) previewVoicing(c.voicing, "R");
+      if (!playing) previewVoicing(c.voicing, "R", c);
       const eng = engineRef.current;
       if (!eng || !eng.ready) return;
       const T = getTransport();
@@ -2817,9 +2949,24 @@ window.__CHORDLAB__ = function(){
       T.position = `${Math.floor(st / 16)}:${Math.floor(st % 16 / 4)}:${st % 4}`;
       setCurIdx(i);
     };
-    const previewVoicing = (v, dir) => {
+    /**
+     * 單點和弦的試聽。四個樂器都能發聲，聽哪幾個由 previewOn 決定——刻意和混音區的
+     * 頻道開關分開，這樣可以播放時開吉他、試聽時只聽鋼琴。
+     * 傳入 ch 才有辦法算鋼琴聲部與貝斯根音；沒傳就只出吉他。
+     */
+    const previewVoicing = (v, dir, ch) => {
       const eng = engineRef.current;
-      if (eng && eng.ready) eng.strum(v, { time: Tone.now() + 0.03, dir: dir || "R", vel: 0.85, chordChange: true });
+      if (!eng || !eng.ready) return;
+      const t = Tone.now() + 0.03;
+      if (previewOn.guitar) eng.strum(v, { time: t, dir: dir || "R", vel: 0.85, chordChange: true });
+      if (ch) {
+        if (previewOn.piano) eng.playPiano(pianoVoicing(ch.rootPc, ch.quality, null, previewOn.bass), t + 0.02, 1.6, 0.5);
+        if (previewOn.bass) {
+          const pc = ch.bassPc != null ? ch.bassPc : ch.rootPc;
+          eng.playBass(28 + ((pc - 4 + 12) % 12), t + 0.02, 1.3, 0.75);
+        }
+        if (previewOn.drum) eng.playDrum("kick", t, 0.8);
+      }
       fireSweep(dir || "R", 0.055, null);
     };
     const keyOptions = Array.from({ length: 12 }, (_, i) => ({
@@ -2986,7 +3133,7 @@ window.__CHORDLAB__ = function(){
         },
         onPickVoicing: (idx) => {
           patchVoice(viewChord, { shapeIdx: idx });
-          previewVoicing({ ...viewChord.allVoicings[idx], capo }, "R");
+          previewVoicing({ ...viewChord.allVoicings[idx], capo }, "R", viewChord);
         }
       }
     ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["solfa", "唱名"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, useFlats, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, WINDOWS.map((w, wi) => {
@@ -3071,7 +3218,7 @@ window.__CHORDLAB__ = function(){
               setVoiceMap((m) => { const n = { ...m }; delete n["c" + c.id]; return n; });
               setProg((p) => p.map((x) => x.id === c.id ? { ...x, quality: q, voiceIdx: 0 } : x));
               const vs = getVoicings(c.rootPc, q, capo);
-              previewVoicing({ ...vs[0], capo }, "R");
+              previewVoicing({ ...vs[0], capo }, "R", { ...c, quality: q });
             }
           },
           QUALITIES[q].label || "大三"
@@ -3097,7 +3244,7 @@ window.__CHORDLAB__ = function(){
         /* @__PURE__ */ React.createElement(
           "div",
           { className: "cprop-row end" },
-          /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => previewVoicing(c.voicing, "R") }, "試聽"),
+          /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => previewVoicing(c.voicing, "R", c) }, "試聽"),
           /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => dupChord(c.id) }, "複製"),
           /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm danger", onClick: () => removeChordAt(ci) }, "刪除")
         )
@@ -3147,11 +3294,26 @@ window.__CHORDLAB__ = function(){
         onChange: setBassKey,
         options: Object.entries(BASS_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
       }
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鋼琴節奏"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: pianoKey,
+        up: true,
+        width: 128,
+        onChange: setPianoKey,
+        options: Object.entries(PIANO_PATTERNS).map(([k, v]) => ({ v: k, l: v.name, s: v.hint }))
+      }
     )), /* @__PURE__ */ React.createElement("button", {
       className: "btn-ghost sm" + (autoMix ? " on" : ""),
       title: "自動混音：高低頻分工、左右分離、底鼓閃避、總線限幅",
       onClick: () => setAutoMix((v) => !v)
-    }, "混音"), /* @__PURE__ */ React.createElement("div", { className: "mixer" }, [
+    }, "混音"), /* @__PURE__ */ React.createElement("div", { className: "prev-row" }, /* @__PURE__ */ React.createElement("span", { className: "prev-lbl", title: "點和弦方塊試聽時，要聽到哪些樂器" }, "試聽"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
+      ["guitar", "吉他"], ["piano", "鋼琴"], ["bass", "貝斯"], ["drum", "鼓"]
+    ].map(([k, l]) => /* @__PURE__ */ React.createElement("button", {
+      key: k,
+      className: previewOn[k] ? "on" : "",
+      onClick: () => setPreviewOn((o) => ({ ...o, [k]: !o[k] }))
+    }, l)))), /* @__PURE__ */ React.createElement("div", { className: "mixer" }, [
       ["guitar", "吉他", status.guitar, 0.6],
       ["piano", "鋼琴", status.piano, 3.2],
       ["bass", "貝斯", status.bass, 1.6],
