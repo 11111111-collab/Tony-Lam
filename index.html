@@ -136,6 +136,7 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{padding:4px 9px;font-size:10.5px;color:var(--dim);background:var(--panel2)}
 .seg button.on{background:var(--brass);color:#080B12;font-weight:700}
+.seg button:disabled{opacity:.38;cursor:not-allowed}
 
 /* 三欄 */
 .mid{display:grid;grid-template-columns:272px minmax(0,1fr) 320px;min-height:0}
@@ -2135,13 +2136,13 @@ window.__CHORDLAB__ = function(){
    *   3nps ：每弦固定音數，讀起來是 R 2 3｜4 5 6｜7 R 2，但跨度到 6–7 格
    * 回傳每條弦要納入的格數陣列。
    */
-  /**
-   * 3nps 每弦要幾個音。名字叫一弦三音，但三音是給七聲音階的：
-   * 相鄰弦差五個半音，七聲音階平均 1.7 半音一個音，三個音剛好接得上。
-   * 五聲音階拿三個音會拉到十幾格，八音以上的減音階／半音階拿三個音又接不到
-   * 下一條弦，所以照密度分級——減音階本來的標準指法就是一弦四音。
-   */
-  const npsFor = (size) => size <= 5 ? 2 : size <= 7 ? 3 : 4;
+  // 一弦三音就是每條弦三個音，六弦剛好十八個音，沒有例外——這是這套系統的定義，
+  // 也是它跟 CAGED 最大的差別（CAGED 才會 3 音 2 音交替）。
+  // 這套系統本來是為七聲音階設計的：相鄰弦差五個半音，七聲平均 1.7 半音一個音，
+  // 三個音剛好接得上下一條弦。音階愈密（藍調、減音階）圖形就會愈往高把位漂。
+  const NPS = 3;
+  // 一個把位就是四格的視窗，加上一格伸展——CAGED 圖形的標準寬度
+  const BOX_SPAN = 5;
   function scaleBoxFrets(scalePcs, anchor, sys, capo, nf) {
     const cols = STRING_MIDI.map((base) => {
       const arr = [];
@@ -2152,7 +2153,27 @@ window.__CHORDLAB__ = function(){
       }
       return arr;
     });
-    const want = sys === "3nps" ? npsFor(scalePcs.size) : 3;
+    // 半音階十二個音全開，本來就沒有「音階把位」這回事——每弦三個音只走三格，
+    // 弦距卻是五格，順著音階走圖形會一路往琴頭塌。這種就回歸把位的本義：
+    // 這個把位視窗裡的所有音。三弦到二弦只差四個半音，視窗在這裡會疊到同一個音，
+    // 已經出現過的音高就跳過，讀起來才不會重複。
+    if (scalePcs.size >= 12) {
+      const wLo = Math.max(capo, anchor), wHi = Math.min(nf, wLo + BOX_SPAN - 1);
+      const seen = new Set();
+      return STRING_MIDI.map((base) => {
+        const arr = [];
+        for (let f = wLo; f <= wHi; f++) {
+          if (seen.has(base + f)) continue;
+          seen.add(base + f);
+          arr.push(f);
+        }
+        return arr;
+      });
+    }
+    // 一弦三音是七聲音階的系統——七個圖形對應七個音級。五聲硬套三音會拉到
+    // 十八格，六音、八音的音階則會一路往高把位漂。非七聲就回到 CAGED。
+    if (sys === "3nps" && scalePcs.size !== 7) sys = "caged";
+    const want = NPS;
     const picked = STRING_MIDI.map(() => []);
     const nextOn = (i, above) => {
       const base = STRING_MIDI[i], list = cols[i];
@@ -2183,8 +2204,9 @@ window.__CHORDLAB__ = function(){
       // 不補的話音階就會斷一格——和聲小調的增二度最容易踩到。
       if (i + 1 < STRING_MIDI.length) {
         for (let guard = 0; guard < 4; guard++) {
-          // 3nps 每弦音數是硬規則，補洞不能把某一條弦撐成四音、其他還是三音
-          if (sys === "3nps" && picked[i].length >= want) break;
+          // 每弦音數是硬規則，補洞不能把某一條弦撐破。一弦三音固定三個音，
+          // CAGED 是 2–3 音，兩者都不該出現第四個。
+          if (picked[i].length >= want) break;
           const mine = nextOn(i, prevMidi), theirs = nextOn(i + 1, prevMidi);
           if (!mine || !theirs || mine.midi >= theirs.midi) break;
           picked[i].push(mine.f);
@@ -3121,6 +3143,8 @@ window.__CHORDLAB__ = function(){
     const scaleOk = neckScale && SCALES[neckScale] && (!SCALES[neckScale].q || SCALES[neckScale].q.includes(neckQ));
     const effScale = scaleOk ? neckScale : defaultScale(neckRoot, neckQ, keyPc, mode);
     const neckScaleSet = new Set(SCALES[effScale].iv.map((x) => (neckRoot + x) % 12));
+    // 非七聲音階套不了一弦三音，實際畫的是 CAGED——按鈕就別再亮著騙人
+    const effPosSys = neckScaleSet.size === 7 ? posSys : "caged";
     const scaleOpts = (() => {
       const q = viewChord ? viewChord.quality : "maj";
       return Object.keys(SCALES).filter((k) => !SCALES[k].q || SCALES[k].q.includes(q))
@@ -3316,19 +3340,24 @@ window.__CHORDLAB__ = function(){
       "模塊"
     ),/* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
       ["caged", "CAGED", "每弦 2–3 音，跨度約 5 格"],
-      ["3nps", "三音一弦", "每條弦音數一樣多，讀起來最整齊；五聲退成兩音、減音階是四音"]
+      // 一弦三音是七聲音階的系統：七個音級對應七個圖形。五聲、藍調、減音階
+      // 套不上去，與其偷偷改成別的東西，不如直接鎖住並說明。
+      ["3nps", "三音一弦", neckScaleSet.size === 7
+        ? "每條弦固定三個音，共十八個音"
+        : "一弦三音是七聲音階的系統，目前這個音階不是七個音，用 CAGED 讀"]
     ].map(([v, l, t]) => /* @__PURE__ */ React.createElement("button", {
       key: v,
       // 一直顯示，不然使用者不會知道有這個選項；直接點系統就順手開啟模塊
-      className: neckSolid === "pos" && posSys === v ? "on" : "",
+      className: neckSolid === "pos" && effPosSys === v ? "on" : "",
+      disabled: v === "3nps" && neckScaleSet.size !== 7,
       title: t,
       onClick: () => { setPosSys(v); setNeckSolid("pos"); }
-    }, l))), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
+    }, l))),/* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
       NeckView,
       {
         chord: viewChord,
         solid: neckSolid,
-        posSys,
+        posSys: effPosSys,
         ovMap: (viewChord.cfg && viewChord.cfg.ov) || {},
         scaleSet: neckScaleSet,
         labelMode,
@@ -3926,14 +3955,18 @@ window.__CHORDLAB__ = function(){
       // 框外，看起來像不見了。所以往上補到至少 BOX_MIN 格；lo 保持原值，
       // 上方的把位標籤還要用它顯示品數。
       const bHi = Math.min(NF, Math.max(hi, lo + BOX_MIN - 1));
-      return { vi, tag: v.tag, lo, hi, bHi, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(bHi) - 3, active: vi === chord.voiceIdx };
+      // 模型要從哪個音開始長。lo 只看按下去的品，空弦（0 品）被濾掉了，
+      // C 開放和弦因此從 1 品起算，整個模型被推到 A 型的位置上。
+      // 有空弦的把位就是第 0 把位，錨點要落在 0。
+      const anchor = hasOpen ? capo : lo;
+      return { vi, tag: v.tag, lo, hi, bHi, anchor, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(bHi) - 3, active: vi === chord.voiceIdx };
     });
     const box = brackets.find((b) => b.active);
     // 把位實色改成順著音階走的模型，不是切一塊矩形
     const boxKeys = new Set();
     let boxLo = null, boxHi = null;
     if (solid === "pos" && box) {
-      scaleBoxFrets(scalePcs, box.lo, posSys, capo, NF).forEach((fs, si) => fs.forEach((f) => {
+      scaleBoxFrets(scalePcs, box.anchor, posSys, capo, NF).forEach((fs, si) => fs.forEach((f) => {
         boxKeys.add(si + ":" + f);
         if (boxLo == null || f < boxLo) boxLo = f;
         if (boxHi == null || f > boxHi) boxHi = f;
