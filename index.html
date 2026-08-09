@@ -2164,8 +2164,10 @@ window.__CHORDLAB__ = function(){
    *
    * 改成順著音階走：每條弦都從「前一條弦最後那個音的下一個音階音」接下去，
    * 中間就不會有缺口。
-   *   caged：每弦 2–3 音，跨度壓在 5 格內，對應傳統的五個把位
-   *   3nps ：每弦固定音數，讀起來是 R 2 3｜4 5 6｜7 R 2，但跨度到 6–7 格
+   *   caged：一指一格的四格視窗，七聲音階下每弦 2–3 音，五個指型各有
+   *          自己的分佈（3-3-3-2-3-3、2-3-3-3-3-2、3-3-2-3-3-3、
+   *          3-3-3-3-2-3、3-2-3-3-3-3），兩音弦每換一個把位就移一條弦
+   *   3nps ：每弦固定三音，讀起來是 R 2 3｜4 5 6｜7 R 2，但跨度到 6–7 格
    * 回傳每條弦要納入的格數陣列。
    */
   // 一弦三音就是每條弦三個音，六弦剛好十八個音，沒有例外——這是這套系統的定義，
@@ -2205,6 +2207,42 @@ window.__CHORDLAB__ = function(){
     // 一弦三音是七聲音階的系統——七個圖形對應七個音級。五聲硬套三音會拉到
     // 十八格，六音、八音的音階則會一路往高把位漂。非七聲就回到 CAGED。
     if (sys === "3nps" && scalePcs.size !== 7) sys = "caged";
+    /**
+     * CAGED 是「一指一格」的四格視窗，正因為四格裝不下固定的音數，
+     * 才會出現 3 音 2 音交替——那是這套系統的特徵，不是缺陷。
+     * 原本的做法是每弦走三音、跨度放寬到五格，結果每個指型都變成
+     * 3-3-3-3-2-3，跟一弦三音幾乎一樣，等於沒有 CAGED。
+     *
+     * C 大調 E 型（視窗 7–11）讀起來是 7R2｜345｜67R｜234｜56｜7R2。
+     * 第五格只當伸展音：下一條弦在四格內接不到中間那個音時才用，
+     * 不然音階會斷格（G 型、D 型都會踩到）。
+     */
+    if (sys !== "3nps") {
+      const w = Math.max(capo, anchor);
+      const hi = Math.min(nf, w + BOX_SPAN - 1);
+      const win = STRING_MIDI.map((base) => {
+        const arr = [];
+        for (let f = w; f <= hi; f++) if (scalePcs.has((base + f) % 12)) arr.push(f);
+        return arr;
+      });
+      const box = STRING_MIDI.map(() => []);
+      let last = -1;
+      for (let i = 0; i < STRING_MIDI.length; i++) {
+        const base = STRING_MIDI[i];
+        for (const f of win[i]) {
+          if (base + f <= last) continue;
+          if (f > w + BOX_SPAN - 2) {
+            const nx = i + 1 < STRING_MIDI.length ? win[i + 1] : null;
+            const reachable = nx && nx.some((g) => g <= w + BOX_SPAN - 2
+              && STRING_MIDI[i + 1] + g > last && STRING_MIDI[i + 1] + g <= base + f);
+            if (reachable) continue;
+          }
+          box[i].push(f);
+          last = base + f;
+        }
+      }
+      return box;
+    }
     const want = NPS;
     const picked = STRING_MIDI.map(() => []);
     const nextOn = (i, above) => {
@@ -3990,7 +4028,9 @@ window.__CHORDLAB__ = function(){
       // 模型要從哪個音開始長。lo 只看按下去的品，空弦（0 品）被濾掉了，
       // C 開放和弦因此從 1 品起算，整個模型被推到 A 型的位置上。
       // 有空弦的把位就是第 0 把位，錨點要落在 0。
-      const anchor = hasOpen ? capo : lo;
+      // 把位的食指格比和弦的最低品低一格：C 大調 E 型的和弦壓在 8 品，
+      // 音階視窗卻是 7–10 品（低音弦從 7 品的 B 起音）。
+      const anchor = hasOpen ? capo : Math.max(capo, lo - 1);
       return { vi, tag: v.tag, lo, hi, bHi, anchor, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(bHi) - 3, active: vi === chord.voiceIdx };
     });
     const box = brackets.find((b) => b.active);
