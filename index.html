@@ -981,6 +981,12 @@ window.__CHORDLAB__ = function(){
     genShapes(shapedPc, quality, capo).forEach((g) => cands.push(g));
     cands.sort((a, b) => a.pos - b.pos);
     cands.forEach((c) => push(c.frets, c.tag, c.pos));
+    // 只留開放把位與五個 CAGED 指型。剩下那些「其他把位」其實是同一個把位上的
+    // 按法微調，不算換把位；要微調直接在指板上點音就好。它們也正是模型看起來
+    // 奇怪的來源——錨點取自和弦的最低品，變形一多把位就被推歪。
+    const famTags = new Set(FAMILIES.map((f) => f.tag));
+    const named = out.filter((v) => v.tag === "開放把位" || famTags.has(v.tag));
+    if (named.length) out.splice(0, out.length, ...named);
     if (!out.length) {
       const iv = QUALITIES[quality].iv.map((i) => ((rootPc - capo + i) % 12 + 12) % 12);
       const frets = STRING_MIDI.map((m) => {
@@ -994,7 +1000,6 @@ window.__CHORDLAB__ = function(){
     // 等距抽樣會把 CAGED 的形狀抽掉——C 大三和弦真正的 D 型（x x 10 12 13 12）
     // 就是這樣消失的，只剩兩個掛錯名的。開放把位與五個 CAGED 形狀先保住，
     // 剩下的名額才拿去平均分配。
-    const famTags = new Set(FAMILIES.map((f) => f.tag));
     const all = out.map((_, i) => i);
     const core = all.filter((i) => out[i].tag === "開放把位" || famTags.has(out[i].tag));
     const pick = new Set();
