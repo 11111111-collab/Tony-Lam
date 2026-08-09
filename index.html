@@ -2238,7 +2238,8 @@ window.__CHORDLAB__ = function(){
        * 因為它是滑上去的經過音，不會讓它去當下一條弦的開頭。
        * 這個條件只在兩個藍調音階成立，其他音階（含七聲、減音階）都不會誤中。
        */
-      const isBlue = (midi) => scalePcs.has((midi + 11) % 12) && scalePcs.has((midi + 1) % 12);
+      const isBlue = (midi) => scalePcs.has(midi % 12)
+        && scalePcs.has((midi + 11) % 12) && scalePcs.has((midi + 1) % 12);
       const box = STRING_MIDI.map(() => []);
       let last = -1;
       for (let i = 0; i < STRING_MIDI.length; i++) {
@@ -2257,6 +2258,15 @@ window.__CHORDLAB__ = function(){
           }
           box[i].push(f);
           last = base + f;
+        }
+        // 藍音是滑上去的經過音，跟著下面那個音走——那個音在這條弦上，藍音就在這條弦上，
+        // 就算落在視窗外一格也一樣。少了它，弦上會出現「2」後面空著的斷句。
+        if (box[i].length) {
+          const nextF = box[i][box[i].length - 1] + 1;
+          if (nextF <= nf && isBlue(base + nextF)) {
+            box[i].push(nextF);
+            last = base + nextF;
+          }
         }
       }
       return box;
