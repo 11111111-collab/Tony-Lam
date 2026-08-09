@@ -936,6 +936,9 @@ window.__CHORDLAB__ = function(){
     }
     return OTHER_TAG;
   }
+  // 品數一律從 capo 起算，而 shapedPc 已經扣掉 capo，所以算音高時不能再加一次
+  // capo——加了就等於整組往上移 capo 個半音，夾 capo 時會排出完全不是這個和弦的
+  // 按法（C 大三和弦夾 capo 2 會排出實際發 D F A♯ 的把位）。
   function genShapes(shapedPc, quality, capo) {
     const iv = QUALITIES[quality].iv.map((x) => ((x % 12) + 12) % 12);
     const tones = iv.map((x) => (shapedPc + x) % 12);
@@ -953,12 +956,12 @@ window.__CHORDLAB__ = function(){
           const list = [];
           if (st < bs) { cand.push([-1]); continue; }
           span.forEach((f) => {
-            if (tones.includes((STRING_MIDI[st] + capo + f) % 12)) list.push(f);
+            if (tones.includes((STRING_MIDI[st] + f) % 12)) list.push(f);
           });
-          if (lo <= 2 && tones.includes((STRING_MIDI[st] + capo) % 12)) list.push(0);
+          if (lo <= 2 && tones.includes(STRING_MIDI[st] % 12)) list.push(0);
           cand.push(list.length ? list : [-1]);
         }
-        const rootF = cand[bs].filter((f) => f >= 0 && (STRING_MIDI[bs] + capo + f) % 12 === (shapedPc % 12 + 12) % 12);
+        const rootF = cand[bs].filter((f) => f >= 0 && (STRING_MIDI[bs] + f) % 12 === (shapedPc % 12 + 12) % 12);
         if (!rootF.length) continue;
         const frets = cand.map((l, st) => {
           if (st < bs) return -1;
@@ -978,7 +981,7 @@ window.__CHORDLAB__ = function(){
         const press = {};
         frets.forEach((f) => { if (f > 0) press[f] = 1; });
         if (Object.keys(press).length > 4) continue;
-        const got = frets.map((f, st) => f < 0 ? -1 : ((STRING_MIDI[st] + capo + f) % 12 - shapedPc % 12 + 24) % 12).filter((x) => x >= 0);
+        const got = frets.map((f, st) => f < 0 ? -1 : ((STRING_MIDI[st] + f) % 12 - shapedPc % 12 + 24) % 12).filter((x) => x >= 0);
         if (!got.includes(0)) continue;
         if (third != null && !got.includes(third)) continue;
         if (sev != null && !got.includes(sev)) continue;
@@ -2243,7 +2246,7 @@ window.__CHORDLAB__ = function(){
     // 這個把位視窗裡的所有音。三弦到二弦只差四個半音，視窗在這裡會疊到同一個音，
     // 已經出現過的音高就跳過，讀起來才不會重複。
     if (scalePcs.size >= 12) {
-      const wLo = Math.max(capo, anchor), wHi = Math.min(nf, wLo + BOX_SPAN - 1);
+      const wLo = Math.max(capo, anchor), wHi = Math.min(nf, anchor + BOX_SPAN - 1);
       const seen = new Set();
       return STRING_MIDI.map((base) => {
         const arr = [];
@@ -2276,8 +2279,10 @@ window.__CHORDLAB__ = function(){
      * 不然音階會斷格（G 型、D 型都會踩到）。
      */
     if (sys !== "3nps") {
+      // 上緣要從原始錨點算，不能從裁過的下緣算——不然開放把位的視窗會整個
+      // 往上推一格，跟同一個指型在高把位長得不一樣。
       const w = Math.max(capo, anchor);
-      const hi = Math.min(nf, w + BOX_SPAN - 1);
+      const hi = Math.min(nf, anchor + BOX_SPAN - 1);
       const win = STRING_MIDI.map((base) => {
         const arr = [];
         for (let f = w; f <= hi; f++) if (scalePcs.has((base + f) % 12)) arr.push(f);
@@ -4103,12 +4108,16 @@ window.__CHORDLAB__ = function(){
       const hi = fs.length ? Math.max(...fs) : capo + 1;
       // 框就貼著和弦真正要按的範圍。以前會往上補到至少四格，是因為模塊的音
       // 會落在框外；現在模塊有自己的輪廓，這個補寬只剩下框到空品格的副作用。
-      // 模型要從哪個音開始長。lo 只看按下去的品，空弦（0 品）被濾掉了，
-      // C 開放和弦因此從 1 品起算，整個模型被推到 A 型的位置上。
-      // 有空弦的把位就是第 0 把位，錨點要落在 0。
-      // 把位的食指格比和弦的最低品低一格：C 大調 E 型的和弦壓在 8 品，
+      // 模型的視窗一律從「和弦最低的發聲音再低一格」起算——空弦也算發聲。
+      // 把位的食指格比和弦的最低音低一格：C 大調 E 型的和弦壓在 8 品，
       // 音階視窗卻是 7–10 品（低音弦從 7 品的 B 起音）。
-      const anchor = hasOpen ? capo : Math.max(capo, lo - 1);
+      // 開放把位原本被寫死成 capo，等於把視窗整個往上推一格：G7 開放把位
+      // 的視窗變成 root-3..root+1，而同一個 G 型在 12 品是 root-4..root，
+      // 兩個看起來就不一樣，還會多露出一顆沒亮的三音。
+      // 錨點允許是 -1（琴枕外），交給 scaleBoxFrets 去裁——這樣視窗的上緣
+      // 才會跟高把位對齊，只有下緣被琴枕吃掉一格。
+      const sounding = v.frets.filter((f) => f >= 0).map((f) => f + capo);
+      const anchor = (sounding.length ? Math.min(...sounding) : capo) - 1;
       return { vi, tag: v.tag, lo, hi, anchor, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: fs.length ? xLine(hi) - 3 : NUT - 8, active: vi === chord.voiceIdx };
     });
     const box = brackets.find((b) => b.active);
