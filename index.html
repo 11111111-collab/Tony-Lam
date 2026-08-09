@@ -785,7 +785,14 @@ window.__CHORDLAB__ = function(){
         dom7: [null, 0, -1, 0, -2, -3],
         sixth: [null, 0, -1, -1, -2, -3],
         add9: [null, 0, -1, -3, 0, -3],
-        maj9: [null, 0, -1, -3, 0, -3]
+        maj9: [null, 0, -1, 1, 0, null],
+        min: [null, 0, -2, -3, -2, -4],
+        dim: [null, 0, -2, -4, -2, -4],
+        aug: [null, 0, -1, -2, -2, -3],
+        sus4: [null, 0, 0, -3, -2, -2],
+        min7: [null, 0, -2, 0, -2, -4],
+        m6: [null, 0, -2, -1, -2, -4],
+        sus7: [null, 0, 0, 0, -2, -2]
       }
     },
     {
@@ -809,7 +816,7 @@ window.__CHORDLAB__ = function(){
         aug: [null, 0, 3, 2, 2, 1],
         sus7: [null, 0, 2, 0, 3, 0],
         dom13: [null, 0, 2, 0, 2, 2],
-        m7b5: [null, 0, 1, 2, 1, null],
+        m7b5: [null, 0, 1, 0, 1, null],
         dim: [null, 0, 1, 2, 1, null],
         dim7: [null, 0, 1, 2, 1, 2]
       }
@@ -823,7 +830,16 @@ window.__CHORDLAB__ = function(){
         maj7: [0, -1, -3, -3, -3, -1],
         dom7: [0, -1, -3, -3, -3, -2],
         sixth: [0, -1, -3, -3, -3, -3],
-        add9: [0, -3, -3, -1, -3, 0]
+        add9: [0, -3, -3, -1, -3, 0],
+        min: [0, -2, -3, -3, -4, 0],
+        dim: [0, -2, -4, -3, -4, 0],
+        aug: [0, -1, -2, -3, -3, 0],
+        sus4: [0, 0, -3, -3, -2, 0],
+        min7: [0, -2, -3, -3, -4, -2],
+        m7b5: [0, -2, -4, -3, -4, -2],
+        dim7: [0, -2, -4, -3, -4, -3],
+        m6: [0, -2, -3, -3, -4, -3],
+        sus7: [0, 0, -3, -3, -2, -2]
       }
     },
     {
@@ -849,7 +865,7 @@ window.__CHORDLAB__ = function(){
         dom13: [0, 2, 0, 1, 2, 0],
         m7b5: [0, 1, 0, 0, null, null],
         dim: [0, 1, 2, 0, null, null],
-        dim7: [0, 1, null, 0, 2, null]
+        dim7: [0, 1, -1, 0, -1, 0]
       }
     },
     {
@@ -866,8 +882,13 @@ window.__CHORDLAB__ = function(){
         sus2: [null, null, 0, 2, 3, 0],
         sixth: [null, null, 0, 2, 0, 2],
         m6: [null, null, 0, 2, 0, 1],
-        min9: [null, null, 0, 2, 1, 0],
-        dom9: [null, null, 0, 2, 1, 0]
+        min9: [null, null, 0, -2, 1, 0],
+        dom9: [null, null, 0, -1, 1, 0],
+        dim: [null, null, 0, 1, 3, 1],
+        aug: [null, null, 0, 3, 3, 2],
+        m7b5: [null, null, 0, 1, 1, 1],
+        dim7: [null, null, 0, 1, 0, 1],
+        sus7: [null, null, 0, 2, 1, 3]
       }
     }
   ];
@@ -974,9 +995,12 @@ window.__CHORDLAB__ = function(){
       const base = ((shapedPc - STRING_PC[fam.rootString]) % 12 + 12) % 12;
       [base, base + 12, base + 24].forEach((r) => {
         if (r < fam.minRoot) return;
+        // 負數位移的模板在低把位會算出負品，而負品跟「不彈」都寫成 -1，
+        // 於是負品被靜靜地當成不彈，排出根本按不出來的指型。
+        // （原本這裡兩行防呆：一行 f >= 0 && f < 0 是恆假的死碼，
+        //   一行 f !== -1 剛好把 -1 這個唯一會發生的值排除掉。）
+        if (tpl.some((o) => o != null && r + o < 0)) return;
         const frets = tpl.map((o) => o == null ? -1 : r + o);
-        if (frets.some((f) => f >= 0 && f < 0)) return;
-        if (frets.some((f) => f !== -1 && f < 0)) return;
         const lows = frets.filter((f) => f > 0);
         cands.push({ frets, tag: fam.tag, pos: lows.length ? Math.min(...lows) : 0 });
       });
