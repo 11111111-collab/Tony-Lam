@@ -4126,6 +4126,17 @@ window.__CHORDLAB__ = function(){
         if (boxLo == null || f < boxLo) boxLo = f;
         if (boxHi == null || f > boxHi) boxHi = f;
       }));
+      // 和弦要按的音也要被框進去。模塊是順著音階走的，同一個音高只會取一次，
+      // 所以和弦用到的那顆有可能被排在別條弦上——G7 開放把位的二弦空弦 B
+      // 就是這樣落在框外的。框要涵蓋「這個把位的音階 ＋ 你正在按的和弦」。
+      activeAbs.forEach((f, si) => {
+        if (f < 0) return;
+        const r = boxRow[si];
+        if (!r) boxRow[si] = { lo: f, hi: f };
+        else { if (f < r.lo) r.lo = f; if (f > r.hi) r.hi = f; }
+        if (boxLo == null || f < boxLo) boxLo = f;
+        if (boxHi == null || f > boxHi) boxHi = f;
+      });
     }
     /**
      * 紫框改成貼著模塊的外輪廓走。原本是一塊固定的方形，模塊只要有一顆音
