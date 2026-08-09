@@ -4024,7 +4024,6 @@ window.__CHORDLAB__ = function(){
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
   function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys }) {
     const NF = 22;
-    const BOX_MIN = 4;
     const W = 980, H = 250, NUT = 58, END = 962;
     const fw = (END - NUT) / NF;
     const yOf = (i) => 178 - i * 27;
@@ -4051,18 +4050,15 @@ window.__CHORDLAB__ = function(){
       const hasOpen = v.frets.some((f) => f === 0);
       const lo = fs.length ? Math.min(...fs) : capo + 1;
       const hi = fs.length ? Math.max(...fs) : capo + 1;
-      // 吉他的「把位」是四格的區塊，但和弦本身常常只跨兩三格——A 大調開放把位
-      // 甚至只按第 2 格。框只取和弦的跨距的話，同一個把位模型裡其他的音會落在
-      // 框外，看起來像不見了。所以往上補到至少 BOX_MIN 格；lo 保持原值，
-      // 上方的把位標籤還要用它顯示品數。
-      const bHi = Math.min(NF, Math.max(hi, lo + BOX_MIN - 1));
+      // 框就貼著和弦真正要按的範圍。以前會往上補到至少四格，是因為模塊的音
+      // 會落在框外；現在模塊有自己的輪廓，這個補寬只剩下框到空品格的副作用。
       // 模型要從哪個音開始長。lo 只看按下去的品，空弦（0 品）被濾掉了，
       // C 開放和弦因此從 1 品起算，整個模型被推到 A 型的位置上。
       // 有空弦的把位就是第 0 把位，錨點要落在 0。
       // 把位的食指格比和弦的最低品低一格：C 大調 E 型的和弦壓在 8 品，
       // 音階視窗卻是 7–10 品（低音弦從 7 品的 B 起音）。
       const anchor = hasOpen ? capo : Math.max(capo, lo - 1);
-      return { vi, tag: v.tag, lo, hi, bHi, anchor, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: xLine(bHi) - 3, active: vi === chord.voiceIdx };
+      return { vi, tag: v.tag, lo, hi, anchor, hasOpen, x1: hasOpen ? NUT - 40 : xLine(lo - 1) + 3, x2: fs.length ? xLine(hi) - 3 : NUT - 8, active: vi === chord.voiceIdx };
     });
     const box = brackets.find((b) => b.active);
     // 把位實色改成順著音階走的模型，不是切一塊矩形
