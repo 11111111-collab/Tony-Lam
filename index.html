@@ -2232,15 +2232,26 @@ window.__CHORDLAB__ = function(){
         for (let f = w; f <= hi; f++) if (scalePcs.has((base + f) % 12)) arr.push(f);
         return arr;
       });
+      /**
+       * 藍音是夾在三個連續半音正中間的經過音——大調藍調的 ♭3（2-♭3-3）、
+       * 小調藍調的 ♭5（4-♭5-5）。教材都把它跟「下面那個音」放在同一條弦上，
+       * 因為它是滑上去的經過音，不會讓它去當下一條弦的開頭。
+       * 這個條件只在兩個藍調音階成立，其他音階（含七聲、減音階）都不會誤中。
+       */
+      const isBlue = (midi) => scalePcs.has((midi + 11) % 12) && scalePcs.has((midi + 1) % 12);
       const box = STRING_MIDI.map(() => []);
       let last = -1;
       for (let i = 0; i < STRING_MIDI.length; i++) {
         const base = STRING_MIDI[i];
         for (const f of win[i]) {
           if (base + f <= last) continue;
+          // 藍音一定要跟它下面那個音同弦；接不上（在弦首、或視窗容不下）就不放，
+          // 因為藍調的圖形本來就是五聲盒型再把藍音黏在那個音旁邊
+          if (isBlue(base + f) && !(box[i].length && base + f - last === 1)) continue;
           if (f > w + BOX_SPAN - 2) {
+            const keepBlue = isBlue(base + f) && last >= 0 && base + f - last === 1;
             const nx = i + 1 < STRING_MIDI.length ? win[i + 1] : null;
-            const reachable = nx && nx.some((g) => g <= w + BOX_SPAN - 2
+            const reachable = !keepBlue && nx && nx.some((g) => g <= w + BOX_SPAN - 2
               && STRING_MIDI[i + 1] + g > last && STRING_MIDI[i + 1] + g <= base + f);
             if (reachable) continue;
           }
