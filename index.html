@@ -792,7 +792,8 @@ window.__CHORDLAB__ = function(){
         sus4: [null, 0, 0, -3, -2, -2],
         min7: [null, 0, -2, 0, -2, -4],
         m6: [null, 0, -2, -1, -2, -4],
-        sus7: [null, 0, 0, 0, -2, -2]
+        sus7: [null, 0, 0, 0, -2, -2],
+        sus2: [null, 0, -3, -3, -2, null]
       }
     },
     {
@@ -839,7 +840,8 @@ window.__CHORDLAB__ = function(){
         m7b5: [0, -2, -4, -3, -4, -2],
         dim7: [0, -2, -4, -3, -4, -3],
         m6: [0, -2, -3, -3, -4, -3],
-        sus7: [0, 0, -3, -3, -2, -2]
+        sus7: [0, 0, -3, -3, -2, -2],
+        sus2: [0, -3, -3, -3, null, null]
       }
     },
     {
@@ -987,7 +989,17 @@ window.__CHORDLAB__ = function(){
       out.push({ key, frets, tag, pos });
     };
     const open = OPEN_SHAPES[shapedPc + ":" + quality];
-    if (open) push(open, "開放把位", 0);
+    if (open) {
+      // 五個開放和弦本來就是五個 CAGED 指型（C 開放和弦就是 C 型），
+      // 那正是這套系統名字的由來。標成「開放把位」會讓同一個位置在
+      // 不同和弦品質下一下叫開放把位、一下叫 C 型，清單就對不起來了。
+      let tag = "開放把位";
+      for (const fam of FAMILIES) {
+        if (open[fam.rootString] == null || open[fam.rootString] < 0) continue;
+        if (cagedTag(open, fam.rootString, quality) === fam.tag) { tag = fam.tag; break; }
+      }
+      push(open, tag, 0);
+    }
     const cands = [];
     FAMILIES.forEach((fam) => {
       const tpl = fam.shapes[quality];
