@@ -2204,9 +2204,16 @@ window.__CHORDLAB__ = function(){
         return arr;
       });
     }
-    // 一弦三音是七聲音階的系統——七個圖形對應七個音級。五聲硬套三音會拉到
-    // 十八格，六音、八音的音階則會一路往高把位漂。非七聲就回到 CAGED。
-    if (sys === "3nps" && scalePcs.size !== 7) sys = "caged";
+    /**
+     * 哪個系統適用哪種音階，照教材走：
+     *   七聲音階 —— CAGED 五個指型與一弦三音七個圖形都成立，兩個都給
+     *   八音的減音階 —— 對稱音階，教材的系統是每弦音數一致的三音一弦
+     *     （指法 1-3-4 與 1-2-4 交替）與四音一弦，不是 CAGED 的 2/3 交替。
+     *     硬套 CAGED 會排出 3-3-4-2-4-3 這種三不像，所以一律走一弦三音。
+     *   五聲與藍調 —— 教材有五個盒型，走 CAGED
+     */
+    if (scalePcs.size === 8) sys = "3nps";
+    else if (sys === "3nps" && scalePcs.size !== 7) sys = "caged";
     /**
      * CAGED 是「一指一格」的四格視窗，正因為四格裝不下固定的音數，
      * 才會出現 3 音 2 音交替——那是這套系統的特徵，不是缺陷。
@@ -3213,8 +3220,9 @@ window.__CHORDLAB__ = function(){
     const scaleOk = neckScale && SCALES[neckScale] && (!SCALES[neckScale].q || SCALES[neckScale].q.includes(neckQ));
     const effScale = scaleOk ? neckScale : defaultScale(neckRoot, neckQ, keyPc, mode);
     const neckScaleSet = new Set(SCALES[effScale].iv.map((x) => (neckRoot + x) % 12));
-    // 非七聲音階套不了一弦三音，實際畫的是 CAGED——按鈕就別再亮著騙人
-    const effPosSys = neckScaleSet.size === 7 ? posSys : "caged";
+    // 按鈕要反映實際畫出來的系統，不能亮著一個、畫的是另一個
+    const nSc = neckScaleSet.size;
+    const effPosSys = nSc === 8 ? "3nps" : nSc === 7 ? posSys : "caged";
     const scaleOpts = (() => {
       const q = viewChord ? viewChord.quality : "maj";
       return Object.keys(SCALES).filter((k) => !SCALES[k].q || SCALES[k].q.includes(q))
@@ -3409,17 +3417,19 @@ window.__CHORDLAB__ = function(){
       },
       "模塊"
     ),/* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [
-      ["caged", "CAGED", "每弦 2–3 音，跨度約 5 格"],
-      // 一弦三音是七聲音階的系統：七個音級對應七個圖形。五聲、藍調、減音階
-      // 套不上去，與其偷偷改成別的東西，不如直接鎖住並說明。
-      ["3nps", "三音一弦", neckScaleSet.size === 7
+      ["caged", "CAGED", nSc === 8
+        ? "減音階是對稱音階，教材用的是每弦音數一致的指法，不是 CAGED"
+        : "一指一格的四格視窗，每弦 2–3 音，五個指型各有自己的分佈"],
+      // 一弦三音是七聲音階的系統：七個音級對應七個圖形。八音的減音階教材同樣
+      // 有三音一弦（指法 1-3-4 與 1-2-4 交替）。五聲與藍調則是五個盒型，走 CAGED。
+      ["3nps", "三音一弦", nSc === 7 || nSc === 8
         ? "每條弦固定三個音，共十八個音"
-        : "一弦三音是七聲音階的系統，目前這個音階不是七個音，用 CAGED 讀"]
+        : "一弦三音是七聲音階的系統，這個音階教材用的是五個盒型，走 CAGED"]
     ].map(([v, l, t]) => /* @__PURE__ */ React.createElement("button", {
       key: v,
       // 一直顯示，不然使用者不會知道有這個選項；直接點系統就順手開啟模塊
       className: neckSolid === "pos" && effPosSys === v ? "on" : "",
-      disabled: v === "3nps" && neckScaleSet.size !== 7,
+      disabled: v === "3nps" ? !(nSc === 7 || nSc === 8) : nSc === 8,
       title: t,
       onClick: () => { setPosSys(v); setNeckSolid("pos"); }
     }, l))),/* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
