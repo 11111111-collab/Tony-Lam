@@ -890,9 +890,12 @@ window.__CHORDLAB__ = function(){
       if (!tpl) continue;
       let same = true;
       for (let st = 0; st < 6; st++) {
-        const a = tpl[st] == null ? -1 : tpl[st];
-        const b = frets[st] < 0 ? -1 : frets[st] - frets[bs];
-        if (a !== b) { same = false; break; }
+        // 「不彈」與「根音下面一格」不能混為一談。原本兩者都寫成 -1，
+        // Bdim 的 x 14 15 16 15 13 就因為 13-14 = -1 被誤認成 A 型
+        // ——A 型的 dim 模板一弦是不彈的。
+        const tMute = tpl[st] == null, fMute = frets[st] < 0;
+        if (tMute !== fMute) { same = false; break; }
+        if (!tMute && tpl[st] !== frets[st] - frets[bs]) { same = false; break; }
       }
       if (same) return fam.tag;
     }
