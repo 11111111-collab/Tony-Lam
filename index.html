@@ -4067,14 +4067,84 @@ window.__CHORDLAB__ = function(){
     const box = brackets.find((b) => b.active);
     // 把位實色改成順著音階走的模型，不是切一塊矩形
     const boxKeys = new Set();
+    // 每條弦自己的頭尾，紫框才能貼著模塊的輪廓走，而不是切一塊方形把音卡掉
+    const boxRow = [null, null, null, null, null, null];
     let boxLo = null, boxHi = null;
     if (solid === "pos" && box) {
       scaleBoxFrets(scalePcs, box.anchor, posSys, capo, NF).forEach((fs, si) => fs.forEach((f) => {
         boxKeys.add(si + ":" + f);
+        const r = boxRow[si];
+        if (!r) boxRow[si] = { lo: f, hi: f };
+        else { if (f < r.lo) r.lo = f; if (f > r.hi) r.hi = f; }
         if (boxLo == null || f < boxLo) boxLo = f;
         if (boxHi == null || f > boxHi) boxHi = f;
       }));
     }
+    /**
+     * 紫框改成貼著模塊的外輪廓走。原本是一塊固定的方形，模塊只要有一顆音
+     * 往後凸出去就被卡在框外；反過來，某條弦明明早就收掉了，框還是拉到底。
+     * 現在每條弦各自算頭尾，該凸的地方凸、該收的地方收，像「凸」字一樣
+     * 仍然方方正正，只是轉角一樣是圓的。
+     */
+    const RH = 13.5;
+    const rowX = (r) => ({
+      // 空弦的音點畫在琴枕左邊，框要跟著往外讓一段
+      x1: r.lo === 0 ? NUT - 40 : xLine(r.lo - 1) + 3,
+      x2: r.hi === 0 ? NUT - 8 : xLine(r.hi) - 3
+    });
+    function outlinePath() {
+      const rows = [];
+      for (let i = 0; i < 6; i++) {
+        if (!boxRow[i]) continue;
+        // 中間有空弦（撞到指板盡頭才會發生）就不硬畫輪廓，退回方框比較不會怪
+        if (rows.length && rows[rows.length - 1].i !== i - 1) return null;
+        rows.push(Object.assign({ i }, rowX(boxRow[i])));
+      }
+      if (!rows.length) return null;
+      const top = (k) => k === rows.length - 1 && rows[k].i === 5 ? 20 : yOf(rows[k].i) - RH;
+      const bot = (k) => k === 0 && rows[k].i === 0 ? 208 : yOf(rows[k].i) + RH;
+      const pts = [];
+      const put = (x, y) => {
+        const p = pts[pts.length - 1];
+        if (!p || Math.abs(p.x - x) > 0.01 || Math.abs(p.y - y) > 0.01) pts.push({ x, y });
+      };
+      // 順時針：先沿著下緣往右，再一階一階往上走右緣
+      put(rows[0].x1, bot(0));
+      put(rows[0].x2, bot(0));
+      for (let k = 0; k < rows.length; k++) {
+        put(rows[k].x2, top(k));
+        if (k + 1 < rows.length) put(rows[k + 1].x2, top(k));
+      }
+      // 再沿著上緣往左，一階一階往下走左緣
+      put(rows[rows.length - 1].x1, top(rows.length - 1));
+      for (let k = rows.length - 1; k >= 0; k--) {
+        put(rows[k].x1, bot(k));
+        if (k - 1 >= 0) put(rows[k - 1].x1, bot(k));
+      }
+      // 繞回起點時會補出一個跟 pts[0] 重複的點，留著會讓首尾兩個轉角都被
+      // 當成零長度跳過，Z 直接斜切回去，左下角就被削掉了
+      while (pts.length > 1) {
+        const a = pts[0], z = pts[pts.length - 1];
+        if (Math.abs(a.x - z.x) > 0.01 || Math.abs(a.y - z.y) > 0.01) break;
+        pts.pop();
+      }
+      const n = pts.length;
+      if (n < 4) return null;
+      let d = "";
+      for (let i = 0; i < n; i++) {
+        const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n];
+        const ux = p1.x - p0.x, uy = p1.y - p0.y, vx = p2.x - p1.x, vy = p2.y - p1.y;
+        const lu = Math.hypot(ux, uy), lv = Math.hypot(vx, vy);
+        if (!lu || !lv) continue;
+        const rr = Math.min(8, lu / 2, lv / 2);
+        const ax = p1.x - ux / lu * rr, ay = p1.y - uy / lu * rr;
+        const bx = p1.x + vx / lv * rr, by = p1.y + vy / lv * rr;
+        d += (d ? "L" : "M") + ax.toFixed(2) + "," + ay.toFixed(2)
+          + "Q" + p1.x.toFixed(2) + "," + p1.y.toFixed(2) + " " + bx.toFixed(2) + "," + by.toFixed(2);
+      }
+      return d ? d + "Z" : null;
+    }
+    const boxOutline = solid === "pos" && box ? outlinePath() : null;
     return /* @__PURE__ */ React.createElement("div", { className: "neck-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "brk-bar" }, /* @__PURE__ */ React.createElement("span", { className: "brk-lbl" }, "把位"), brackets.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.vi, className: "brk-btn" + (b.active ? " on" : ""), onClick: () => onPickVoicing(b.vi) }, /* @__PURE__ */ React.createElement("b", null, b.tag), /* @__PURE__ */ React.createElement("i", null, b.hasOpen ? "空弦" : b.lo + " 品")))), /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 " + W + " " + H, className: "neck", role: "img", "aria-label": "整支指板的和弦音位置" }, /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: END - NUT, height: "180", fill: "var(--wood)", rx: "3" }), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: NUT, y: "24", width: xLine(capo) - NUT, height: "180", fill: "#0E0C08", opacity: ".72" }), Array.from({ length: NF + 1 }, (_, f) => /* @__PURE__ */ React.createElement(
       "line",
       {
@@ -4087,6 +4157,7 @@ window.__CHORDLAB__ = function(){
         strokeWidth: f === 0 ? 5 : 2
       }
     )), [3, 5, 7, 9, 15, 17, 19, 21].map((f) => /* @__PURE__ */ React.createElement("circle", { key: f, cx: xSlot(f), cy: "114", r: "6", fill: "var(--dot)", opacity: ".55" })), [[12, 78], [12, 150], [24, 78], [24, 150]].filter(([f]) => f <= 22).map(([f, y], i) => /* @__PURE__ */ React.createElement("circle", { key: i, cx: xSlot(f), cy: y, r: "6", fill: "var(--dot)", opacity: ".55" })), capo > 0 && /* @__PURE__ */ React.createElement("rect", { x: xLine(capo) - 4, y: "20", width: "8", height: "188", rx: "4", fill: "var(--rust)", opacity: ".9" }), brackets.filter((b) => b.active).map((b) => {
+      if (boxOutline) return /* @__PURE__ */ React.createElement("path", { key: b.vi, className: "brk-body", d: boxOutline });
       const x1 = solid === "pos" && boxLo != null ? xLine(boxLo - 1) + 3 : b.x1;
       const x2 = solid === "pos" && boxHi != null ? xLine(boxHi) - 3 : b.x2;
       return /* @__PURE__ */ React.createElement("rect", { key: b.vi, className: "brk-body", x: x1, y: "20", width: Math.max(30, x2 - x1), height: "188", rx: "8" });
