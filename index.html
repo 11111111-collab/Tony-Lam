@@ -2296,6 +2296,15 @@ window.__CHORDLAB__ = function(){
        */
       const isBlue = (midi) => scalePcs.has(midi % 12)
         && scalePcs.has((midi + 11) % 12) && scalePcs.has((midi + 1) % 12);
+      /**
+       * CAGED 一條弦 2–3 音是這套系統的定義，模塊是一顆一顆彈的旋律圖形，
+       * 所以第四個音不是「多給你一顆」，是把圖形讀壞了。四格視窗裡湊得出
+       * 四個音階音的情況真的存在：和聲小調（♭6-7 與 2-♭3 兩組半音）、
+       * 旋律小調、Altered，以及兩個藍調音階再加上黏在後面的藍音。
+       * 滿了就收手，剩下的留給下一條弦——`last` 不動，下一條弦會從這裡接上，
+       * 音階不會斷。
+       */
+      const PER_STRING_MAX = 3;
       const box = STRING_MIDI.map(() => []);
       let last = -1;
       for (let i = 0; i < STRING_MIDI.length; i++) {
@@ -2312,12 +2321,19 @@ window.__CHORDLAB__ = function(){
               && STRING_MIDI[i + 1] + g > last && STRING_MIDI[i + 1] + g <= base + f);
             if (reachable) continue;
           }
+          if (box[i].length >= PER_STRING_MAX) {
+            // 收手的前提是下一條弦接得到這顆音。接不到還硬收，音階就從中間
+            // 斷掉一顆——模塊是拿來一顆一顆彈旋律的，斷格比多一顆音嚴重得多，
+            // 所以這種時候寧可讓這條弦破例到四音。
+            const nx2 = i + 1 < STRING_MIDI.length ? win[i + 1] : null;
+            if (nx2 && nx2.some((g) => STRING_MIDI[i + 1] + g === base + f)) break;
+          }
           box[i].push(f);
           last = base + f;
         }
         // 藍音是滑上去的經過音，跟著下面那個音走——那個音在這條弦上，藍音就在這條弦上，
         // 就算落在視窗外一格也一樣。少了它，弦上會出現「2」後面空著的斷句。
-        if (box[i].length) {
+        if (box[i].length && box[i].length < PER_STRING_MAX) {
           const nextF = box[i][box[i].length - 1] + 1;
           if (nextF <= nf && isBlue(base + nextF)) {
             box[i].push(nextF);
@@ -4135,17 +4151,19 @@ window.__CHORDLAB__ = function(){
         if (boxLo == null || f < boxLo) boxLo = f;
         if (boxHi == null || f > boxHi) boxHi = f;
       }));
-      // 和弦要按的音也要被框進去。模塊是順著音階走的，同一個音高只會取一次，
-      // 所以和弦用到的那顆有可能被排在別條弦上——G7 開放把位的二弦空弦 B
-      // 就是這樣落在框外的。框要涵蓋「這個把位的音階 ＋ 你正在按的和弦」。
-      activeAbs.forEach((f, si) => {
-        if (f < 0) return;
-        const r = boxRow[si];
-        if (!r) boxRow[si] = { lo: f, hi: f };
-        else { if (f < r.lo) r.lo = f; if (f > r.hi) r.hi = f; }
-        if (boxLo == null || f < boxLo) boxLo = f;
-        if (boxHi == null || f > boxHi) boxHi = f;
-      });
+      /**
+       * 框只跟著音階走，不把和弦按的音拉進來。
+       *
+       * 這兩件事是不同層面的：按和弦時，某顆音要壓在哪條弦是被手型和組成音
+       * 綁死的；模塊是拿來一顆一顆彈旋律的，同一個音級在哪條弦上取，可以
+       * 純粹看手指順不順。A 型 C9 的和弦把 2 壓在三弦第 7 品，模塊卻把 2
+       * 取在二弦第 3 品——樂理上都是那個 2，模塊選好按的那顆才對。
+       *
+       * 以前這裡會把和弦的音也框進去，結果三弦被拉到第 7 品,畫面上那顆
+       * 和弦的 2 就長得像是模塊的一部分,跟二弦的 2 讀起來變成同一個音級
+       * 出現兩次,那條弦也看起來多一顆。和弦的音本來就該落在框外,那不是
+       * 破圖,是它不屬於這個音階圖形。
+       */
     }
     /**
      * 紫框改成貼著模塊的外輪廓走。原本是一塊固定的方形，模塊只要有一顆音
