@@ -689,7 +689,20 @@ window.__CHORDLAB__ = function(){
     lydian: { n: "4級 Lydian", s: "♯4，漂浮、開闊", iv: [0, 2, 4, 6, 7, 9, 11], q: [...Q_MAJ] },
     mixo: { n: "5級 Mixolydian", s: "降七音，屬和弦與藍調", iv: [0, 2, 4, 5, 7, 9, 10], q: ["maj", "sixth", "add9", ...Q_DOM, ...Q_SUS] },
     majPent: { n: "大調五聲", s: "拿掉半音，怎麼彈都安全", iv: [0, 2, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13"] },
-    majBlues: { n: "大調藍調", s: "五聲加♭3 藍調音", iv: [0, 2, 3, 4, 7, 9], q: ["maj", "sixth", "dom7", "dom9", "dom13"] },
+    // 藍音是夾在 2–♭3–3 中間的滑音，跟和弦組成音無關——能在大三和弦上彈，
+    // 就能在 maj7 / maj9 / add9 上彈。maj9 與 add9 還更順，因為大調藍調裡
+    // 本來就有 2（＝9）。原本這裡漏掉這三個，跟隔壁的大調五聲不一致。
+    majBlues: { n: "大調藍調", s: "五聲加♭3 藍調音", iv: [0, 2, 3, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13"] },
+    /**
+     * 關係小調的五聲與藍調，音**完全等於**大調的那兩個：
+     *   C 大調五聲 C D E G A   ＝ A 小調五聲
+     *   C 大調藍調 C D E♭ E G A ＝ A 小調藍調
+     * 所以這裡給的不是另一組音，是同一組音的另一種看法——`tonic` 把級數的
+     * 主音移到關係小調（根音 +9），C 就從 R 變成 ♭3、A 從 6 變成 R。
+     * 兩個選項亮起來一模一樣是對的，那正好把關係大小調同音這件事畫出來。
+     */
+    relMinPent: { n: "關係小調五聲", s: "與大調五聲同音，主音移到關係小調", iv: [0, 2, 4, 7, 9], tonic: 9, q: [...Q_MAJ] },
+    relMinBlues: { n: "關係小調藍調", s: "與大調藍調同音，主音移到關係小調", iv: [0, 2, 3, 4, 7, 9], tonic: 9, q: [...Q_MAJ] },
     aeolian: { n: "6級 Aeolian", s: "自然小調", iv: [0, 2, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
     dorian: { n: "2級 Dorian", s: "小調加大六，沒那麼暗", iv: [0, 2, 3, 5, 7, 9, 10], q: [...Q_MIN] },
     phrygian: { n: "3級 Phrygian", s: "降二音，西班牙色彩", iv: [0, 1, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
@@ -3313,13 +3326,21 @@ window.__CHORDLAB__ = function(){
     const scaleOk = neckScale && SCALES[neckScale] && (!SCALES[neckScale].q || SCALES[neckScale].q.includes(neckQ));
     const effScale = scaleOk ? neckScale : defaultScale(neckRoot, neckQ, keyPc, mode);
     const neckScaleSet = new Set(SCALES[effScale].iv.map((x) => (neckRoot + x) % 12));
+    // 級數要對哪個主音。關係小調的兩個音階把它移到根音 +9，其餘都是 0（和弦根音）
+    const neckDegTonic = SCALES[effScale].tonic || 0;
     // 按鈕要反映實際畫出來的系統，不能亮著一個、畫的是另一個
     const nSc = neckScaleSet.size;
     const effPosSys = nSc === 8 ? "3nps" : nSc === 7 ? posSys : "caged";
     const scaleOpts = (() => {
       const q = viewChord ? viewChord.quality : "maj";
       return Object.keys(SCALES).filter((k) => !SCALES[k].q || SCALES[k].q.includes(q))
-        .map((k) => ({ v: k, l: SCALES[k].n, s: SCALES[k].s }));
+        .map((k) => {
+          // 關係小調的兩個跟大調那兩個亮起來一模一樣，差別只在主音。把實際的
+          // 主音音名寫進選項裡，選單和收合後顯示的值才不會看起來是重複選項。
+          const t = SCALES[k].tonic;
+          const name = t ? SCALES[k].n + "（主音 " + pcName((neckRoot + t) % 12, useFlats) + "）" : SCALES[k].n;
+          return { v: k, l: name, s: SCALES[k].s };
+        });
     })();
     const jumpTo = async (i, c) => {
       setSelId(c.id);
@@ -3533,6 +3554,7 @@ window.__CHORDLAB__ = function(){
         posSys: effPosSys,
         ovMap: (viewChord.cfg && viewChord.cfg.ov) || {},
         scaleSet: neckScaleSet,
+        degTonic: neckDegTonic,
         labelMode,
         capo,
         keyPc,
@@ -4094,7 +4116,7 @@ window.__CHORDLAB__ = function(){
   const SOLFA_FLAT = ["Do", "♭Re", "Re", "♭Mi", "Mi", "Fa", "♭So", "So", "♭La", "La", "♭Si", "Si"];
   const solfaOf = (pc, keyPc, useFlats) => (useFlats ? SOLFA_FLAT : SOLFA_SHARP)[((pc - keyPc) % 12 + 12) % 12];
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
-  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys }) {
+  function NeckView({ chord, capo, keyPc, scale, useFlats, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys, degTonic = 0 }) {
     const NF = 22;
     const W = 980, H = 250, NUT = 58, END = 962;
     const fw = (END - NUT) / NF;
@@ -4108,12 +4130,20 @@ window.__CHORDLAB__ = function(){
       if (ivMap[pc] === void 0) ivMap[pc] = semi;
     });
     const scalePcs = scaleSet || new Set(scale.map((s) => (keyPc + s) % 12));
-    const scaleSemis = new Set([...scalePcs].map((pc) => semiOf(pc, chord.rootPc)));
+    /**
+     * 級數的主音不一定是和弦根音。選了關係小調的五聲／藍調時，音是同一組，
+     * 但你是把它當 A 小調在彈，所以 C 要讀成 ♭3、A 要讀成 R。`degTonic` 就是
+     * 主音相對和弦根音的位移（關係小調是 +9），0 代表照舊對和弦根音。
+     * ♯4 與 ♯5 的判斷也要跟著移，不然半音的寫法會對到錯的主音。
+     */
+    const tonicPc = ((chord.rootPc + degTonic) % 12 + 12) % 12;
+    const scaleSemis = new Set([...scalePcs].map((pc) => semiOf(pc, tonicPc)));
     const aug = scaleSemis.has(4) && !scaleSemis.has(7);
     const degOf = (sm) => {
-      if (sm === 6 && scaleSemis.has(6) && !scaleSemis.has(5)) return "♯4";
-      if (sm === 8) return aug ? "♯5" : "♭6";
-      return DEG_LABEL[sm];
+      const d = ((sm - degTonic) % 12 + 12) % 12;
+      if (d === 6 && scaleSemis.has(6) && !scaleSemis.has(5)) return "♯4";
+      if (d === 8) return aug ? "♯5" : "♭6";
+      return DEG_LABEL[d];
     };
     const labelFor = (sm, pc) => labelMode === "solfa" ? solfaOf(pc, keyPc, useFlats) : degOf(sm);
     const activeAbs = chord.voicing.frets.map((f) => f < 0 ? -1 : f + capo);
