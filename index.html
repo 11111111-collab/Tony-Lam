@@ -703,11 +703,23 @@ window.__CHORDLAB__ = function(){
      */
     relMinPent: { n: "關係小調五聲", s: "與大調五聲同音，主音移到關係小調", iv: [0, 2, 4, 7, 9], tonic: 9, q: [...Q_MAJ] },
     relMinBlues: { n: "關係小調藍調", s: "與大調藍調同音，主音移到關係小調", iv: [0, 2, 3, 4, 7, 9], tonic: 9, q: [...Q_MAJ] },
+    /**
+     * 大調和弦也能用關係小調的調式來看：C Ionian 與 A Aeolian 是同一組音
+     * （C D E F G A B），差別只在主音。所以 iv 直接用 Ionian 那組，靠 tonic
+     * 把級數移到關係小調，C 讀成 ♭3、A 讀成 R。
+     *
+     * 位置要放在 `ionian` 後面。`defaultScale` 是按物件順序找第一個「音集
+     * 等於調性」的七聲音階，而這個的 iv 跟 ionian 一模一樣——排在前面會把
+     * 大調和弦的預設音階搶走。
+     */
+    relMinAeolian: { n: "6級 Aeolian", s: "與 1級 Ionian 同音，主音移到關係小調", iv: [0, 2, 4, 5, 7, 9, 11], tonic: 9, q: [...Q_MAJ] },
     aeolian: { n: "6級 Aeolian", s: "自然小調", iv: [0, 2, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
     dorian: { n: "2級 Dorian", s: "小調加大六，沒那麼暗", iv: [0, 2, 3, 5, 7, 9, 10], q: [...Q_MIN] },
     phrygian: { n: "3級 Phrygian", s: "降二音，西班牙色彩", iv: [0, 1, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
     minPent: { n: "小調五聲", s: "最通用的 solo 音階", iv: [0, 3, 5, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13"] },
-    minBlues: { n: "小調藍調", s: "五聲加♭5", iv: [0, 3, 5, 6, 7, 10], q: ["min", "min7", "min9", "dom7", "dom9", "dom13"] },
+    // m6 原本被排除在外，但小調五聲同樣含 ♭7、同樣跟 m6 的大六度差半音，
+    // 卻是開放的——開一個關一個並不一致。統一成跟小調五聲相同。
+    minBlues: { n: "小調藍調", s: "五聲加♭5", iv: [0, 3, 5, 6, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13"] },
     /**
      * 關係大調的五聲與藍調，跟上面關係小調那組完全對稱——一樣不是新的音，
      * 是同一組音把主音移到關係大調（根音 +3）：
@@ -719,7 +731,11 @@ window.__CHORDLAB__ = function(){
      * 五聲跟 minPent 一樣含 m6，藍調跟 minBlues 一樣不含。
      */
     relMajPent: { n: "關係大調五聲", s: "與小調五聲同音，主音移到關係大調", iv: [0, 3, 5, 7, 10], tonic: 3, q: [...Q_MIN] },
-    relMajBlues: { n: "關係大調藍調", s: "與小調藍調同音，主音移到關係大調", iv: [0, 3, 5, 6, 7, 10], tonic: 3, q: ["min", "min7", "min9"] },
+    relMajBlues: { n: "關係大調藍調", s: "與小調藍調同音，主音移到關係大調", iv: [0, 3, 5, 6, 7, 10], tonic: 3, q: [...Q_MIN] },
+    // 小調和弦看關係大調的調式，跟上面 relMinAeolian 對稱：A Aeolian 與
+    // C Ionian 同音，iv 用 Aeolian 那組，tonic 把主音移到關係大調。
+    // 同樣要排在 `aeolian` 後面，否則會搶走小調和弦的預設音階。
+    relMajIonian: { n: "1級 Ionian", s: "與 6級 Aeolian 同音，主音移到關係大調", iv: [0, 2, 3, 5, 7, 8, 10], tonic: 3, q: [...Q_MIN] },
     harmMin: { n: "和聲小調", s: "小調加大七（跟 m7 會撞）", iv: [0, 2, 3, 5, 7, 8, 11], q: ["min", "m6"] },
     melMin: { n: "旋律小調", s: "小三大六大七", iv: [0, 2, 3, 5, 7, 9, 11], q: ["min", "m6"] },
     locrian: { n: "7級 Locrian", s: "降二降五", iv: [0, 1, 3, 5, 6, 8, 10], q: ["m7b5", "dim"] },
