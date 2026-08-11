@@ -2172,12 +2172,25 @@ window.__CHORDLAB__ = function(){
     }
     pick(voicing, stringIdx, time, vel) {
       if (!this.ready || !voicing) return;
-      let k = stringIdx;
-      if (voicing.frets[k] < 0) {
-        const alt = voicing.frets.map((f, i) => f >= 0 ? i : -1).filter((i) => i >= 0);
-        if (!alt.length) return;
-        k = alt.reduce((a, b) => Math.abs(b - stringIdx) < Math.abs(a - stringIdx) ? b : a);
-      }
+      /**
+       * 琶音與 Travis 這些樣式的弦號是照六條弦寫的，實際的把位常常沒有六條。
+       * 原本只有「指定的弦沒發聲」才退到弦號最近的那條，發聲的就照號碼用
+       * ——稀疏的把位會整群擠在一起。強力和弦的 A 型 x 3 5 5 x x 就是這樣：
+       * 琶音要三、四、五弦，而三弦本來就有聲音（最高的那顆），於是四個事件
+       * 有三個落在同一顆，中間的五度一次都沒被指定到，聽起來偏高而且不像
+       * 強力和弦。
+       *
+       * 改成把整組弦號往高音弦對齊：少幾條弦就整體右移幾格，低音側超出的
+       * 夾到最低的那條。這樣四弦、五弦的把位維持原本的對應（D 型的琶音還是
+       * D3 A3 D4 F♯4 的上行），只有真的塞不下的稀疏把位才會把聲部攤開。
+       * 六條弦全響時位移為 0，行為完全不變。
+       *
+       * 按比例映射（si / 5 × 聲部數）試過，會連發聲的弦一起挪，四弦的 D 型
+       * 會變成 D3 D4 D4 F♯4，反而把好好的上行弄壞。
+       */
+      const alt = voicing.frets.map((f, i) => f >= 0 ? i : -1).filter((i) => i >= 0);
+      if (!alt.length) return;
+      const k = alt[Math.min(alt.length - 1, Math.max(0, stringIdx - (6 - alt.length)))];
       this._attackString(k, STRING_MIDI[k] + voicing.capo + voicing.frets[k], time, vel);
       this.onStrum && this.onStrum({ dir: "P", strings: [k], spread: 0, vel });
     }
