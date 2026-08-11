@@ -3620,22 +3620,41 @@ window.__CHORDLAB__ = function(){
           previewVoicing({ ...viewChord.allVoicings[idx], capo }, "R", viewChord);
         }
       }
-    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["solfa", "唱名"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, useFlats, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, WINDOWS.map((w, wi) => {
+    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["solfa", "唱名"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, useFlats, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, (function () {
       const fr = viewChord.voicing.shape.frets;
-      const sub = w ? fr.map((f, si) => si >= w[0] && si <= w[1] ? f : -1) : fr;
-      const ms = voicingToMidi(sub, capo);
-      if (ms.length < 3) return null;
-      const semis = ms.map((m) => semiOf(m % 12, viewChord.rootPc));
       const iv3 = QUALITIES[viewChord.quality].iv.slice(0, 3).map((x) => ((x % 12) + 12) % 12);
-      const ok = iv3.every((x) => semis.includes(x));
-      const nums = [];
-      if (w) for (let si = w[0]; si <= w[1]; si++) nums.push(6 - si);
-      const cur = JSON.stringify((viewChord.cfg && viewChord.cfg.win) || null) === JSON.stringify(w || null);
-      return /* @__PURE__ */ React.createElement("button", { key: wi, className: "win-btn" + (cur ? " on" : "") + (ok ? "" : " weak"),
-        onClick: () => { patchVoice(viewChord, { win: w }); } },
-        /* @__PURE__ */ React.createElement("b", null, w ? nums.join("-") : "整型"),
-        /* @__PURE__ */ React.createElement("i", null, semis.map((sm) => IV_LABEL[sm]).join("-")));
-    })), (function(){ const ov = (viewChord.cfg && viewChord.cfg.ov) || {}; const ks = Object.keys(ov);
+      const maskOf = (w) => w ? fr.map((f, si) => si >= w[0] && si <= w[1] ? f : -1) : fr.slice();
+      /**
+       * 弦組是照指板固定的六條弦切的，不是照這把和弦實際有聲音的弦。範圍外
+       * 的弦本來就不彈時，框進去等於沒框，兩顆按鈕會按出一模一樣的東西——
+       * Cm 的 A 型 x 3 5 5 4 3 沒有第六弦，「6-5-4-3」就跟「5-4-3」完全相同。
+       * 全部把位有 64% 帶這種重複（六弦把位一個都沒有，悶弦愈多愈嚴重）。
+       * 結果重複的就不畫，只留先出現的那顆。
+       */
+      const seen = new Set();
+      const opts = [];
+      WINDOWS.forEach((w, wi) => {
+        const sub = maskOf(w);
+        if (voicingToMidi(sub, capo).length < 3) return;
+        const key = sub.join(",");
+        if (seen.has(key)) return;
+        seen.add(key);
+        opts.push({ w, wi, sub, key });
+      });
+      // 存檔的弦組正好是被藏起來的那顆時，讓等效的那顆亮起來。按出來的音
+      // 一模一樣，只是選取的位置換一顆，不會變成看起來什麼都沒選
+      const curKey = maskOf((viewChord.cfg && viewChord.cfg.win) || null).join(",");
+      return opts.map(({ w, wi, sub, key }) => {
+        const semis = voicingToMidi(sub, capo).map((m) => semiOf(m % 12, viewChord.rootPc));
+        const ok = iv3.every((x) => semis.includes(x));
+        const nums = [];
+        if (w) for (let si = w[0]; si <= w[1]; si++) nums.push(6 - si);
+        return /* @__PURE__ */ React.createElement("button", { key: wi, className: "win-btn" + (key === curKey ? " on" : "") + (ok ? "" : " weak"),
+          onClick: () => { patchVoice(viewChord, { win: w }); } },
+          /* @__PURE__ */ React.createElement("b", null, w ? nums.join("-") : "整型"),
+          /* @__PURE__ */ React.createElement("i", null, semis.map((sm) => IV_LABEL[sm]).join("-")));
+      });
+    })()), (function(){ const ov = (viewChord.cfg && viewChord.cfg.ov) || {}; const ks = Object.keys(ov);
       const cfg = viewChord.cfg || {};
       if (!ks.length && !cfg.win && !cfg.shapeIdx) return null;
       return /* @__PURE__ */ React.createElement("div", { className: "mods" },
