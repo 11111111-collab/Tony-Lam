@@ -647,6 +647,8 @@ window.__CHORDLAB__ = function(){
     aug: { label: "aug", full: "增三和弦", iv: [0, 4, 8] },
     sus2: { label: "sus2", full: "掛留二", iv: [0, 2, 7] },
     sus4: { label: "sus4", full: "掛留四", iv: [0, 5, 7] },
+    // 只有根音與純五度，沒有三度——所以它既不是大調也不是小調
+    power: { label: "5", full: "強力和弦", iv: [0, 7] },
     maj7: { label: "maj7", full: "大七", iv: [0, 4, 7, 11] },
     min7: { label: "m7", full: "小七", iv: [0, 3, 7, 10] },
     dom7: { label: "7", full: "屬七", iv: [0, 4, 7, 10] },
@@ -685,14 +687,14 @@ window.__CHORDLAB__ = function(){
     return seven[0] || allow[0] || "chromatic";
   }
   const SCALES = {
-    ionian: { n: "1級 Ionian", s: "大調、最標準", iv: [0, 2, 4, 5, 7, 9, 11], q: [...Q_MAJ, ...Q_SUS] },
-    lydian: { n: "4級 Lydian", s: "♯4，漂浮、開闊", iv: [0, 2, 4, 6, 7, 9, 11], q: [...Q_MAJ] },
-    mixo: { n: "5級 Mixolydian", s: "降七音，屬和弦與藍調", iv: [0, 2, 4, 5, 7, 9, 10], q: ["maj", "sixth", "add9", ...Q_DOM, ...Q_SUS] },
-    majPent: { n: "大調五聲", s: "拿掉半音，怎麼彈都安全", iv: [0, 2, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13"] },
+    ionian: { n: "1級 Ionian", s: "大調、最標準", iv: [0, 2, 4, 5, 7, 9, 11], q: [...Q_MAJ, ...Q_SUS, "power"] },
+    lydian: { n: "4級 Lydian", s: "♯4，漂浮、開闊", iv: [0, 2, 4, 6, 7, 9, 11], q: [...Q_MAJ, "power"] },
+    mixo: { n: "5級 Mixolydian", s: "降七音，屬和弦與藍調", iv: [0, 2, 4, 5, 7, 9, 10], q: ["maj", "sixth", "add9", ...Q_DOM, ...Q_SUS, "power"] },
+    majPent: { n: "大調五聲", s: "拿掉半音，怎麼彈都安全", iv: [0, 2, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13", "power"] },
     // 藍音是夾在 2–♭3–3 中間的滑音，跟和弦組成音無關——能在大三和弦上彈，
     // 就能在 maj7 / maj9 / add9 上彈。maj9 與 add9 還更順，因為大調藍調裡
     // 本來就有 2（＝9）。原本這裡漏掉這三個，跟隔壁的大調五聲不一致。
-    majBlues: { n: "大調藍調", s: "五聲加♭3 藍調音", iv: [0, 2, 3, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13"] },
+    majBlues: { n: "大調藍調", s: "五聲加♭3 藍調音", iv: [0, 2, 3, 4, 7, 9], q: [...Q_MAJ, "dom7", "dom9", "dom13", "power"] },
     /**
      * 關係小調的五聲與藍調，音**完全等於**大調的那兩個：
      *   C 大調五聲 C D E G A   ＝ A 小調五聲
@@ -713,13 +715,13 @@ window.__CHORDLAB__ = function(){
      * 大調和弦的預設音階搶走。
      */
     relMinAeolian: { n: "6級 Aeolian", s: "與 1級 Ionian 同音，主音移到關係小調", iv: [0, 2, 4, 5, 7, 9, 11], tonic: 9, q: [...Q_MAJ] },
-    aeolian: { n: "6級 Aeolian", s: "自然小調", iv: [0, 2, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
-    dorian: { n: "2級 Dorian", s: "小調加大六，沒那麼暗", iv: [0, 2, 3, 5, 7, 9, 10], q: [...Q_MIN] },
-    phrygian: { n: "3級 Phrygian", s: "降二音，西班牙色彩", iv: [0, 1, 3, 5, 7, 8, 10], q: ["min", "min7", "min9"] },
-    minPent: { n: "小調五聲", s: "最通用的 solo 音階", iv: [0, 3, 5, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13"] },
+    aeolian: { n: "6級 Aeolian", s: "自然小調", iv: [0, 2, 3, 5, 7, 8, 10], q: ["min", "min7", "min9", "power"] },
+    dorian: { n: "2級 Dorian", s: "小調加大六，沒那麼暗", iv: [0, 2, 3, 5, 7, 9, 10], q: [...Q_MIN, "power"] },
+    phrygian: { n: "3級 Phrygian", s: "降二音，西班牙色彩", iv: [0, 1, 3, 5, 7, 8, 10], q: ["min", "min7", "min9", "power"] },
+    minPent: { n: "小調五聲", s: "最通用的 solo 音階", iv: [0, 3, 5, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13", "power"] },
     // m6 原本被排除在外，但小調五聲同樣含 ♭7、同樣跟 m6 的大六度差半音，
     // 卻是開放的——開一個關一個並不一致。統一成跟小調五聲相同。
-    minBlues: { n: "小調藍調", s: "五聲加♭5", iv: [0, 3, 5, 6, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13"] },
+    minBlues: { n: "小調藍調", s: "五聲加♭5", iv: [0, 3, 5, 6, 7, 10], q: [...Q_MIN, "dom7", "dom9", "dom13", "power"] },
     /**
      * 關係大調的五聲與藍調，跟上面關係小調那組完全對稱——一樣不是新的音，
      * 是同一組音把主音移到關係大調（根音 +3）：
@@ -736,12 +738,12 @@ window.__CHORDLAB__ = function(){
     // C Ionian 同音，iv 用 Aeolian 那組，tonic 把主音移到關係大調。
     // 同樣要排在 `aeolian` 後面，否則會搶走小調和弦的預設音階。
     relMajIonian: { n: "1級 Ionian", s: "與 6級 Aeolian 同音，主音移到關係大調", iv: [0, 2, 3, 5, 7, 8, 10], tonic: 3, q: [...Q_MIN] },
-    harmMin: { n: "和聲小調", s: "小調加大七（跟 m7 會撞）", iv: [0, 2, 3, 5, 7, 8, 11], q: ["min", "m6"] },
-    melMin: { n: "旋律小調", s: "小三大六大七", iv: [0, 2, 3, 5, 7, 9, 11], q: ["min", "m6"] },
+    harmMin: { n: "和聲小調", s: "小調加大七（跟 m7 會撞）", iv: [0, 2, 3, 5, 7, 8, 11], q: ["min", "m6", "power"] },
+    melMin: { n: "旋律小調", s: "小三大六大七", iv: [0, 2, 3, 5, 7, 9, 11], q: ["min", "m6", "power"] },
     locrian: { n: "7級 Locrian", s: "降二降五", iv: [0, 1, 3, 5, 6, 8, 10], q: ["m7b5", "dim"] },
     dimWH: { n: "全半減", s: "全音半音交替，配減七", iv: [0, 2, 3, 5, 6, 8, 9, 11], q: ["dim", "dim7"] },
     altered: { n: "變化音階", s: "屬和弦綔音全上", iv: [0, 1, 3, 4, 6, 8, 10], q: [...Q_DOM] },
-    dimHW: { n: "半全減", s: "半音全音交替，配屬七", iv: [0, 1, 3, 4, 6, 7, 9, 10], q: ["dom7", "dom9", "dom13"] },
+    dimHW: { n: "半全減", s: "半音全音交替，配屬七", iv: [0, 1, 3, 4, 6, 7, 9, 10], q: ["dom7", "dom9", "dom13", "power"] },
     wholeTone: { n: "全音階", s: "全是全音，配 aug", iv: [0, 2, 4, 6, 8, 10], q: ["aug", "dom7", "dom9", "dom13"] },
     chromatic: { n: "半音階全開", s: "十二個音全部顯示", iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], q: null }
   };
@@ -848,6 +850,7 @@ window.__CHORDLAB__ = function(){
       minRoot: 0,
       shapes: {
         maj: [null, 0, 2, 2, 2, 0],
+        power: [null, 0, 2, 2, null, null],
         min: [null, 0, 2, 2, 1, 0],
         dom7: [null, 0, 2, 0, 2, 0],
         min7: [null, 0, 2, 0, 1, 0],
@@ -900,6 +903,7 @@ window.__CHORDLAB__ = function(){
       minRoot: 0,
       shapes: {
         maj: [0, 2, 2, 1, 0, 0],
+        power: [0, 2, 2, null, null, null],
         min: [0, 2, 2, 0, 0, 0],
         dom7: [0, 2, 0, 1, 0, 0],
         min7: [0, 2, 0, 0, 0, 0],
@@ -926,6 +930,7 @@ window.__CHORDLAB__ = function(){
       minRoot: 0,
       shapes: {
         maj: [null, null, 0, 2, 3, 2],
+        power: [null, null, 0, 2, 3, null],
         min: [null, null, 0, 2, 3, 1],
         dom7: [null, null, 0, 2, 1, 2],
         maj7: [null, null, 0, 2, 2, 2],
@@ -3665,6 +3670,7 @@ window.__CHORDLAB__ = function(){
           "sus2",
           "sus4",
           "sus7",
+          "power",
           "add9",
           "dom9",
           "maj9",
