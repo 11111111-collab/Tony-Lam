@@ -652,6 +652,7 @@ window.__CHORDLAB__ = function(){
    */
   // 給 Tone.js 與 MIDI 匯出用的固定音名，跟畫面上的拼法無關（那邊走 makeSpeller）
   const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const SOLFA_LETTER = ["Do", "Re", "Mi", "Fa", "So", "La", "Si"];
   const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
   const LETTER_NAME = ["C", "D", "E", "F", "G", "A", "B"];
   const accText = (n) => n === 0 ? "" : n > 0 ? "\u266f".repeat(n) : "\u266d".repeat(-n);
@@ -705,7 +706,19 @@ window.__CHORDLAB__ = function(){
       spell,
       // 和弦內音要相對「和弦根音」推，不是相對調——Cm 的三音是 E♭，
       // 就算現在是 A 大調也一樣
-      fromRoot: (rootPc, pc) => noteText(noteAbove(spell(rootPc), (((pc - rootPc) % 12) + 12) % 12, STEP_CHORD))
+      fromRoot: (rootPc, pc) => noteText(noteAbove(spell(rootPc), (((pc - rootPc) % 12) + 12) % 12, STEP_CHORD)),
+      /**
+       * 唱名是固定調：Do 永遠是 C，跟調性無關——C♯ 就是 ♯Do、D♭ 就是 ♭Re。
+       * 原本寫成首調（減掉 keyPc，Do 跟著主音跑），那是另一套系統。
+       *
+       * 字母決定唱名、升降照抄，所以唱名跟級數必然一致：級數說 ♭3（落在
+       * Mi 這個字母上），唱名就是 ♭Mi，不會跑去變成 ♯Re。
+       * `steps` 由呼叫端給，才能跟著當下音階對 ♯4 / ♯5 做同樣的判斷。
+       */
+      solfa: (rootPc, pc, steps) => {
+        const n = noteAbove(spell(rootPc), (((pc - rootPc) % 12) + 12) % 12, steps || STEP_SCALE);
+        return accText(n.alt) + SOLFA_LETTER[n.L];
+      }
     };
   }
   const QUALITIES = {
@@ -4276,7 +4289,7 @@ window.__CHORDLAB__ = function(){
       if (f < 0) return /* @__PURE__ */ React.createElement("text", { key: i, x: 14, y: yOf(i) + 4, className: "fb-mark" }, "✕");
       const lbl = (fr) => {
         const pc = (STRING_MIDI[i] + capo + fr) % 12;
-        return labelMode === "solfa" ? solfaOf(pc, keyPc || 0, sp.flat) : DEG_LABEL[semiOf(pc, rootPc || 0)];
+        return labelMode === "solfa" ? sp.solfa(rootPc || 0, pc) : DEG_LABEL[semiOf(pc, rootPc || 0)];
       };
       if (f === 0) return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: 14, cy: yOf(i), r: "8.5", fill: "none", stroke: "var(--brass)", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("text", { x: 14, y: yOf(i) + 3.4, className: "fb-fnum open" }, lbl(0)));
       const slot = f - base;
@@ -4287,9 +4300,6 @@ window.__CHORDLAB__ = function(){
   }
   const IV_LABEL = { 0: "R", 1: "♭9", 2: "9", 3: "♭3", 4: "3", 5: "11", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
   const DEG_LABEL = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
-  const SOLFA_SHARP = ["Do", "♯Do", "Re", "♯Re", "Mi", "Fa", "♯Fa", "So", "♯So", "La", "♯La", "Si"];
-  const SOLFA_FLAT = ["Do", "♭Re", "Re", "♭Mi", "Mi", "Fa", "♭So", "So", "♭La", "La", "♭Si", "Si"];
-  const solfaOf = (pc, keyPc, flat) => (flat ? SOLFA_FLAT : SOLFA_SHARP)[((pc - keyPc) % 12 + 12) % 12];
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
   function NeckView({ chord, capo, keyPc, scale, sp, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys, degTonic = 0 }) {
     const NF = 22;
@@ -4320,7 +4330,12 @@ window.__CHORDLAB__ = function(){
       if (d === 8) return aug ? "♯5" : "♭6";
       return DEG_LABEL[d];
     };
-    const labelFor = (sm, pc) => labelMode === "solfa" ? solfaOf(pc, keyPc, sp.flat) : degOf(sm);
+    // 唱名要跟級數落在同一個字母上。degOf 對 ♯4 與 ♯5 有特別判斷，
+    // 這裡照抄成一份 steps 交給拼字器，兩種標法才不會各說各話
+    const solfaSteps = Object.assign({}, STEP_SCALE);
+    if (scaleSemis.has(6) && !scaleSemis.has(5)) solfaSteps[6] = 3;
+    if (aug) solfaSteps[8] = 4;
+    const labelFor = (sm, pc) => labelMode === "solfa" ? sp.solfa(chord.rootPc, pc, solfaSteps) : degOf(sm);
     const activeAbs = chord.voicing.frets.map((f) => f < 0 ? -1 : f + capo);
     const brackets = chord.allVoicings.map((v, vi) => {
       const fs = v.frets.filter((f) => f > 0).map((f) => f + capo);
