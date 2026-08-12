@@ -35,15 +35,55 @@
    ```
    等到 `status: completed` 且 `conclusion: success`，且 `head_sha` 是這次的 commit。
 
-6. 連結：https://11111111-collab.github.io/Tony-Lam/
+6. 部署完之後**核對線上那份就是這次的 commit**，不要只看 API 說成功：
 
-**已知限制**：agent 環境的網路政策封鎖 `github.io`（CONNECT 回 403），所以**無法自己開啟該網站驗證**。不要假裝驗證過，也不要用 GitHub API 的部署狀態代替「網站打得開」——那兩件事不一樣。
+   ```
+   curl -s https://11111111-collab.github.io/Tony-Lam/ -o /tmp/live.html
+   git show origin/main:index.html | diff -q - /tmp/live.html
+   ```
+   位元組一致才算數。「部署成功」跟「線上是我寫的那份」是兩件事。
 
-**測試沙箱**：`cdn.jsdelivr.net`（樂器取樣）和 `cdnjs.cloudflare.com`（React／Tone.js）也被擋，所以取樣載不到、音訊引擎不會 ready，**聽不到實際聲音**。牽涉聲音的驗證只能用真實程式碼模擬播放路徑推導，並且要說明這個限制。
+7. 連結：https://11111111-collab.github.io/Tony-Lam/
 
-實測過的網域狀態（2026-08）——`raw.githubusercontent.com` 和 `fonts.googleapis.com` 是**通的**，擋掉的是上面那三個（`github.io`、`cdn.jsdelivr.net`、`cdnjs.cloudflare.com`）。查法：`curl -sS -o /dev/null -w "%{http_code}" https://<host>/`，回 `000` 且 `CONNECT tunnel failed, response 403` 就是被政策擋掉。要解除的話，環境的 Network access 改 `Custom` 並把這三個加進 Allowed domains（記得勾保留預設清單）。
+## 驗證環境（2026-08 起）
 
-瀏覽器測試的做法：把 CDN 網址換成本機 vendor 副本，起靜態伺服器，用 Playwright（`executablePath: '/opt/pw-browsers/chromium'`）。
+環境的 Network access 已改成 `Custom`，放行 `github.io`、`cdn.jsdelivr.net`、
+`cdnjs.cloudflare.com`。所以 **curl / node 抓得到線上網站與所有 CDN 資源**。
+
+**但 Chromium 對外完全不通**——連網路政策允許的網域也一樣，代理回
+`200 Connection Established` 之後隧道就斷。試過 `--proxy-server`、Playwright
+的 `proxy` 選項、關 QUIC、忽略憑證，四種都失敗。所以**不能直接用瀏覽器開真站**。
+
+繞法是 `tools/mirror.cjs`：node 去真的 CDN 抓，瀏覽器從 localhost 拿。
+
+```
+npm install --no-save playwright   # 環境沒預裝 playwright 套件，瀏覽器本身有
+node tools/mirror.cjs              # 起在 3100，服務工作目錄的 index.html
+node tools/audit.cjs               # 用真取樣跑起來並量測
+```
+
+Chromium 走 `executablePath: '/opt/pw-browsers/chromium'`，不要 `playwright install`。
+
+鏡像服務的是**工作目錄那份 index.html**，所以改到一半的東西可以直接配真資源測。
+抓過的檔存在 `tools/.cache/`（已 gitignore）。
+
+**現在驗得到**（以前只能推導）：
+
+- 真的 Tone.js v15.5.27、真的 React v18.3.1，版本跟線上一致
+- 取樣真的載得到——實測 195 個檔、0 失敗
+- `AudioContext: running`、`Transport: started`，引擎真的在跑
+- 輸出的 RMS 時序（有沒有出聲、音量起伏）
+- **從頻譜峰值反推音高**，驗證實際響的音就是預期的和弦組成音。
+  實測抓到 `F2 A2 C3 F3 C4 F4 C5`（F 大三）、`C3 E3 G3 C4 E4 G4`（C 大三）
+
+所以「音訊引擎壞了」和「取樣載不到」**現在分得出來**。以前這兩件事在
+agent 環境裡長得一模一樣，是個很容易誤判的盲點。
+
+**還是做不到**：容器沒有音效裝置，量到的是訊號不是聽感。「好不好聽、音色
+平衡對不對」永遠要人耳判斷，不要假裝驗過。
+
+查網域通不通：`curl -sS -o /dev/null -w "%{http_code}" https://<host>/`，
+回 `000` 且 `CONNECT tunnel failed, response 403` 就是被政策擋掉。
 
 ## 這個專案的樂理約定
 
