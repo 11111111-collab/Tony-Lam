@@ -638,7 +638,6 @@ window.__CHORDLAB__ = function(){
   const { useState, useEffect, useRef, useCallback, useMemo } = React;
   const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const FLAT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
-  const FLAT_KEYS = [5, 10, 3, 8, 1, 6];
   const pcName = (pc, useFlats) => (useFlats ? FLAT_NAMES : SHARP_NAMES)[(pc % 12 + 12) % 12];
   const QUALITIES = {
     maj: { label: "", full: "大三和弦", iv: [0, 4, 7] },
@@ -2647,12 +2646,15 @@ window.__CHORDLAB__ = function(){
     const [capo, setCapo] = useState(0);
     const [seventhMode, setSeventhMode] = useState(false);
     /**
-     * 升降記號的寫法。"auto" 照調號推導（F、B♭、E♭、A♭、D♭、G♭ 這些調用降記號），
-     * 也就是原本唯一的行為；"sharp" / "flat" 是手動指定，整份譜一起換寫法。
-     * C♯ 與 D♭ 音高相同但級數與導音的寫法不同，動機從哪個音出發會影響該用哪種，
-     * 所以要能自己決定，不能只由調號決定。
+     * 升降記號的寫法，只有升與降兩種，由使用者決定。
+     * C♯ 與 D♭ 音高相同但級數與導音的寫法不同，動機從哪個音出發會影響該用哪種。
+     *
+     * 原本還有一個「自動」（照調號推導）並且是預設，後來拿掉了。代價是寫法不再
+     * 跟著調號走：G 大調的 F♯ 在降記號模式會寫成 G♭，F 大調的 B♭ 在升記號模式
+     * 會寫成 A♯——樂理上不對，但既然是手動指定就照選的走。
+     * 預設用降記號，跟拿掉自動之前選單長的樣子一致。
      */
-    const [accidental, setAccidental] = useState("auto");
+    const [accidental, setAccidental] = useState("flat");
     const [prog, setProg] = useState(() => [
       mkChord(0, "maj"),
       mkChord(7, "maj"),
@@ -2694,8 +2696,7 @@ window.__CHORDLAB__ = function(){
     const [autoMix, setAutoMix] = useState(() => savedRef.current.mix ? !!savedRef.current.mix.autoMix : true);
     const [master, setMaster] = useState(() => (savedRef.current.mix && savedRef.current.mix.master) != null ? savedRef.current.mix.master : 1);
     const [on, setOn] = useState(() => (savedRef.current.mix && savedRef.current.mix.on) || { guitar: true, piano: false, bass: true, drum: true });
-    const autoFlats = FLAT_KEYS.includes(keyPc) || mode === "minor" && FLAT_KEYS.includes((keyPc + 3) % 12);
-    const useFlats = accidental === "flat" ? true : accidental === "sharp" ? false : autoFlats;
+    const useFlats = accidental !== "sharp";
     const engineRef = useRef(null);
     const partRef = useRef(null);
     const recRef = useRef(null);
@@ -3122,7 +3123,8 @@ window.__CHORDLAB__ = function(){
     const restoreSnap = (sn) => {
       if (sn.mode) setMode(sn.mode);
       if (sn.keyPc != null) setKeyPc(sn.keyPc);
-      setAccidental(sn.accidental || "auto");
+      // 舊存檔可能留著已經移除的 "auto"，一律當降記號
+      setAccidental(sn.accidental === "sharp" ? "sharp" : "flat");
       if (sn.capo != null) setCapo(sn.capo);
       if (sn.bpm != null) setBpm(sn.bpm);
       setSwing(sn.swing || 0);
@@ -3446,11 +3448,10 @@ window.__CHORDLAB__ = function(){
       }
       fireSweep(dir || "R", 0.055, null);
     };
-    // 選單本身也要跟著寫法走，不然選了「♯」卻只列得出 D♭，就選不到 C♯。
-    // "auto" 時每個調各自照它慣用的寫法（黑鍵給降記號），維持原本的樣子
+    // 選單本身也要跟著寫法走，不然選了「♯」卻只列得出 D♭，就選不到 C♯
     const keyOptions = Array.from({ length: 12 }, (_, i) => ({
       v: i,
-      l: pcName(i, accidental === "flat" ? true : accidental === "sharp" ? false : FLAT_KEYS.includes(i)),
+      l: pcName(i, useFlats),
       s: null
     }));
     const bassOptions = [{ v: "", l: "跟隨根音", s: "一般和弦" }].concat(
@@ -3500,12 +3501,12 @@ window.__CHORDLAB__ = function(){
         onChange: setMode
       }
     ), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" },
-      [["auto", "自動"], ["sharp", "♯"], ["flat", "♭"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
+      [["sharp", "♯"], ["flat", "♭"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
         "button",
         {
           key: v,
           className: accidental === v ? "on" : "",
-          title: v === "auto" ? "照調號決定用升還是降" : v === "sharp" ? "一律用升記號（C♯、D♯…）" : "一律用降記號（D♭、E♭…）",
+          title: v === "sharp" ? "一律用升記號（C♯、D♯…）" : "一律用降記號（D♭、E♭…）",
           onClick: () => setAccidental(v)
         },
         l
