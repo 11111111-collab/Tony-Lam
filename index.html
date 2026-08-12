@@ -2646,6 +2646,13 @@ window.__CHORDLAB__ = function(){
     const [bpmText, setBpmText] = useState("92");
     const [capo, setCapo] = useState(0);
     const [seventhMode, setSeventhMode] = useState(false);
+    /**
+     * 升降記號的寫法。"auto" 照調號推導（F、B♭、E♭、A♭、D♭、G♭ 這些調用降記號），
+     * 也就是原本唯一的行為；"sharp" / "flat" 是手動指定，整份譜一起換寫法。
+     * C♯ 與 D♭ 音高相同但級數與導音的寫法不同，動機從哪個音出發會影響該用哪種，
+     * 所以要能自己決定，不能只由調號決定。
+     */
+    const [accidental, setAccidental] = useState("auto");
     const [prog, setProg] = useState(() => [
       mkChord(0, "maj"),
       mkChord(7, "maj"),
@@ -2687,7 +2694,8 @@ window.__CHORDLAB__ = function(){
     const [autoMix, setAutoMix] = useState(() => savedRef.current.mix ? !!savedRef.current.mix.autoMix : true);
     const [master, setMaster] = useState(() => (savedRef.current.mix && savedRef.current.mix.master) != null ? savedRef.current.mix.master : 1);
     const [on, setOn] = useState(() => (savedRef.current.mix && savedRef.current.mix.on) || { guitar: true, piano: false, bass: true, drum: true });
-    const useFlats = FLAT_KEYS.includes(keyPc) || mode === "minor" && FLAT_KEYS.includes((keyPc + 3) % 12);
+    const autoFlats = FLAT_KEYS.includes(keyPc) || mode === "minor" && FLAT_KEYS.includes((keyPc + 3) % 12);
+    const useFlats = accidental === "flat" ? true : accidental === "sharp" ? false : autoFlats;
     const engineRef = useRef(null);
     const partRef = useRef(null);
     const recRef = useRef(null);
@@ -2717,11 +2725,11 @@ window.__CHORDLAB__ = function(){
       persist((d) => {
         d.tpl[tmplId || FREE_KEY] = {
           prog: prog.map((c) => ({ id: c.id, rootPc: c.rootPc, quality: c.quality, bars: c.bars, beats: c.beats, bassPc: c.bassPc, mG: c.mG, mP: c.mP, mB: c.mB, voiceIdx: c.voiceIdx })),
-          voiceMap, keyPc, mode, capo, bpm, swing, seventhMode,
+          voiceMap, keyPc, mode, accidental, capo, bpm, swing, seventhMode,
           strumKey, drumKey, bassKey, pianoKey, gtone, ptone
         };
       });
-    }, [tmplId, prog, voiceMap, keyPc, mode, capo, bpm, swing, seventhMode, strumKey, drumKey, bassKey, pianoKey, gtone, ptone]);
+    }, [tmplId, prog, voiceMap, keyPc, mode, accidental, capo, bpm, swing, seventhMode, strumKey, drumKey, bassKey, pianoKey, gtone, ptone]);
     // 混音層：全域，換範本不跟著變
     useEffect(() => {
       if (!saveArmed.current) return;
@@ -3114,6 +3122,7 @@ window.__CHORDLAB__ = function(){
     const restoreSnap = (sn) => {
       if (sn.mode) setMode(sn.mode);
       if (sn.keyPc != null) setKeyPc(sn.keyPc);
+      setAccidental(sn.accidental || "auto");
       if (sn.capo != null) setCapo(sn.capo);
       if (sn.bpm != null) setBpm(sn.bpm);
       setSwing(sn.swing || 0);
@@ -3437,9 +3446,11 @@ window.__CHORDLAB__ = function(){
       }
       fireSweep(dir || "R", 0.055, null);
     };
+    // 選單本身也要跟著寫法走，不然選了「♯」卻只列得出 D♭，就選不到 C♯。
+    // "auto" 時每個調各自照它慣用的寫法（黑鍵給降記號），維持原本的樣子
     const keyOptions = Array.from({ length: 12 }, (_, i) => ({
       v: i,
-      l: pcName(i, FLAT_KEYS.includes(i)),
+      l: pcName(i, accidental === "flat" ? true : accidental === "sharp" ? false : FLAT_KEYS.includes(i)),
       s: null
     }));
     const bassOptions = [{ v: "", l: "跟隨根音", s: "一般和弦" }].concat(
@@ -3488,6 +3499,17 @@ window.__CHORDLAB__ = function(){
         options: [{ v: "major", l: "大調" }, { v: "minor", l: "小調" }],
         onChange: setMode
       }
+    ), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" },
+      [["auto", "自動"], ["sharp", "♯"], ["flat", "♭"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: v,
+          className: accidental === v ? "on" : "",
+          title: v === "auto" ? "照調號決定用升還是降" : v === "sharp" ? "一律用升記號（C♯、D♯…）" : "一律用降記號（D♭、E♭…）",
+          onClick: () => setAccidental(v)
+        },
+        l
+      ))
     )), /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, keyName, " 調內和弦"), /* @__PURE__ */ React.createElement("div", { className: "seg" }, /* @__PURE__ */ React.createElement("button", { className: !seventhMode ? "on" : "", onClick: () => setSeventhMode(false) }, "三和弦"), /* @__PURE__ */ React.createElement("button", { className: seventhMode ? "on" : "", onClick: () => setSeventhMode(true) }, "七和弦"))), /* @__PURE__ */ React.createElement("div", { className: "palette" }, romans.map((r, i) => {
       const rootPc = (keyPc + scale[i]) % 12;
       const q = seventhMode ? sevenths[i] : triads[i];
