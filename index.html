@@ -718,6 +718,22 @@ window.__CHORDLAB__ = function(){
       solfa: (rootPc, pc, steps) => {
         const n = noteAbove(spell(rootPc), (((pc - rootPc) % 12) + 12) % 12, steps || STEP_SCALE);
         return accText(n.alt) + SOLFA_LETTER[n.L];
+      },
+      /**
+       * 首調：Do 是這個調的主音，音節由「相對主音的度數」決定。
+       *
+       * 升降一樣由字母推導出來——度數落在第幾個字母，就拿大調音階同一級的
+       * 音高去比，差多少補多少。所以小三度永遠是 ♭Mi，不會因為升降切換變成
+       * ♯Re（那正是舊實作的毛病：十二個固定音節配一個全域旗標）。
+       */
+      movable: (tonicPc, pc, steps) => {
+        const st = steps || STEP_SCALE;
+        const semi = (((pc - tonicPc) % 12) + 12) % 12;
+        const step = st[semi];
+        let alt = semi - MAJOR_SCALE[step];
+        while (alt > 6) alt -= 12;
+        while (alt < -6) alt += 12;
+        return accText(alt) + SOLFA_LETTER[step];
       }
     };
   }
@@ -3742,7 +3758,7 @@ window.__CHORDLAB__ = function(){
           previewVoicing({ ...viewChord.allVoicings[idx], capo }, "R", viewChord);
         }
       }
-    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["solfa", "唱名"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, sp, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, (function () {
+    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["movable", "首調"], ["fixed", "固定調"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, sp, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, (function () {
       const fr = viewChord.voicing.shape.frets;
       const iv3 = QUALITIES[viewChord.quality].iv.slice(0, 3).map((x) => ((x % 12) + 12) % 12);
       const maskOf = (w) => w ? fr.map((f, si) => si >= w[0] && si <= w[1] ? f : -1) : fr.slice();
@@ -4289,7 +4305,9 @@ window.__CHORDLAB__ = function(){
       if (f < 0) return /* @__PURE__ */ React.createElement("text", { key: i, x: 14, y: yOf(i) + 4, className: "fb-mark" }, "✕");
       const lbl = (fr) => {
         const pc = (STRING_MIDI[i] + capo + fr) % 12;
-        return labelMode === "solfa" ? sp.solfa(rootPc || 0, pc) : DEG_LABEL[semiOf(pc, rootPc || 0)];
+        return labelMode === "fixed" ? sp.solfa(rootPc || 0, pc)
+          : labelMode === "movable" ? sp.movable(keyPc || 0, pc)
+          : DEG_LABEL[semiOf(pc, rootPc || 0)];
       };
       if (f === 0) return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: 14, cy: yOf(i), r: "8.5", fill: "none", stroke: "var(--brass)", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("text", { x: 14, y: yOf(i) + 3.4, className: "fb-fnum open" }, lbl(0)));
       const slot = f - base;
@@ -4335,7 +4353,9 @@ window.__CHORDLAB__ = function(){
     const solfaSteps = Object.assign({}, STEP_SCALE);
     if (scaleSemis.has(6) && !scaleSemis.has(5)) solfaSteps[6] = 3;
     if (aug) solfaSteps[8] = 4;
-    const labelFor = (sm, pc) => labelMode === "solfa" ? sp.solfa(chord.rootPc, pc, solfaSteps) : degOf(sm);
+    const labelFor = (sm, pc) => labelMode === "fixed" ? sp.solfa(chord.rootPc, pc, solfaSteps)
+      : labelMode === "movable" ? sp.movable(keyPc, pc, solfaSteps)
+      : degOf(sm);
     const activeAbs = chord.voicing.frets.map((f) => f < 0 ? -1 : f + capo);
     const brackets = chord.allVoicings.map((v, vi) => {
       const fs = v.frets.filter((f) => f > 0).map((f) => f + capo);
@@ -4504,7 +4524,7 @@ window.__CHORDLAB__ = function(){
         },
         isActive && /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "14", className: "nk-ring" }),
         /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "10.5" }),
-        /* @__PURE__ */ React.createElement("text", { x: cx, y: cy + 3.6, className: labelMode === "solfa" ? "sf" : "" }, semi === 9 && chord.quality === "dim7" && labelMode !== "solfa" ? "°7" : labelFor(sm, pc))
+        /* @__PURE__ */ React.createElement("text", { x: cx, y: cy + 3.6, className: labelMode !== "deg" ? "sf" : "" }, semi === 9 && chord.quality === "dim7" && labelMode === "deg" ? "°7" : labelFor(sm, pc))
       );
     }))), Array.from(
       { length: NF + 1 },
