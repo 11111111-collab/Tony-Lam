@@ -39,7 +39,9 @@
 
 **已知限制**：agent 環境的網路政策封鎖 `github.io`（CONNECT 回 403），所以**無法自己開啟該網站驗證**。不要假裝驗證過，也不要用 GitHub API 的部署狀態代替「網站打得開」——那兩件事不一樣。
 
-**測試沙箱**：`raw.githubusercontent.com` 也被擋，所以取樣載不到、音訊引擎不會 ready，**聽不到實際聲音**。牽涉聲音的驗證只能用真實程式碼模擬播放路徑推導，並且要說明這個限制。
+**測試沙箱**：`cdn.jsdelivr.net`（樂器取樣）和 `cdnjs.cloudflare.com`（React／Tone.js）也被擋，所以取樣載不到、音訊引擎不會 ready，**聽不到實際聲音**。牽涉聲音的驗證只能用真實程式碼模擬播放路徑推導，並且要說明這個限制。
+
+實測過的網域狀態（2026-08）——`raw.githubusercontent.com` 和 `fonts.googleapis.com` 是**通的**，擋掉的是上面那三個（`github.io`、`cdn.jsdelivr.net`、`cdnjs.cloudflare.com`）。查法：`curl -sS -o /dev/null -w "%{http_code}" https://<host>/`，回 `000` 且 `CONNECT tunnel failed, response 403` 就是被政策擋掉。要解除的話，環境的 Network access 改 `Custom` 並把這三個加進 Allowed domains（記得勾保留預設清單）。
 
 瀏覽器測試的做法：把 CDN 網址換成本機 vendor 副本，起靜態伺服器，用 Playwright（`executablePath: '/opt/pw-browsers/chromium'`）。
 
