@@ -1198,8 +1198,23 @@ window.__CHORDLAB__ = function(){
         // 於是負品被靜靜地當成不彈，排出根本按不出來的指型。
         // （原本這裡兩行防呆：一行 f >= 0 && f < 0 是恆假的死碼，
         //   一行 f !== -1 剛好把 -1 這個唯一會發生的值排除掉。）
-        if (tpl.some((o) => o != null && r + o < 0)) return;
-        const frets = tpl.map((o) => o == null ? -1 : r + o);
+        //
+        // 但整個指型丟掉是可惜的：琴枕外的音按不出來，把那幾條弦打 X 就好，
+        // 剩下的音往往還湊得齊完整的組成音。C 小三的 C 型就是這樣——它的
+        // 兩顆三音一顆在 D 弦、一顆在高 e 空弦，降半音時高 e 要按 -1 品，
+        // 整個指型因此消失；打 X 之後剩 x 3 1 0 1 x，仍然是 C-E♭-G-C，
+        // 是個按得出來的開放 Cm。
+        //
+        // 收的標準是「組成音一個都不能少」：打完 X 之後剩下的音必須仍然
+        // 涵蓋 QUALITIES[quality].iv 的每一個音級，湊不齊就照舊丟掉——
+        // 這裡是在補一個本來不存在的指型，不能補出一個名不副實的和弦。
+        const raw = tpl.map((o) => o == null ? -1 : r + o);
+        const frets = raw.map((f) => f < 0 ? -1 : f);
+        if (raw.some((f, i) => tpl[i] != null && f < 0)) {
+          const have = new Set();
+          frets.forEach((f, i) => { if (f >= 0) have.add(((STRING_PC[i] + f - shapedPc) % 12 + 12) % 12); });
+          if (!QUALITIES[quality].iv.every((i) => have.has(((i % 12) + 12) % 12))) return;
+        }
         const lows = frets.filter((f) => f > 0);
         cands.push({ frets, tag: fam.tag, pos: lows.length ? Math.min(...lows) : 0 });
       });
