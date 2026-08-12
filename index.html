@@ -679,7 +679,9 @@ window.__CHORDLAB__ = function(){
   function defaultScale(rootPc, quality, keyPc, mode) {
     const keySet = [...new Set(scaleOf(mode).map((x) => (keyPc + x) % 12))].sort((a, b) => a - b).join(",");
     const allow = Object.keys(SCALES).filter((k) => !SCALES[k].q || SCALES[k].q.includes(quality));
-    const seven = allow.filter((k) => SCALES[k].iv.length === 7);
+    // 標了 altOnly 的只出現在選單，不參與搶預設——這裡是「有七聲音階就用第一個」，
+    // 不比對調性，所以新增七聲音階很容易把既有的預設換掉
+    const seven = allow.filter((k) => SCALES[k].iv.length === 7 && !SCALES[k].altOnly);
     for (const k of seven) {
       const set = [...new Set(SCALES[k].iv.map((x) => (rootPc + x) % 12))].sort((a, b) => a - b).join(",");
       if (set === keySet) return k;
@@ -745,6 +747,20 @@ window.__CHORDLAB__ = function(){
     altered: { n: "變化音階", s: "屬和弦綔音全上", iv: [0, 1, 3, 4, 6, 8, 10], q: [...Q_DOM] },
     dimHW: { n: "半全減", s: "半音全音交替，配屬七", iv: [0, 1, 3, 4, 6, 7, 9, 10], q: ["dom7", "dom9", "dom13", "power"] },
     wholeTone: { n: "全音階", s: "全是全音，配 aug", iv: [0, 2, 4, 6, 8, 10], q: ["aug", "dom7", "dom9", "dom13"] },
+    /**
+     * 增和弦的兩個調式。和聲小調與旋律小調把自然小調的第七音升半音，而那個
+     * 音正好是關係大調的五度——所以它們配的不是大三和弦，是**增三和弦**：
+     * A 和聲小調裡建立在 C 上的和弦就是 C E G♯ ＝ Caug。
+     *
+     *   A 和聲小調 從 C 起算 = 1 2 3 4 ♯5 6 7   → Ionian ♯5（和聲小調第三級）
+     *   A 旋律小調 從 C 起算 = 1 2 3 ♯4 ♯5 6 7  → Lydian ♯5（旋律小調第三級）
+     *
+     * `altOnly` 是「選單裡有，但不當預設」。`defaultScale` 只要看到有七聲音階
+     * 就直接回傳第一個，不管符不符合調性;aug 原本沒有七聲音階才落到全音階。
+     * 沒有這個標記，加進來就會把增和弦的預設從全音階換掉。
+     */
+    ionianAug: { n: "大調升五 Ionian ♯5", s: "和聲小調第三級，＝關係小調的和聲小調", iv: [0, 2, 4, 5, 8, 9, 11], q: ["aug"], altOnly: true },
+    lydianAug: { n: "Lydian ♯5", s: "旋律小調第三級，＝關係小調的旋律小調", iv: [0, 2, 4, 6, 8, 9, 11], q: ["aug"], altOnly: true },
     chromatic: { n: "半音階全開", s: "十二個音全部顯示", iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], q: null }
   };
   const triadsOf = (mode) => mode === "minor" ? MINOR_TRIADS : MAJOR_TRIADS;
