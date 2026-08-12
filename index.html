@@ -312,6 +312,8 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .win-btn.on{border-color:var(--brass);background:#1D2030}
 .win-btn.on b{color:var(--brass)}
 .win-btn.weak{opacity:.45}
+.capo-key{margin-left:6px;font-family:var(--mono);font-size:10.5px;color:var(--brass);
+  border:1px solid var(--brass2);border-radius:99px;padding:2px 8px;white-space:nowrap}
 .mods{display:flex;flex-wrap:wrap;gap:4px}
 .mod{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
 .mod.add{border-color:var(--jade);color:var(--jade)}
@@ -1151,7 +1153,18 @@ window.__CHORDLAB__ = function(){
     return out;
   }
   function getVoicings(rootPc, quality, capo) {
-    const shapedPc = ((rootPc - capo) % 12 + 12) % 12;
+    /**
+     * 移調夾的邏輯是「指型不變，整個往上移，調跟著變」。
+     *
+     * 原本寫成 rootPc - capo：和弦名稱固定不動，靠往下換一個指型讓它仍然
+     * 發出原本的音——夾兩格彈 C 會叫你按 B♭ 的指型，而 B♭ 沒有開放和弦，
+     * C 的開放把位就消失了。那是「用移調夾湊出同一個調」的思路，不是
+     * 移調夾本來的用法。
+     *
+     * 現在指型直接照你選的和弦算，capo 只負責把整組往上推（發出的音高與
+     * 指板上畫的位置都 +capo），開放把位在任何 capo 都還在。
+     */
+    const shapedPc = ((rootPc % 12) + 12) % 12;
     const out = [];
     const push = (frets, tag, pos) => {
       if (!frets) return;
@@ -2879,7 +2892,9 @@ window.__CHORDLAB__ = function(){
           voiceIdx: (cfg.shapeIdx || 0) % v.allShapes.length,
           voicing: v,
           allVoicings: v.allShapes,
-          info: voiceInfo(c.rootPc, c.quality, v.frets, capo, sp)
+          // 音程分析與和弦命名跟移調夾無關——整組一起往上移，音程不變。
+          // 這裡傳 0，名稱才會是你手指按的那個和弦
+          info: voiceInfo(c.rootPc, c.quality, v.frets, 0, sp)
         };
       }),
       [prog, capo, voiceMap, sp]
@@ -3497,7 +3512,9 @@ window.__CHORDLAB__ = function(){
     const neckQ = viewChord ? viewChord.quality : "maj";
     const scaleOk = neckScale && SCALES[neckScale] && (!SCALES[neckScale].q || SCALES[neckScale].q.includes(neckQ));
     const effScale = scaleOk ? neckScale : defaultScale(neckRoot, neckQ, keyPc, mode);
-    const neckScaleSet = new Set(SCALES[effScale].iv.map((x) => (neckRoot + x) % 12));
+    // 音階選擇的邏輯留在「你按的和弦」這個域裡（defaultScale 要跟調性比對），
+    // 但畫在指板上的音要是實際發出的音高，所以這裡才加 capo
+    const neckScaleSet = new Set(SCALES[effScale].iv.map((x) => (neckRoot + capo + x) % 12));
     // 級數要對哪個主音。關係小調的兩個音階把它移到根音 +9，其餘都是 0（和弦根音）
     const neckDegTonic = SCALES[effScale].tonic || 0;
     // 按鈕要反映實際畫出來的系統，不能亮著一個、畫的是另一個
@@ -3582,7 +3599,11 @@ window.__CHORDLAB__ = function(){
           await applyTone(gtone === "acoustic" ? "studio" : "acoustic");
         }
       }
-    ), /* @__PURE__ */ React.createElement("header", { className: "bar top" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement("span", { className: "brand-name" }, "CHORD LAB")), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "速度"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.max(40, b - 1)) }, "−"), /* @__PURE__ */ React.createElement("input", { className: "num", type: "text", inputMode: "numeric", "aria-label": "每分鐘拍數", value: bpmText, onChange: (e) => setBpmText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)), onBlur: commitBpm, onKeyDown: (e) => { if (e.key === "Enter") e.currentTarget.blur(); } }), /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.min(220, b + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "移調夾"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.max(0, c - 1)) }, "−"), /* @__PURE__ */ React.createElement("span", { className: "num" }, capo === 0 ? "無" : capo + " 格"), /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.min(9, c + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("header", { className: "bar top" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement("span", { className: "brand-name" }, "CHORD LAB")), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "速度"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.max(40, b - 1)) }, "−"), /* @__PURE__ */ React.createElement("input", { className: "num", type: "text", inputMode: "numeric", "aria-label": "每分鐘拍數", value: bpmText, onChange: (e) => setBpmText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)), onBlur: commitBpm, onKeyDown: (e) => { if (e.key === "Enter") e.currentTarget.blur(); } }), /* @__PURE__ */ React.createElement("button", { onClick: () => setBpm((b) => Math.min(220, b + 1)) }, "+"))), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "移調夾"), /* @__PURE__ */ React.createElement("div", { className: "stepper" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.max(0, c - 1)) }, "−"), /* @__PURE__ */ React.createElement("span", { className: "num" }, capo === 0 ? "無" : capo + " 格"), /* @__PURE__ */ React.createElement("button", { onClick: () => setCapo((c) => Math.min(9, c + 1)) }, "+")), capo > 0 && /* @__PURE__ */ React.createElement(
+      "span",
+      { className: "capo-key", title: "手指按的還是 " + sp.note(keyPc) + " 調的指型，實際發出的是這個調" },
+      "實際 " + sp.note((keyPc + capo) % 12) + (mode === "minor" ? "m" : "")
+    )), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "btn-toggle" + (metro ? " on" : ""),
@@ -3800,7 +3821,7 @@ window.__CHORDLAB__ = function(){
           onClick: () => clearOne(viewChord, +k) },
           (6 - k) + "弦 " + (ov[k] < 0 ? "消音" : ov[k] === 0 ? "空弦" : ov[k] + capo + "格") + " ✕")),
         /* @__PURE__ */ React.createElement("button", { className: "mod reset", onClick: () => resetVoice(viewChord) }, "還原"));
-    })(), React.createElement("div", { className: "notes" }, voicingToMidi(viewChord.voicing.frets, capo).map((m, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "note-pill" }, sp.fromRoot(viewChord.rootPc, m % 12), /* @__PURE__ */ React.createElement("em", null, Math.floor(m / 12) - 1))))) : /* @__PURE__ */ React.createElement("div", { className: "empty tall" }, "點進行軌上的任一個和弦，這裡會顯示真實按法、組成音，以及刷弦時每條弦亮起的順序。"), editChord && (() => {
+    })(), React.createElement("div", { className: "notes" }, voicingToMidi(viewChord.voicing.frets, capo).map((m, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "note-pill" }, sp.fromRoot((viewChord.rootPc + capo) % 12, m % 12), /* @__PURE__ */ React.createElement("em", null, Math.floor(m / 12) - 1))))) : /* @__PURE__ */ React.createElement("div", { className: "empty tall" }, "點進行軌上的任一個和弦，這裡會顯示真實按法、組成音，以及刷弦時每條弦亮起的順序。"), editChord && (() => {
       const c = editChord;
       const ci = progV.findIndex((x) => x.id === c.id);
       return /* @__PURE__ */ React.createElement(
@@ -4303,11 +4324,14 @@ window.__CHORDLAB__ = function(){
       ));
     }), frets.map((f, i) => {
       if (f < 0) return /* @__PURE__ */ React.createElement("text", { key: i, x: 14, y: yOf(i) + 4, className: "fb-mark" }, "✕");
+      // 指板上的音已經含 capo，比對的根音與主音也要 +capo 才對得上
+      const refPc = (((rootPc || 0) + capo) % 12 + 12) % 12;
+      const refKey = (((keyPc || 0) + capo) % 12 + 12) % 12;
       const lbl = (fr) => {
         const pc = (STRING_MIDI[i] + capo + fr) % 12;
-        return labelMode === "fixed" ? sp.solfa(rootPc || 0, pc)
-          : labelMode === "movable" ? sp.movable(keyPc || 0, pc)
-          : DEG_LABEL[semiOf(pc, rootPc || 0)];
+        return labelMode === "fixed" ? sp.solfa(refPc, pc)
+          : labelMode === "movable" ? sp.movable(refKey, pc)
+          : DEG_LABEL[semiOf(pc, refPc)];
       };
       if (f === 0) return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: 14, cy: yOf(i), r: "8.5", fill: "none", stroke: "var(--brass)", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("text", { x: 14, y: yOf(i) + 3.4, className: "fb-fnum open" }, lbl(0)));
       const slot = f - base;
@@ -4326,10 +4350,14 @@ window.__CHORDLAB__ = function(){
     const yOf = (i) => 178 - i * 27;
     const xLine = (f) => NUT + f * fw;
     const xSlot = (f) => f === 0 ? NUT - 24 : NUT + (f - 0.5) * fw;
+    // 指板上的音含 capo，所以拿去比對的和弦根音與調性主音都要 +capo。
+    // chord.rootPc 本身仍是「你手指按的那個和弦」，指型就是照它算出來的
+    const refPc = ((chord.rootPc + capo) % 12 + 12) % 12;
+    const refKey = ((keyPc + capo) % 12 + 12) % 12;
     const ivMap = {};
     QUALITIES[chord.quality].iv.forEach((iv) => {
       const semi = (iv % 12 + 12) % 12;
-      const pc = (chord.rootPc + semi) % 12;
+      const pc = (refPc + semi) % 12;
       if (ivMap[pc] === void 0) ivMap[pc] = semi;
     });
     const scalePcs = scaleSet || new Set(scale.map((s) => (keyPc + s) % 12));
@@ -4339,7 +4367,7 @@ window.__CHORDLAB__ = function(){
      * 主音相對和弦根音的位移（關係小調是 +9），0 代表照舊對和弦根音。
      * ♯4 與 ♯5 的判斷也要跟著移，不然半音的寫法會對到錯的主音。
      */
-    const tonicPc = ((chord.rootPc + degTonic) % 12 + 12) % 12;
+    const tonicPc = ((refPc + degTonic) % 12 + 12) % 12;
     const scaleSemis = new Set([...scalePcs].map((pc) => semiOf(pc, tonicPc)));
     const aug = scaleSemis.has(4) && !scaleSemis.has(7);
     const degOf = (sm) => {
@@ -4353,8 +4381,8 @@ window.__CHORDLAB__ = function(){
     const solfaSteps = Object.assign({}, STEP_SCALE);
     if (scaleSemis.has(6) && !scaleSemis.has(5)) solfaSteps[6] = 3;
     if (aug) solfaSteps[8] = 4;
-    const labelFor = (sm, pc) => labelMode === "fixed" ? sp.solfa(chord.rootPc, pc, solfaSteps)
-      : labelMode === "movable" ? sp.movable(keyPc, pc, solfaSteps)
+    const labelFor = (sm, pc) => labelMode === "fixed" ? sp.solfa(refPc, pc, solfaSteps)
+      : labelMode === "movable" ? sp.movable(refKey, pc, solfaSteps)
       : degOf(sm);
     const activeAbs = chord.voicing.frets.map((f) => f < 0 ? -1 : f + capo);
     const brackets = chord.allVoicings.map((v, vi) => {
@@ -4509,7 +4537,7 @@ window.__CHORDLAB__ = function(){
       const rel = f - capo;
       const isManual = ovMap && ovMap[i] !== void 0 && ovMap[i] === rel;
       const isCut = ovMap && ovMap[i] === -1 && chord.voicing.baseFrets[i] === rel;
-      const sm = semi !== void 0 ? semi : semiOf(pc, chord.rootPc);
+      const sm = semi !== void 0 ? semi : semiOf(pc, refPc);
       // 實色：全指板一律打亮，或只打亮目前把位涵蓋的格數（開放弦看這個把位有沒有用到）
       const inBox = boxKeys.has(i + ":" + f);
       const lit = !isCut && (solid === "all" || solid === "pos" && inBox);
