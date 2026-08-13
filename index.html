@@ -2596,6 +2596,30 @@ window.__CHORDLAB__ = function(){
     return picked;
   }
 
+  /**
+   * 換和弦屬性時要接到哪一個把位。
+   *
+   * getVoicings 是照 pos 由低到高排的，所以原本一律接 vs[0] 等於「不管你
+   * 本來按在第幾格，換個屬性就跳回最低把位」。在高把位改屬性（C 大三 →
+   * Cmaj7）等於選好的位置被丟掉，得重按一次。
+   *
+   * 改成挑離原本把位最近的那個。距離一樣時優先同一個 CAGED 指型——C 型的
+   * 大三接到 C 型的 maj7 是最自然的接法，手型幾乎不用動。
+   *
+   * cur 要傳 getVoicings 的那一筆（buildVoice 的 voicing.shape），不要傳
+   * buildVoice 自己算的 pos——後者是「最低的發聲品」，開放和弦會算成 1 或 2，
+   * 跟 getVoicings 的 0 對不起來，比距離會偏掉。
+   */
+  function nearestVoicing(vs, cur) {
+    if (!vs.length || !cur) return 0;
+    let best = 0, bestD = Infinity, bestSame = false;
+    for (let i = 0; i < vs.length; i++) {
+      const d = Math.abs(vs[i].pos - cur.pos);
+      const same = vs[i].tag === cur.tag;
+      if (d < bestD || (d === bestD && same && !bestSame)) { best = i; bestD = d; bestSame = same; }
+    }
+    return best;
+  }
   function buildVoice(rootPc, quality, capo, cfg) {
     const vs = getVoicings(rootPc, quality, capo);
     const shape = vs[(cfg.shapeIdx || 0) % vs.length];
@@ -3973,9 +3997,11 @@ window.__CHORDLAB__ = function(){
             className: "chip q" + (c.quality === q ? " on" : ""),
             onClick: () => {
               setVoiceMap((m) => { const n = { ...m }; delete n["c" + c.id]; return n; });
-              setProg((p) => p.map((x) => x.id === c.id ? { ...x, quality: q, voiceIdx: 0 } : x));
               const vs = getVoicings(c.rootPc, q, capo);
-              previewVoicing({ ...vs[0], capo }, "R", { ...c, quality: q });
+              // 停在原本的把位附近，不要跳回最低把位
+              const idx = nearestVoicing(vs, c.voicing && c.voicing.shape);
+              setProg((p) => p.map((x) => x.id === c.id ? { ...x, quality: q, voiceIdx: idx } : x));
+              previewVoicing({ ...vs[idx], capo }, "R", { ...c, quality: q });
             }
           },
           QUALITIES[q].label || "大三"
