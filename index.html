@@ -647,7 +647,39 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 <script>
 window.__CHORDLAB__ = function(){
 (() => {
+  /* ══════════════════════════════════════════════════════════════════════
+   *  CHORD LAB —— 單一檔案的和弦與指板練習工具
+   *
+   *  沒有 build 步驟，這個檔案就是成品。React 與 Tone.js 從 CDN 載入，
+   *  樂器取樣從 jsDelivr 載入。全部程式包在這個 IIFE 裡。
+   *
+   *  章節（搜尋 "// 3." 之類就能跳過去）
+   *     1  音名與拼字            字母＋升降推導音名
+   *     2  和弦與音階的定義      QUALITIES / SCALES
+   *     3  指板與指型            開放和弦、CAGED、getVoicings
+   *     4  音色與伴奏樣式        取樣音色、刷弦／鼓／貝斯樣式
+   *     5  進行範本與接續建議    TEMPLATES / suggestNext
+   *     6  MIDI 匯出             手刻位元組
+   *     7  取樣來源與載入        多來源備援
+   *     8  音訊引擎              Engine 類別
+   *     9  存檔                  localStorage
+   *    10  把位與音階盒          scaleBoxFrets / buildVoice / voiceInfo
+   *    11  律動與排程            buildSchedule
+   *    12  主元件 ChordLab       所有狀態與互動
+   *    13  首頁                  Landing
+   *    14  UI 元件               Picker / Fretboard / NeckView
+   *    15  掛載
+   *
+   *  改動之前先跑 tools/regress.cjs 存一份行為指紋，改完再比對一次。
+   * ══════════════════════════════════════════════════════════════════════ */
   const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 1. 音名與拼字
+  // 字母 ＋ 升降推導出音名。同音異名的兩種寫法各自都對，
+  // 差別只在這個調的主音要叫 C♯ 還是 D♭。
+  // ────────────────────────────────────────────────────────────────────────
+
   /**
    * 音名是「字母 ＋ 升降」推導出來的，不是十二個固定名字翻來翻去。
    *
@@ -749,6 +781,42 @@ window.__CHORDLAB__ = function(){
       }
     };
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 2. 和弦與音階的定義
+  // QUALITIES 是和弦的音程組成，SCALES 是音階。
+  // 兩者都用「相對根音的半音數」表示。
+  // ────────────────────────────────────────────────────────────────────────
+
+  /* ── 音級標籤 ──────────────────────────────────────────────────────────
+   * 這幾個原本散在 Fretboard 與 NeckView 中間（第 14 章），但 IV_LABEL 的
+   * 第一個使用者在三千多行之前，找的人根本不會往那裡看。它們全是純字面量
+   * 或無外部相依的小函式，屬於樂理定義，搬到這裡。
+   *
+   * semiOf 同理：一個「相對根音差幾個半音」的基本換算，七個地方在用，
+   * 原本卻夾在把位那一章裡。
+   * ──────────────────────────────────────────────────────────────────── */
+  const semiOf = (pc, rootPc) => ((pc - rootPc) % 12 + 12) % 12;
+  // 相對根音的音程名（和弦用，延伸音寫成 9 / 11 / 13）
+  const IV_LABEL = { 0: "R", 1: "♭9", 2: "9", 3: "♭3", 4: "3", 5: "11", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
+  // 相對主音的音級名（音階用，不寫成延伸音）
+  const DEG_LABEL = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
+  /**
+   * 減七和弦疊的是小三度：R–♭3–♭5–♭♭7。第四個音跟大六度同一個音高，但功能
+   * 完全不同——它是降兩次的七度，會半音往下解決到目標和弦的三度；六度是加色音，
+   * 不解決。所以在 dim7 上要寫 °7，不能寫 6。
+   *
+   * 這件事原本只有指板做（那裡寫死一個 semi === 9 的判斷），和弦堆疊直接查
+   * IV_LABEL 就寫成 6，同一顆音在上面叫 6、在下面叫 °7，看的人會以為模塊裡
+   * 少了一個音。抽成一個判斷讓兩邊共用，以後再多一個標示的地方也接得上。
+   */
+  const isDimSeventh = (semi, quality) => semi === 9 && quality === "dim7";
+  const ivLabel = (semi, quality) => isDimSeventh(semi, quality) ? "°7" : IV_LABEL[semi];
+  // 指板上一顆音要塗什麼顏色：根音、三音、五音、其餘延伸音
+  const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
+  // 指板總格數。圖形按鈕要算「哪些圖形排得進指板」，NeckView 以外也要用
+  const NECK_FRETS = 22;
+
   const QUALITIES = {
     maj: { label: "", full: "大三和弦", iv: [0, 4, 7] },
     min: { label: "m", full: "小三和弦", iv: [0, 3, 7] },
@@ -915,6 +983,13 @@ window.__CHORDLAB__ = function(){
     const base = flatMap[rel] || "?";
     return isMinorish ? base.toLowerCase() : base;
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 3. 指板與指型
+  // 開放和弦、CAGED 五指型、自動排列，最後由 getVoicings
+  // 收成一份照把位排序的清單。
+  // ────────────────────────────────────────────────────────────────────────
+
   const STRING_MIDI = [40, 45, 50, 55, 59, 64];
   const OPEN_SHAPES = {
     "0:maj": [-1, 3, 2, 0, 1, 0],
@@ -1291,6 +1366,12 @@ window.__CHORDLAB__ = function(){
     });
     return notes;
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 4. 音色與伴奏樣式
+  // 取樣音色、鋼琴聲部、刷弦／鼓／貝斯的節奏樣式。
+  // ────────────────────────────────────────────────────────────────────────
+
   const midiToName = (m) => SHARP_NAMES[m % 12] + (Math.floor(m / 12) - 1);
   const TONES = {
     // 這組取樣的高音區比一般木吉他亮很多（MIDI 59–76 的頻譜重心 4700Hz，
@@ -1512,6 +1593,12 @@ window.__CHORDLAB__ = function(){
     octave: { name: "根音 + 八度", events: [{ i: 0, deg: 0, len: 1 }, { i: 4, deg: 12, len: 1 }, { i: 8, deg: 0, len: 1 }, { i: 12, deg: 12, len: 1 }] },
     drive8: { name: "八分根音衝", events: [0, 2, 4, 6, 8, 10, 12, 14].map((i) => ({ i, deg: 0, len: 1 })) }
   };
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 5. 進行範本與接續建議
+  // 七十三組現成進行，以及「接下來可以走」的推薦。
+  // ────────────────────────────────────────────────────────────────────────
+
   const TEMPLATES = [
     { id: "t001", name: "四和弦神曲", sub: "I–V–vi–IV ・ 全世界通用的骨架", genre: "pop", style: "西洋主流", mode: "major", bpm: 100, strum: "roll", drum: "rock", bass: "root", tone: "acoustic", chords: [{ d: 0 }, { d: 4 }, { d: 5 }, { d: 3 }] },
     { id: "t004", name: "六四一五", sub: "vi–IV–I–V ・ 從陰影走向光", genre: "pop", style: "西洋主流", mode: "major", bpm: 96, strum: "roll", drum: "pop16", bass: "root", tone: "acoustic", chords: [{ d: 5 }, { d: 3 }, { d: 0 }, { d: 4 }] },
@@ -1639,6 +1726,12 @@ window.__CHORDLAB__ = function(){
     );
     return top;
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 6. MIDI 匯出
+  // 手刻 MIDI 檔的位元組，沒有外部函式庫。
+  // ────────────────────────────────────────────────────────────────────────
+
   function writeVarLen(n) {
     const bytes = [n & 127];
     n >>= 7;
@@ -1706,6 +1799,13 @@ window.__CHORDLAB__ = function(){
     noteTracks.forEach((t) => bytes.push(...t));
     return new Blob([new Uint8Array(bytes)], { type: "audio/midi" });
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 7. 取樣來源與載入
+  // 取樣放在 jsDelivr 與 raw.githubusercontent，各有備援來源。
+  // 載不到就換下一個。
+  // ────────────────────────────────────────────────────────────────────────
+
   const SAMPLE_BASES = [
     "https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/",
     "https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/"
@@ -1975,6 +2075,13 @@ window.__CHORDLAB__ = function(){
     }
     return null;
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 8. 音訊引擎
+  // Engine 一個類別包住所有發聲：取樣器、匯流排、殘響、
+  // 限幅、以及各樂器的觸發。
+  // ────────────────────────────────────────────────────────────────────────
+
   class Engine {
     constructor() {
       this.ready = false;
@@ -2415,6 +2522,12 @@ window.__CHORDLAB__ = function(){
       else this.hat.triggerAttackRelease(0.03, time, vel * 0.55);
     }
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 9. 存檔
+  // localStorage，存進行、混音設定與試用次數。
+  // ────────────────────────────────────────────────────────────────────────
+
   /**
    * 編輯存檔。每個範本各自記住自己的編輯，切走再切回來不會變回預設；
    * 混音類的設定（音量、頻道開關）則是全域的，換範本不該跟著變。
@@ -2438,8 +2551,14 @@ window.__CHORDLAB__ = function(){
       // 無痕模式或容量滿了就算了，不影響使用
     }
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 10. 把位與音階盒
+  // scaleBoxFrets 產生 CAGED 與一弦三音的框；
+  // buildVoice / voiceInfo 把一個指型變成畫得出來的資料。
+  // ────────────────────────────────────────────────────────────────────────
+
   const VKEY = (ch) => "c" + ch.id;
-  const semiOf = (pc, rootPc) => ((pc - rootPc) % 12 + 12) % 12;
   const WINDOWS = [null, [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5]];
   /**
    * 音階把位模型。矩形的格數視窗會切斷音階——C 大調 A 型框第 3–6 格時，
@@ -2675,6 +2794,13 @@ window.__CHORDLAB__ = function(){
     const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 || isDimSeventh(bass, quality) ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + ivLabel(bass, quality);
     return { name, inv, stack: semis.map((sm) => ivLabel(sm, quality)).join("-"), extra: ex, missing };
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 11. 律動與排程
+  // 重音輪廓與搖擺感，buildSchedule 把一段進行攤平成
+  // Tone.js 的事件清單。
+  // ────────────────────────────────────────────────────────────────────────
+
   const METRIC_W = [1, 0.34, 0.62, 0.4, 0.85, 0.34, 0.66, 0.4, 0.92, 0.34, 0.64, 0.4, 0.86, 0.36, 0.68, 0.42];
   const ACCENT_PROFILES = {
     straight: { depth: 0.55, back: 0.05, arc: 0.05 },
@@ -2798,6 +2924,12 @@ window.__CHORDLAB__ = function(){
     });
     return { events, totalBars: Math.max(1, Math.ceil(cur / 16)) };
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 12. 主元件 ChordLab
+  // 所有狀態與互動都在這裡。這個函式很大，內部另有分段標示。
+  // ────────────────────────────────────────────────────────────────────────
+
   const NOTE_LENS = [
     { b: 0.5, g: "\u266a", n: "\u516b\u5206", t: "\u534a\u62cd" },
     { b: 1, g: "\u2669", n: "\u56db\u5206", t: "\u4e00\u62cd" },
@@ -2816,6 +2948,11 @@ window.__CHORDLAB__ = function(){
     voiceIdx: 0
   });
   function ChordLab() {
+
+    // ── 狀態 ──────────────────────────────────────────────────────────
+    // 三十幾個 useState。改任何一個都會重畫，所以順序不重要，
+    // 照「調性 → 進行 → 指板 → 音訊 → 混音」分群擺。
+
     const [booted, setBooted] = useState(false);
     const [status, setStatus] = useState({ guitar: "idle", piano: "idle", bass: "idle", drum: "idle" });
     const [keyPc, setKeyPc] = useState(0);
@@ -2877,6 +3014,11 @@ window.__CHORDLAB__ = function(){
     const [autoMix, setAutoMix] = useState(() => savedRef.current.mix ? !!savedRef.current.mix.autoMix : true);
     const [master, setMaster] = useState(() => (savedRef.current.mix && savedRef.current.mix.master) != null ? savedRef.current.mix.master : 1);
     const [on, setOn] = useState(() => (savedRef.current.mix && savedRef.current.mix.on) || { guitar: true, piano: false, bass: true, drum: true });
+
+    // ── 參照與基本衍生值 ──────────────────────────────────────────────
+    // sp 是音名拼字器，engineRef 是音訊引擎，其餘 ref 存的是
+    // 不該觸發重畫的東西（播放中的 part、錄音器、拖曳狀態）。
+
     // 調決定主音怎麼拼，其餘音名全部由字母推導出來
     const sp = React.useMemo(() => makeSpeller(keyPc, mode, accidental), [keyPc, mode, accidental]);
     const engineRef = useRef(null);
@@ -2893,6 +3035,10 @@ window.__CHORDLAB__ = function(){
     const romans = romanOf(mode);
     // 開機第一輪不要存，不然還沒載入就把預設值蓋回存檔
     const saveArmed = useRef(false);
+
+    // ── 存檔、通知與復原 ──────────────────────────────────────────────
+    // localStorage 的寫入時機、toast、以及 undo / redo 的歷史堆疊。
+
     useEffect(() => {
       const t = setTimeout(() => { saveArmed.current = true; }, 0);
       return () => clearTimeout(t);
@@ -2952,6 +3098,11 @@ window.__CHORDLAB__ = function(){
       setProg(next);
       notify("已重做");
     }, []);
+
+    // ── 衍生資料 ──────────────────────────────────────────────────────
+    // progV 是整份進行加上每個和弦算好的指型，畫面幾乎都讀它。
+    // starts / barMap / suggestions 都由它推出來。
+
     const progV = useMemo(
       () => prog.map((c) => {
         const cfg = voiceMap[VKEY(c)] || { shapeIdx: c.voiceIdx || 0 };
@@ -2989,6 +3140,11 @@ window.__CHORDLAB__ = function(){
       () => suggestNext(prog.length ? prog[prog.length - 1] : null, keyPc, mode),
       [prog, keyPc, mode]
     );
+
+    // ── 音訊、播放與排程 ──────────────────────────────────────────────
+    // 解鎖 AudioContext、載入取樣、把 progV 交給 buildSchedule 排成
+    // Tone.js 的事件，以及播放與停止。
+
     useEffect(() => {
       let alive = true;
       const eng = new Engine();
@@ -3181,6 +3337,10 @@ window.__CHORDLAB__ = function(){
       const el = document.querySelector('.card[data-cid="' + selId + '"]');
       if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
     }, [selId]);
+
+    // ── 編輯和弦 ──────────────────────────────────────────────────────
+    // 新增、刪除、複製、拖曳排序、換把位、改單音、移調。
+
     const addChord = (rootPc, quality) => {
       const c = mkChord(rootPc, quality);
       setProg((p) => [...p, c]);
@@ -3259,6 +3419,10 @@ window.__CHORDLAB__ = function(){
       })));
       setKeyPc(newKey);
     };
+
+    // ── 音色與範本 ────────────────────────────────────────────────────
+    // 切換取樣音色、套用進行範本、重設、整段加七度。
+
     const applyTone = async (key) => {
       const eng = engineRef.current;
       setGtone(key);
@@ -3394,6 +3558,10 @@ window.__CHORDLAB__ = function(){
       if (i < 0) return c;
       return { ...c, quality: sevenths[i] };
     }));
+
+    // ── 錄音與匯出 ────────────────────────────────────────────────────
+    // 錄成音檔，以及 MusicXML / ChordPro / TAB / JSON / MIDI 五種匯出。
+
     const toggleRec = async () => {
       const eng = engineRef.current;
       if (!eng) return;
@@ -3572,6 +3740,11 @@ window.__CHORDLAB__ = function(){
       download(exportMidi(tracks, bpm), "chord-lab-" + Date.now() + ".mid");
       notify("MIDI 已下載，可直接拖進 DAW");
     };
+
+    // ── 畫面用的衍生值 ────────────────────────────────────────────────
+    // 指板要畫哪個和弦、配哪個音階、音階盒有幾個圖形。
+    // 這一段只算不改，全部餵給下面的 render。
+
     const totalBars = progV.reduce((s, c) => s + (c.bars || 1), 0);
     const sampleReady = status.guitar === "sample";
     const keyName = sp.note(keyPc) + (mode === "minor" ? "m" : "");
@@ -3692,6 +3865,11 @@ window.__CHORDLAB__ = function(){
         s: null
       }))
     );
+
+    // ── 畫面 ──────────────────────────────────────────────────────────
+    // 由上而下：頂欄 → 左欄（和弦盤與範本）→ 中欄（進行與指板總覽）
+    // → 右欄（把位、和弦性質、混音）。
+
     return /* @__PURE__ */ React.createElement("div", { className: "cl-root" }, !booted && /* @__PURE__ */ React.createElement(
       Landing,
       {
@@ -4124,6 +4302,12 @@ window.__CHORDLAB__ = function(){
       onChange: (e) => setMaster(+e.target.value)
     })))))), toast && /* @__PURE__ */ React.createElement("div", { className: "toast" }, toast));
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 13. 首頁
+  // 進入 App 前的說明頁。
+  // ────────────────────────────────────────────────────────────────────────
+
   const HERO_STRINGS = ["E2", "A2", "D3", "G3", "B3", "E4"];
   const HERO_MARKS = [
     { t: "Cmaj7", pc: 0, q: "maj7", fret: 2, x: 30 },
@@ -4298,6 +4482,12 @@ window.__CHORDLAB__ = function(){
       /* @__PURE__ */ React.createElement("span", { className: "vstr-name" }, n)
     )))), !sampled && /* @__PURE__ */ React.createElement("span", { className: "lp-loading" }, "載入原聲吉他取樣…")), /* @__PURE__ */ React.createElement("div", { className: "lp-grain", "aria-hidden": "true" })));
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 14. UI 元件
+  // Picker 下拉選單、Fretboard 單一和弦圖、NeckView 整支指板。
+  // ────────────────────────────────────────────────────────────────────────
+
   function Picker({ value, options, onChange, width, up, grow, cls }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -4465,23 +4655,6 @@ window.__CHORDLAB__ = function(){
       return /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: X0 + (slot + 0.5) * sw, cy: yOf(i), r: "8.5", fill: isAdd ? "var(--jade)" : "var(--brass)" }), /* @__PURE__ */ React.createElement("text", { x: X0 + (slot + 0.5) * sw, y: yOf(i) + 3.6, className: "fb-fnum" + (lbl(f).length > 2 ? " long" : "") }, lbl(f)));
     }), !showNut && /* @__PURE__ */ React.createElement("text", { x: X0 + sw * 0.5, y: H - 8, className: "fb-pos" }, base + capo, " fr")));
   }
-  const IV_LABEL = { 0: "R", 1: "♭9", 2: "9", 3: "♭3", 4: "3", 5: "11", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
-  /**
-   * 減七和弦疊的是小三度：R–♭3–♭5–♭♭7。第四個音跟大六度同一個音高，但功能
-   * 完全不同——它是降兩次的七度，會半音往下解決到目標和弦的三度；六度是加色音，
-   * 不解決。所以在 dim7 上要寫 °7，不能寫 6。
-   *
-   * 這件事原本只有指板做（那裡寫死一個 semi === 9 的判斷），和弦堆疊直接查
-   * IV_LABEL 就寫成 6，同一顆音在上面叫 6、在下面叫 °7，看的人會以為模塊裡
-   * 少了一個音。抽成一個判斷讓兩邊共用，以後再多一個標示的地方也接得上。
-   */
-  const isDimSeventh = (semi, quality) => semi === 9 && quality === "dim7";
-  const ivLabel = (semi, quality) => isDimSeventh(semi, quality) ? "°7" : IV_LABEL[semi];
-  const DEG_LABEL = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
-  const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
-  // 指板總格數。圖形按鈕要算「哪些圖形排得進指板」，NeckView 以外也要用，
-  // 所以提到模組層，兩邊看同一個數字
-  const NECK_FRETS = 22;
   function NeckView({ chord, capo, keyPc, scale, sp, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys, degTonic = 0, patAnchor = null }) {
     const NF = NECK_FRETS;
     const W = 980, H = 250, NUT = 58, END = 962;
@@ -4700,6 +4873,12 @@ window.__CHORDLAB__ = function(){
       (_, f) => f === 0 ? null : /* @__PURE__ */ React.createElement("text", { key: f, x: xSlot(f), y: "224", className: "nk-fnum" }, f)
     )), /* @__PURE__ */ React.createElement("div", { className: "neck-legend" }, /* @__PURE__ */ React.createElement("span", { className: "lg root" }, "R 根音"), /* @__PURE__ */ React.createElement("span", { className: "lg third" }, "3 決定大小調的三度"), /* @__PURE__ */ React.createElement("span", { className: "lg fifth" }, "5 五度"), /* @__PURE__ */ React.createElement("span", { className: "lg ext" }, "♭7 / 7 延伸音"), showScale && /* @__PURE__ */ React.createElement("span", { className: "lg sc" }, "灰色是選定音階的音"), /* @__PURE__ */ React.createElement("span", { className: "lg chrom" }, "藍色是音階外的半音")));
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 15. 掛載
+  // 掛上 React，以及 CDN 函式庫的載入器。
+  // ────────────────────────────────────────────────────────────────────────
+
   const rootEl = document.getElementById("root");
   ReactDOM.createRoot(rootEl).render(React.createElement(ChordLab));
 })();
