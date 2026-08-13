@@ -207,28 +207,36 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .track>*{position:relative}
 /* 便利貼本體。角度與紙色照索引輪流套，不用亂數——亂數會讓卡片在每次
    重畫時抖動。右下角折起一小塊當撕口。 */
-.card{position:relative;width:116px;min-height:108px;background:var(--note);
+.card{position:relative;width:116px;min-height:108px;touch-action:none;
   border:0;border-radius:2px;padding:9px 10px 11px;
   display:flex;flex-direction:column;justify-content:space-between;
   color:var(--ink);font-family:var(--hand);
-  cursor:pointer;transition:transform .14s,box-shadow .14s,filter .14s;
+  cursor:pointer;transition:transform .18s ease,box-shadow .14s,filter .14s;
   box-shadow:0 1px 1px rgba(0,0,0,.28), 0 6px 12px -6px rgba(0,0,0,.5);
   transform-origin:50% 8%}
-.card:nth-child(4n+1){transform:rotate(-1.6deg)}
-.card:nth-child(4n+2){transform:rotate(1.1deg);background:var(--note2)}
-.card:nth-child(4n+3){transform:rotate(-.5deg)}
-.card:nth-child(4n+4){transform:rotate(1.9deg);background:var(--note2)}
+/* 角度與紙色由 JS 依 c.id 指定成變數，不用 nth-child——拖曳時排列順序
+   一直在變，靠位置決定的話便利貼會在補位途中忽然換角度換顏色。
+   平移量也走變數，FLIP 才不會把旋轉覆寫掉。 */
+.card{--rot:0deg;--fx:0px;--fy:0px;background:var(--paper,var(--note));
+  transform:translate(var(--fx),var(--fy)) rotate(var(--rot))}
+.card.no-anim{transition:none}
+/* 空出來的位置。虛線框讓你看得到它要落在哪 */
+.card-gap{width:116px;min-height:108px;border-radius:2px;flex:0 0 auto;
+  border:2px dashed color-mix(in srgb,#FFFFFF 22%,transparent);
+  background:rgba(0,0,0,.14);transition:transform .18s ease}
+/* 拿起來那張：脫離版面跟著游標，傾斜再大一點、影子拉遠，像離開板面 */
+.card.ghost{position:fixed;z-index:400;pointer-events:none;margin:0;
+  --rot:-4deg;transform:rotate(var(--rot)) scale(1.06);
+  box-shadow:0 10px 12px -6px rgba(0,0,0,.5), 0 34px 46px -18px rgba(0,0,0,.85);
+  transition:none;filter:brightness(1.06)}
 .card::after{content:"";position:absolute;right:0;bottom:0;width:14px;height:14px;
   background:linear-gradient(135deg,transparent 50%,rgba(0,0,0,.15) 50%)}
 .card:hover{filter:brightness(1.05);box-shadow:0 2px 3px rgba(0,0,0,.3), 0 12px 20px -8px rgba(0,0,0,.6)}
-.card:nth-child(4n+1):hover{transform:rotate(-1.6deg) translateY(-3px)}
-.card:nth-child(4n+2):hover{transform:rotate(1.1deg) translateY(-3px)}
-.card:nth-child(4n+3):hover{transform:rotate(-.5deg) translateY(-3px)}
-.card:nth-child(4n+4):hover{transform:rotate(1.9deg) translateY(-3px)}
+.card:hover{transform:translate(var(--fx),var(--fy)) rotate(var(--rot)) translateY(-3px)}
 /* 選取＝被拿起來：擺正、放大、影子拉長 */
-.card.sel,.card.sel:hover{transform:rotate(0deg) translateY(-4px) scale(1.04);
+.card.sel,.card.sel:hover{transform:translate(var(--fx),var(--fy)) translateY(-4px) scale(1.04);
   box-shadow:0 3px 4px rgba(0,0,0,.3), 0 18px 26px -10px rgba(0,0,0,.7), 0 0 0 2px var(--ink) inset}
-.card.live,.card.live:hover{transform:rotate(0deg) translateY(-5px) scale(1.06);
+.card.live,.card.live:hover{transform:translate(var(--fx),var(--fy)) translateY(-5px) scale(1.06);
   box-shadow:0 3px 4px rgba(0,0,0,.3), 0 20px 30px -10px rgba(0,0,0,.7),
              0 0 0 2px #1E7A5A inset, 0 0 22px -4px var(--jade)}
 .card-top{display:flex;align-items:center;justify-content:space-between;gap:4px}
@@ -3049,6 +3057,8 @@ window.__CHORDLAB__ = function(){
     { b: 4, g: "\u25cb", n: "\u5168\u97f3\u7b26", t: "\u4e00\u5c0f\u7bc0" },
     { b: 8, g: "\u25cb\u25cb", n: "\u5169\u5c0f\u7bc0", t: "\u516b\u62cd" }
   ];
+  // 便利貼的四種傾斜角。照 c.id 取，一張紙的角度就跟著它一輩子
+  const ROT4 = ["-1.6deg", "1.1deg", "-0.5deg", "1.9deg"];
   let UID = 1;
   const mkChord = (rootPc, quality, bars = 1) => ({
     id: UID++,
@@ -3143,6 +3153,9 @@ window.__CHORDLAB__ = function(){
     const [recording, setRecording] = useState(false);
     const [sweep, setSweep] = useState({ id: 0, dir: "D", spread: 0.02, strings: [] });
     const [toast, setToast] = useState("");
+    // 便利貼拖曳：dragId 是被拿起來那張，dropIdx 是空位現在停在哪
+    const [dragId, setDragId] = useState(null);
+    const [dropIdx, setDropIdx] = useState(-1);
     const [strumKey, setStrumKey] = useState("roll");
     const [drumKey, setDrumKey] = useState("rock");
     const [bassKey, setBassKey] = useState("fifth");
@@ -3168,6 +3181,8 @@ window.__CHORDLAB__ = function(){
     const partRef = useRef(null);
     const recRef = useRef(null);
     const dragRef = useRef(null);
+    const ghostRef = useRef(null);
+    const flipRef = useRef(new Map());
     const sweepId = useRef(0);
     const startAtRef = useRef({ tick: 0, idx: -1 });
     const histRef = useRef({ past: [], future: [], last: null, skip: false });
@@ -3550,6 +3565,111 @@ window.__CHORDLAB__ = function(){
         return [...p.slice(0, i + 1), copy, ...p.slice(i + 1)];
       });
     };
+    /**
+     * 便利貼的拖曳。
+     *
+     * 原本用 HTML5 draggable，但那個半透明影子是瀏覽器畫的，原件一定留在
+     * 原位——看起來就像多了一張。改成自己用指標事件做：
+     *
+     *   被拿起來那張   從版面上移除，用 position:fixed 跟著游標
+     *   原本的位置     變成一個空位，後面的便利貼往前補
+     *   空位           跟著插入點移動
+     *   判定           浮起那張跟某張的重疊面積超過一張的一半，插入點才換
+     *
+     * 位置更新直接改 DOM 不走 state——一秒六十次 setState 會讓整個 ChordLab
+     * 重畫。只有插入點真的變了才 setState。
+     */
+    const dragMove = (e) => {
+      const d = dragRef.current;
+      if (!d) return;
+      if (!d.live) {
+        // 沒超過門檻就還不算拖曳，不然一般點選會被吃掉
+        if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) < 5) return;
+        d.live = true;
+        setDragId(d.id);
+        setDropIdx(d.to);
+      }
+      const gx = e.clientX - d.offX, gy = e.clientY - d.offY;
+      const g = ghostRef.current;
+      if (g) { g.style.left = gx + "px"; g.style.top = gy + "px"; }
+      // 跟每一張沒被拿起來的比重疊面積，超過半張才算數
+      const half = d.w * d.h * 0.5;
+      let hit = -1, most = half, hitRect = null;
+      document.querySelectorAll(".track .card[data-oi]").forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const ov = Math.max(0, Math.min(gx + d.w, r.right) - Math.max(gx, r.left)) *
+                   Math.max(0, Math.min(gy + d.h, r.bottom) - Math.max(gy, r.top));
+        if (ov > most) { most = ov; hit = +el.dataset.oi; hitRect = r; }
+      });
+      if (hit < 0) return;
+      /**
+       * 插入點放命中那張的前面還後面，看兩者的中線誰在左邊。
+       *
+       * 不能拿 hit 跟目前的插入點比——那是兩套不同的索引，混用會震盪：
+       * 空位一移動其他便利貼就跟著位移，重疊比例跟著變，於是又把空位推
+       * 回去，來回跳。實測過確實會抖。改成跟中線比就自己穩住了：把空位
+       * 移到某張前面，那張會往右退，重疊只會更低於門檻，不會再翻回來。
+       */
+      const to = (gx + d.w / 2) < (hitRect.left + hitRect.width / 2) ? hit : hit + 1;
+      if (to !== d.to) { d.to = to; setDropIdx(to); }
+    };
+    const dragEnd = () => {
+      const d = dragRef.current;
+      dragRef.current = null;
+      window.removeEventListener("pointermove", dragMove);
+      window.removeEventListener("pointerup", dragEnd);
+      if (!d) return;
+      setDragId(null);
+      setDropIdx(-1);
+      if (!d.live) return;
+      d.moved = true;
+      setProg((p) => {
+        const a = p.findIndex((c) => c.id === d.id);
+        if (a < 0) return p;
+        const next = p.slice();
+        const [m] = next.splice(a, 1);
+        next.splice(Math.max(0, Math.min(d.to, next.length)), 0, m);
+        return next;
+      });
+    };
+    const dragStart = (e, c, oi) => {
+      if (e.button != null && e.button !== 0) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      dragRef.current = {
+        id: c.id, to: oi, live: false, moved: false,
+        sx: e.clientX, sy: e.clientY,
+        offX: e.clientX - r.left, offY: e.clientY - r.top,
+        w: r.width, h: r.height
+      };
+      window.addEventListener("pointermove", dragMove);
+      window.addEventListener("pointerup", dragEnd);
+    };
+    /**
+     * 補位的滑動。便利貼排在 flex 流程裡，插入點一換位置就直接跳過去，
+     * 所以要用 FLIP：先記住上一次的位置，重畫後算出差值，先把它平移回
+     * 原位再放掉，看起來就是滑過去的。
+     *
+     * 平移量走 CSS 變數而不是直接寫 transform——每張便利貼本來就有自己的
+     * 旋轉角度，直接覆寫 transform 會把角度弄丟。
+     */
+    React.useLayoutEffect(() => {
+      const prev = flipRef.current, next = /* @__PURE__ */ new Map();
+      document.querySelectorAll(".track [data-flip]").forEach((el) => {
+        const k = el.dataset.flip, r = el.getBoundingClientRect();
+        next.set(k, r);
+        const q = prev.get(k);
+        if (!q || (Math.abs(q.left - r.left) < 0.5 && Math.abs(q.top - r.top) < 0.5)) return;
+        el.style.setProperty("--fx", (q.left - r.left) + "px");
+        el.style.setProperty("--fy", (q.top - r.top) + "px");
+        el.classList.add("no-anim");
+        requestAnimationFrame(() => {
+          el.classList.remove("no-anim");
+          el.style.setProperty("--fx", "0px");
+          el.style.setProperty("--fy", "0px");
+        });
+      });
+      flipRef.current = next;
+    });
     const onDrop = (targetId) => {
       const from = dragRef.current;
       dragRef.current = null;
@@ -4022,6 +4142,49 @@ window.__CHORDLAB__ = function(){
       }))
     );
 
+    /**
+     * 一張便利貼。浮起來跟著游標那張要跟版面上的長得一模一樣，所以抽成
+     * 函式兩邊共用；ghost 為 true 時不掛互動事件。
+     *
+     * 旋轉角度與紙色照 c.id 取，不照排列順序——順序在拖曳過程中一直在變，
+     * 照順序取的話便利貼會在補位時忽然換角度換顏色。
+     */
+    const renderCard = (c, i, oi, ghost) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: ghost ? "ghost" : c.id,
+        ref: ghost ? ghostRef : null,
+        "data-cid": c.id,
+        "data-oi": ghost ? null : oi,
+        "data-flip": ghost ? null : "c" + c.id,
+        style: { "--rot": ROT4[c.id % 4], "--paper": c.id % 2 ? "var(--note2)" : "var(--note)" },
+        className: "card" + (ghost ? " ghost" : "") + (c.id === selId ? " sel" : "")
+          + (i === curIdx && playing ? " live" : "")
+          + (barMap[i] && barMap[i].barStart ? " barline" : "")
+          + (barMap[i] && barMap[i].over ? " over" : ""),
+        onPointerDown: ghost ? null : (e) => dragStart(e, c, oi),
+        title: ghost ? null : (playing ? "從這一格接著播" : "選取後按播放會從這一格開始（← → 換格、Del 刪除）"),
+        onClick: ghost ? null : () => { if (dragRef.current && dragRef.current.live) return; jumpTo(i, c); }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "card-top" },
+        /* @__PURE__ */ React.createElement("span", { className: "deg" }, degreeLabel(c.rootPc, c.quality, keyPc, mode)),
+        /* @__PURE__ */ React.createElement("div", { className: "card-top-r" },
+          /* @__PURE__ */ React.createElement("span", { className: "card-bars" },
+            barMap[i] && barMap[i].barStart ? "小節 " + (Math.floor(starts[i] / 16) + 1) : ""),
+          /* @__PURE__ */ React.createElement("button", {
+            className: "card-del", title: "刪除這個和弦", "aria-label": "刪除這個和弦",
+            onPointerDown: (e) => e.stopPropagation(),
+            onClick: (e) => { e.stopPropagation(); removeChordAt(i); }
+          }, "✕"))),
+      /* @__PURE__ */ React.createElement("div", { className: "card-name" }, c.info.name),
+      /* @__PURE__ */ React.createElement("div", { className: "card-hint" },
+        (c.mG || c.mP) ? /* @__PURE__ */ React.createElement("em", { className: "card-mute" },
+          (c.mG ? "無吉他" : "") + (c.mG && c.mP ? " " : "") + (c.mP ? "無鋼琴" : "")) : null,
+        c.voicing.tag,
+        /* @__PURE__ */ React.createElement("em", { className: "card-len" },
+          (NOTE_LENS.find((n) => Math.abs(n.b - beatsOf(c)) < 0.01) || { g: beatsOf(c) + "拍" }).g))
+    );
+
     // ── 畫面 ──────────────────────────────────────────────────────────
     // 由上而下：頂欄 → 左欄（和弦盤與範本）→ 中欄（進行與指板總覽）
     // → 右欄（把位、和弦性質、混音）。
@@ -4170,25 +4333,21 @@ window.__CHORDLAB__ = function(){
       className: "track",
       onDragOver: (e) => e.preventDefault(),
       onDrop: () => onDrop(null)
-    }, progV.map((c, i) => /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        key: c.id,
-        "data-cid": c.id,
-        className: "card" + (c.id === selId ? " sel" : "") + (i === curIdx && playing ? " live" : "") + (barMap[i] && barMap[i].barStart ? " barline" : "") + (barMap[i] && barMap[i].over ? " over" : ""),
-        draggable: true,
-        onDragStart: () => {
-          dragRef.current = c.id;
-        },
-        onDragOver: (e) => e.preventDefault(),
-        onDrop: (e) => { e.stopPropagation(); onDrop(c.id); },
-        title: playing ? "從這一格接著播" : "選取後按播放會從這一格開始（← → 換格、Del 刪除）",
-        onClick: () => jumpTo(i, c)
-      },
-      /* @__PURE__ */ React.createElement("div", { className: "card-top" }, /* @__PURE__ */ React.createElement("span", { className: "deg" }, degreeLabel(c.rootPc, c.quality, keyPc, mode)), /* @__PURE__ */ React.createElement("div", { className: "card-top-r" }, /* @__PURE__ */ React.createElement("span", { className: "card-bars" }, barMap[i] && barMap[i].barStart ? "小節 " + (Math.floor(starts[i] / 16) + 1) : ""), /* @__PURE__ */ React.createElement("button", { className: "card-del", title: "刪除這個和弦", "aria-label": "刪除這個和弦", onClick: (e) => { e.stopPropagation(); removeChordAt(i); } }, "✕"))),
-      /* @__PURE__ */ React.createElement("div", { className: "card-name" }, c.info.name),
-      /* @__PURE__ */ React.createElement("div", { className: "card-hint" }, (c.mG || c.mP) ? /* @__PURE__ */ React.createElement("em", { className: "card-mute" }, (c.mG ? "無吉他" : "") + (c.mG && c.mP ? " " : "") + (c.mP ? "無鋼琴" : "")) : null, c.voicing.tag, /* @__PURE__ */ React.createElement("em", { className: "card-len" }, (NOTE_LENS.find((n) => Math.abs(n.b - beatsOf(c)) < 0.01) || { g: beatsOf(c) + "拍" }).g))
-    )), !progV.length && /* @__PURE__ */ React.createElement("div", { className: "empty" }, "從左邊的和弦盤點一個和弦，或直接套用一組進行範本開始。")), /* @__PURE__ */ React.createElement("div", { className: "dock" + (neckOpen && viewChord ? " open" : "") }, /* @__PURE__ */ React.createElement("div", { className: "sug" }, /* @__PURE__ */ React.createElement("div", { className: "sug-head" }, /* @__PURE__ */ React.createElement("div", { className: "sug-label" }, "接下來可以走"), /* @__PURE__ */ React.createElement(
+    }, (function () {
+      // 拿起來那張不畫在版面裡（它跟著游標走），空位插在插入點上
+      const items = [];
+      progV.forEach((c, i) => { if (c.id !== dragId) items.push({ c, i }); });
+      if (dragId != null) {
+        items.splice(Math.max(0, Math.min(dropIdx, items.length)), 0, { gap: true });
+      }
+      let oi = -1;
+      return items.map((it) => {
+        if (it.gap) return /* @__PURE__ */ React.createElement("div",
+          { key: "gap", className: "card-gap", "data-flip": "gap" });
+        oi += 1;
+        return renderCard(it.c, it.i, oi);
+      });
+    })(), !progV.length && /* @__PURE__ */ React.createElement("div", { className: "empty" }, "從左邊的和弦盤點一個和弦，或直接套用一組進行範本開始。")), /* @__PURE__ */ React.createElement("div", { className: "dock" + (neckOpen && viewChord ? " open" : "") }, /* @__PURE__ */ React.createElement("div", { className: "sug" }, /* @__PURE__ */ React.createElement("div", { className: "sug-head" }, /* @__PURE__ */ React.createElement("div", { className: "sug-label" }, "接下來可以走"), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "btn-neck" + (neckOpen ? " on" : ""),
@@ -4509,7 +4668,10 @@ window.__CHORDLAB__ = function(){
       "aria-label": "總音量",
       value: master,
       onChange: (e) => setMaster(+e.target.value)
-    })))))), toast && /* @__PURE__ */ React.createElement("div", { className: "toast" }, toast));
+    })))))), dragId != null && (function () {
+      const k = progV.findIndex((c) => c.id === dragId);
+      return k < 0 ? null : renderCard(progV[k], k, -1, true);
+    })(), toast && /* @__PURE__ */ React.createElement("div", { className: "toast" }, toast));
   }
 
   // ────────────────────────────────────────────────────────────────────────
