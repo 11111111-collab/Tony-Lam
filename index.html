@@ -2651,8 +2651,8 @@ window.__CHORDLAB__ = function(){
     if (missing.includes(3) || missing.includes(4)) name += "no3";
     if (missing.includes(7)) name += "no5";
     if (bass !== 0) name += "/" + sp.note((rootPc + bass) % 12);
-    const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + IV_LABEL[bass];
-    return { name, inv, stack: semis.map((sm) => IV_LABEL[sm]).join("-"), extra: ex, missing };
+    const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + ivLabel(bass, quality);
+    return { name, inv, stack: semis.map((sm) => ivLabel(sm, quality)).join("-"), extra: ex, missing };
   }
   const METRIC_W = [1, 0.34, 0.62, 0.4, 0.85, 0.34, 0.66, 0.4, 0.92, 0.34, 0.64, 0.4, 0.86, 0.36, 0.68, 0.42];
   const ACCENT_PROFILES = {
@@ -3929,7 +3929,7 @@ window.__CHORDLAB__ = function(){
         return /* @__PURE__ */ React.createElement("button", { key: wi, className: "win-btn" + (key === curKey ? " on" : "") + (ok ? "" : " weak"),
           onClick: () => { patchVoice(viewChord, { win: w }); } },
           /* @__PURE__ */ React.createElement("b", null, w ? nums.join("-") : "整型"),
-          /* @__PURE__ */ React.createElement("i", null, semis.map((sm) => IV_LABEL[sm]).join("-")));
+          /* @__PURE__ */ React.createElement("i", null, semis.map((sm) => ivLabel(sm, viewChord.quality)).join("-")));
       });
     })()), (function(){ const ov = (viewChord.cfg && viewChord.cfg.ov) || {}; const ks = Object.keys(ov);
       const cfg = viewChord.cfg || {};
@@ -4461,6 +4461,17 @@ window.__CHORDLAB__ = function(){
     }), !showNut && /* @__PURE__ */ React.createElement("text", { x: X0 + sw * 0.5, y: H - 8, className: "fb-pos" }, base + capo, " fr")));
   }
   const IV_LABEL = { 0: "R", 1: "♭9", 2: "9", 3: "♭3", 4: "3", 5: "11", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
+  /**
+   * 減七和弦疊的是小三度：R–♭3–♭5–♭♭7。第四個音跟大六度同一個音高，但功能
+   * 完全不同——它是降兩次的七度，會半音往下解決到目標和弦的三度；六度是加色音，
+   * 不解決。所以在 dim7 上要寫 °7，不能寫 6。
+   *
+   * 這件事原本只有指板做（那裡寫死一個 semi === 9 的判斷），和弦堆疊直接查
+   * IV_LABEL 就寫成 6，同一顆音在上面叫 6、在下面叫 °7，看的人會以為模塊裡
+   * 少了一個音。抽成一個判斷讓兩邊共用，以後再多一個標示的地方也接得上。
+   */
+  const isDimSeventh = (semi, quality) => semi === 9 && quality === "dim7";
+  const ivLabel = (semi, quality) => isDimSeventh(semi, quality) ? "°7" : IV_LABEL[semi];
   const DEG_LABEL = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
   // 指板總格數。圖形按鈕要算「哪些圖形排得進指板」，NeckView 以外也要用，
@@ -4677,7 +4688,7 @@ window.__CHORDLAB__ = function(){
         },
         isActive && /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "14", className: "nk-ring" }),
         /* @__PURE__ */ React.createElement("circle", { cx, cy, r: "10.5" }),
-        /* @__PURE__ */ React.createElement("text", { x: cx, y: cy + 3.6, className: labelMode !== "deg" ? "sf" : "" }, semi === 9 && chord.quality === "dim7" && labelMode === "deg" ? "°7" : labelFor(sm, pc))
+        /* @__PURE__ */ React.createElement("text", { x: cx, y: cy + 3.6, className: labelMode !== "deg" ? "sf" : "" }, labelMode === "deg" && isDimSeventh(semi, chord.quality) ? "°7" : labelFor(sm, pc))
       );
     }))), Array.from(
       { length: NF + 1 },
