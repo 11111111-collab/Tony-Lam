@@ -312,8 +312,14 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .win-btn.on{border-color:var(--brass);background:#1D2030}
 .win-btn.on b{color:var(--brass)}
 .win-btn.weak{opacity:.45}
-.seg.tiny.pat{margin-left:2px}
-.seg.tiny.pat button{min-width:22px}
+.seg.tiny.pat{margin-left:2px;overflow-x:auto;overflow-y:hidden;max-width:230px;scrollbar-width:thin;scroll-behavior:smooth}
+.seg.tiny.pat::-webkit-scrollbar{height:3px}
+.seg.tiny.pat::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.seg.tiny.pat button{min-width:22px;flex:0 0 auto}
+/* 第二輪（高八度）從這裡開始，給一條分隔線，免得 1234567123 看不出斷點 */
+.seg.tiny.pat button.octstart{box-shadow:inset 1px 0 0 var(--line)}
+.seg.tiny.pat button.oct{opacity:.82}
+.seg.tiny.pat button.oct.on{opacity:1}
 .capo-key{margin-left:6px;font-family:var(--mono);font-size:10.5px;color:var(--brass);
   border:1px solid var(--brass2);border-radius:99px;padding:2px 8px;white-space:nowrap}
 .mods{display:flex;flex-wrap:wrap;gap:4px}
@@ -3565,13 +3571,24 @@ window.__CHORDLAB__ = function(){
       if (effPosSys !== "3nps" || nSc !== 7) return [];
       const out = [];
       const floor = capo > 0 ? capo : 1;
-      for (let f = floor; f <= 22 && out.length < 7; f++) {
-        if (neckScaleSet.has((STRING_MIDI[0] + f) % 12)) out.push(f);
+      for (let f = floor; f <= NECK_FRETS; f++) {
+        if (!neckScaleSet.has((STRING_MIDI[0] + f) % 12)) continue;
+        /**
+         * 七個圖形走完一圈八度之後還沒到指板盡頭，接下去就是高八度的
+         * 圖1、圖2……所以不停在第七個，一路排到排不下為止。
+         *
+         * 「排不下」的判準是圖形殘缺：高把位過了某一格，圖形的上緣會被
+         * 指板末端切掉，某幾條弦只剩一兩個音，那已經不是這個圖形了。
+         * 每弦滿三音才收。三個調實測下來切點都落在第 10 個，而第 10 個
+         * 剛好收在最後一格（C 大調是 17–22），指板末端看得到。
+         */
+        const box = scaleBoxFrets(neckScaleSet, f, "3nps", capo, NECK_FRETS);
+        if (box.every((r) => r.length === NPS)) out.push(f);
       }
       return out;
     })();
     // 圖形是七聲音階 + 一弦三音才有的東西，條件不成立時選擇不能留著生效
-    const effBoxPat = patAnchors.length === 7 && boxPat >= 1 && boxPat <= 7 ? boxPat : 0;
+    const effBoxPat = boxPat >= 1 && boxPat <= patAnchors.length ? boxPat : 0;
     const patAnchor = effBoxPat ? patAnchors[effBoxPat - 1] : null;
     const scaleOpts = (() => {
       const q = viewChord ? viewChord.quality : "maj";
@@ -3807,14 +3824,24 @@ window.__CHORDLAB__ = function(){
     }, l))),
     // 七個圖形的直接切換。教材是照把位高低排的，所以按鈕上除了號碼還標起音
     // 音級——換調之後同一個號碼的起音會不一樣，只有號碼會看不出是哪一個。
-    patAnchors.length === 7 && /* @__PURE__ */ React.createElement("div", { className: "seg tiny pat" },
-      [["自動", 0, "跟著選中的和弦把位決定圖形"]].concat(patAnchors.map((f, i) => {
+    patAnchors.length >= 7 && /* @__PURE__ */ React.createElement("div", { className: "seg tiny pat" },
+      [["自動", 0, "跟著選中的和弦把位決定圖形", ""]].concat(patAnchors.map((f, i) => {
+        // 號碼循環 1–7：第八個就是高八度的圖1，號碼跟著回到 1
+        const n = (i % 7) + 1, oct = i >= 7;
+        // 第二輪的第一顆要畫分隔線。CSS 的 :first-of-type 會抓到「自動」那顆，
+        // 選不到這裡要的位置，所以直接在這標記
+        const octStart = i === 7;
         const deg = degLabelOf((STRING_MIDI[0] + f) % 12);
-        return [String(i + 1), i + 1, "圖 " + (i + 1) + "：低音 E 弦 " + f + " 品起音，音級 " + deg];
-      })).map(([l, v, t]) => /* @__PURE__ */ React.createElement("button", {
+        return [String(n), i + 1,
+          "圖 " + n + (oct ? "（高八度）" : "") + "：低音 E 弦 " + f + " 品起音，音級 " + deg,
+          (oct ? " oct" : "") + (octStart ? " octstart" : "")];
+      })).map(([l, v, t, extra]) => /* @__PURE__ */ React.createElement("button", {
         key: v,
-        className: neckSolid === "pos" && effBoxPat === v ? "on" : "",
+        className: (neckSolid === "pos" && effBoxPat === v ? "on" : "") + extra,
         title: t,
+        // 選到捲出視窗外的圖形時（例如自動跳到高八度那幾個）要自己捲回畫面內
+        ref: (el) => { if (el && neckSolid === "pos" && effBoxPat === v && v > 0)
+          el.scrollIntoView({ block: "nearest", inline: "nearest" }); },
         onClick: () => { setBoxPat(v); setNeckSolid("pos"); }
       }, l))),
     /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => setNeckOpen(false) }, "收起 ▾"))), /* @__PURE__ */ React.createElement(
@@ -4410,8 +4437,11 @@ window.__CHORDLAB__ = function(){
   const IV_LABEL = { 0: "R", 1: "♭9", 2: "9", 3: "♭3", 4: "3", 5: "11", 6: "♭5", 7: "5", 8: "♯5", 9: "6", 10: "♭7", 11: "7" };
   const DEG_LABEL = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
   const roleOf = (semi) => semi === 0 ? "root" : semi === 3 || semi === 4 ? "third" : semi === 6 || semi === 7 || semi === 8 ? "fifth" : "ext";
+  // 指板總格數。圖形按鈕要算「哪些圖形排得進指板」，NeckView 以外也要用，
+  // 所以提到模組層，兩邊看同一個數字
+  const NECK_FRETS = 22;
   function NeckView({ chord, capo, keyPc, scale, sp, showScale, onPickNote, onPickVoicing, ovMap, scaleSet, labelMode, solid, posSys, degTonic = 0, patAnchor = null }) {
-    const NF = 22;
+    const NF = NECK_FRETS;
     const W = 980, H = 250, NUT = 58, END = 962;
     const fw = (END - NUT) / NF;
     const yOf = (i) => 178 - i * 27;
