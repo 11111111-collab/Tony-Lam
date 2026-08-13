@@ -2651,7 +2651,7 @@ window.__CHORDLAB__ = function(){
     if (missing.includes(3) || missing.includes(4)) name += "no3";
     if (missing.includes(7)) name += "no5";
     if (bass !== 0) name += "/" + sp.note((rootPc + bass) % 12);
-    const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + ivLabel(bass, quality);
+    const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 || isDimSeventh(bass, quality) ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + ivLabel(bass, quality);
     return { name, inv, stack: semis.map((sm) => ivLabel(sm, quality)).join("-"), extra: ex, missing };
   }
   const METRIC_W = [1, 0.34, 0.62, 0.4, 0.85, 0.34, 0.66, 0.4, 0.92, 0.34, 0.64, 0.4, 0.86, 0.36, 0.68, 0.42];
