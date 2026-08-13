@@ -463,6 +463,33 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   padding:8px 12px;font-size:12px;color:var(--dim);background:var(--panel2)}
 .btn-toggle:hover{border-color:var(--brass2);color:var(--txt)}
 .metro-dot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.metro-wrap{position:relative;display:flex;align-items:stretch}
+/* .cl-root button 有 background:none;border:none（特異度 0,1,1），單一 class
+   壓不過它，所以這兩條要加上 .cl-root 才吃得到 */
+.cl-root .btn-metro-more{padding:0 6px;margin-left:-1px;border:1px solid var(--line);border-left:0;
+  border-radius:0 7px 7px 0;background:var(--panel2);color:var(--dim);font-size:10px}
+.btn-metro-more.on{color:var(--brass);border-color:var(--brass2)}
+.metro-panel{position:absolute;top:calc(100% + 7px);right:0;width:288px;background:#181B22;
+  border:1px solid var(--brass2);border-radius:9px;padding:10px;z-index:200;
+  box-shadow:0 16px 40px -12px #000;animation:popIn .13s ease-out;
+  display:flex;flex-direction:column;gap:9px;text-align:left}
+.metro-row{display:flex;align-items:center;gap:7px}
+.metro-lbl{font-size:9.5px;letter-spacing:.14em;color:var(--dim);flex-shrink:0;width:38px}
+.metro-grid{display:flex;gap:5px;width:100%}
+.metro-beat{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.metro-ticks{display:flex;gap:2px}
+.metro-beat>i{font-family:var(--mono);font-size:8.5px;font-style:normal;color:var(--dim);text-align:center}
+/* 拍點方塊。lv3 重音、lv2 次重音、lv1 一般、lv0 靜音；lit 是現在響到的那一格 */
+/* 底色要比面板底(#181B22)亮得夠多，不然「一般」那格會跟背景糊在一起，
+   八個細分點看起來只剩四個 */
+.cl-root .mtick{flex:1;min-width:0;height:26px;border-radius:3px;border:1px solid #3A4050;
+  background:#272C38;transition:background .05s,box-shadow .05s}
+.mtick.lv0{background:transparent;border-style:dashed;opacity:.5}
+.mtick.lv2{background:var(--brass2)}
+.mtick.lv3{background:var(--brass)}
+.mtick.lit{background:var(--jade);border-color:var(--jade);box-shadow:0 0 9px -1px var(--jade);opacity:1}
+.metro-vol{flex:1;accent-color:var(--brass)}
+.metro-hint{font-size:9px;color:var(--dim);line-height:1.5}
 .btn-toggle.on{color:var(--jade);border-color:var(--jade)}
 .btn-toggle.on .metro-dot{background:var(--jade);animation:blink 1s steps(1) infinite}
 
@@ -2164,10 +2191,13 @@ window.__CHORDLAB__ = function(){
         noise: { type: "white" },
         envelope: { attack: 1e-3, decay: 0.035, sustain: 0 }
       }).connect(new Tone.Filter(9e3, "highpass").connect(new Tone.Volume(-8).connect(this.gDrum)));
+      // 節拍器接在 dest 而不是任何一條樂器匯流排上——它不進混音、不進錄音，
+      // 只有你自己聽得到。音量另外留一個把手，練習時常要它比伴奏大聲或小聲。
+      this.clickVol = new Tone.Volume(-8).connect(dest);
       this.click = new Tone.Synth({
         oscillator: { type: "sine" },
         envelope: { attack: 1e-3, decay: 0.028, sustain: 0, release: 0.01 }
-      }).connect(new Tone.Volume(-8).connect(dest));
+      }).connect(this.clickVol);
       // 取樣吉他（四段力度）自己的音量匯流排，走原吉他匯流排的殘響與混音
       this.gLayered = new Tone.Volume(-3).connect(this.gGuitar);
       this.tone = "acoustic";
@@ -2486,9 +2516,17 @@ window.__CHORDLAB__ = function(){
       if (this.mode.bass === "sample" && this.bass) this.bass.triggerAttackRelease(n, dur, time, vel);
       else this.bassFallback.triggerAttackRelease(n, dur, time, vel);
     }
-    playClick(accent, time) {
-      if (!this.click) return;
-      this.click.triggerAttackRelease(accent ? "C7" : "C6", 0.03, time, accent ? 0.75 : 0.42);
+    /**
+     * 四段強弱：3 小節頭、2 拍頭、1 細分、0 靜音。
+     * 高低用音高分而不是只用音量——細分點很密時，光靠音量差聽不出哪一下是拍頭。
+     */
+    playClick(level, time) {
+      if (!this.click || !level) return;
+      const spec = CLICK_LEVELS[level] || CLICK_LEVELS[1];
+      this.click.triggerAttackRelease(spec[0], 0.03, time, spec[1]);
+    }
+    setClickVol(db) {
+      if (this.clickVol) this.clickVol.volume.value = db;
     }
     playDrum(kind, time, vel) {
       const k = this.drums && this.drums[kind];
@@ -2828,11 +2866,22 @@ window.__CHORDLAB__ = function(){
     if (p.arc) f *= 1 + p.arc * (barPos - 0.45);
     return f;
   }
+  // 節拍器四段強弱的音高與力度。3 小節頭、2 拍頭、1 細分、0 靜音（不發聲）
+  const CLICK_LEVELS = { 3: ["C7", 0.85], 2: ["G6", 0.6], 1: ["C6", 0.36] };
+  // 每拍可以切成幾下。三連音是 3，所以間隔會是 4/3 個十六分格——Tone 的
+  // bar:beat:sixteenth 記法吃小數（實測 "0:0:0.5" 在 120BPM 是 0.0625 秒，
+  // 剛好三十二分音符），所以三連與三十二分都排得出來。
+  const METRO_DIVS = [[1, "4分"], [2, "8分"], [3, "三連"], [4, "16分"], [8, "32分"]];
+  const metroDefaultPat = (div) => Array.from({ length: 4 * div },
+    (_, i) => i === 0 ? 3 : i % div === 0 ? 2 : 1);
   const SIX = (b) => Math.max(1, Math.round(b * 4));
   const beatsOf = (ch) => ch.beats != null ? ch.beats : (ch.bars || 1) * 4;
   function buildSchedule(prog, opts) {
     const { strumKey, drumKey, bassKey, pianoKey, capo, useGuitar, usePiano, useBass, useDrum, useClick } = opts;
+    const metroDiv = opts.metroDiv || 1;
+    const metroPat = opts.metroPat || metroDefaultPat(metroDiv);
     const events = [];
+    // abs 可能是小數（節拍器的細分點），bar:beat:sixteenth 三段都要跟著算得對
     const at = (abs) => `${Math.floor(abs / 16)}:${Math.floor(abs % 16 / 4)}:${abs % 4}`;
     const feel = STRUM_FEEL[strumKey] || "straight";
     const sp = STRUM_PATTERNS[strumKey] || STRUM_PATTERNS.roll || { events: [] };
@@ -2916,8 +2965,25 @@ window.__CHORDLAB__ = function(){
             duck: d.duck, chordIdx: ci, beat: abs / 4
           }));
         }
+        /**
+         * 節拍器。一拍切成 metroDiv 下，所以只在拍頭進來一次，然後把該拍的
+         * 細分點一次排完——這樣三連音（間隔 4/3 個十六分格）跟三十二分
+         * （間隔 0.5）用同一段程式就出得來，不必為了細於十六分而改主格線。
+         *
+         * 靜音的拍點仍然要送事件，只是不發聲：燈號要照樣走過去，不然被你
+         * 設成靜音的那一格看起來像卡住。
+         */
         if (useClick && abs % 4 === 0) {
-          events.push({ time: at(abs), kind: "click", accent: slot === 0, chordIdx: ci, beat: abs / 4 });
+          const step = 4 / metroDiv;
+          const beatInBar = abs % 16 / 4;
+          for (let k = 0; k < metroDiv; k++) {
+            const tick = beatInBar * metroDiv + k;
+            events.push({
+              time: at(abs + k * step), kind: "click",
+              level: metroPat[tick] == null ? 1 : metroPat[tick],
+              tick, chordIdx: ci, beat: (abs + k * step) / 4
+            });
+          }
         }
       }
       cur += span;
@@ -2959,6 +3025,27 @@ window.__CHORDLAB__ = function(){
     const [mode, setMode] = useState("major");
     const [bpm, setBpm] = useState(92);
     const [bpmText, setBpmText] = useState("92");
+    /**
+     * 敲擊定速：連續敲的間隔平均起來就是速度。三秒沒敲就重來，
+     * 不然上一輪的殘留會把平均值拉歪。
+     */
+    const tapTempo = () => {
+      const now = performance.now();
+      const arr = tapRef.current.filter((t) => now - t < 3e3);
+      arr.push(now);
+      tapRef.current = arr.slice(-6);
+      if (arr.length < 2) return;
+      const gaps = arr.slice(1).map((t, i) => t - arr[i]);
+      const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+      const n = Math.round(6e4 / avg);
+      if (n >= 40 && n <= 220) setBpm(n);
+    };
+    const cycleTick = (i) => setMetroPats((m) => {
+      const cur = (m[metroDiv] || metroDefaultPat(metroDiv)).slice();
+      // 一般 → 次重音 → 重音 → 靜音 → 一般
+      cur[i] = { 1: 2, 2: 3, 3: 0, 0: 1 }[cur[i] == null ? 1 : cur[i]];
+      return { ...m, [metroDiv]: cur };
+    });
     const [capo, setCapo] = useState(0);
     const [seventhMode, setSeventhMode] = useState(false);
     /**
@@ -2993,6 +3080,17 @@ window.__CHORDLAB__ = function(){
     const [labelMode, setLabelMode] = useState("deg");
     const [swing, setSwing] = useState(0);
     const [metro, setMetro] = useState(false);
+    const [metroOpen, setMetroOpen] = useState(false);
+    const [metroDiv, setMetroDiv] = useState(1);
+    // 重音樣式按細分數分開存，切回去原本的細分時你調過的重音還在
+    const [metroPats, setMetroPats] = useState({});
+    const [metroVol, setMetroVol] = useState(-8);
+    const [metroTick, setMetroTick] = useState(-1);
+    const metroPat = metroPats[metroDiv] || metroDefaultPat(metroDiv);
+    // 排程的 callback 是閉包，面板開關要用 ref 讀才拿得到當下的值
+    const metroOpenRef = useRef(false);
+    metroOpenRef.current = metroOpen;
+    const tapRef = useRef([]);
     const [gtone, setGtone] = useState("acoustic");
     const [ptone, setPtone] = useState(PIANO_DEFAULT);
     const [playing, setPlaying] = useState(false);
@@ -3190,6 +3288,14 @@ window.__CHORDLAB__ = function(){
     }, [vols]);
     useEffect(() => {
       const eng = engineRef.current;
+      if (eng && eng.ready && eng.setClickVol) eng.setClickVol(metroVol);
+    }, [metroVol, booted]);
+    // 停播或關掉節拍器時把燈熄掉，不然會停在最後亮的那一格看起來像當掉
+    useEffect(() => {
+      if (!playing || !metro) setMetroTick(-1);
+    }, [playing, metro]);
+    useEffect(() => {
+      const eng = engineRef.current;
       if (eng && eng.ready && eng.setMaster) eng.setMaster(master);
     }, [master, booted]);
     useEffect(() => {
@@ -3223,7 +3329,9 @@ window.__CHORDLAB__ = function(){
         usePiano: on.piano,
         useBass: on.bass,
         useDrum: on.drum,
-        useClick: metro
+        useClick: metro,
+        metroDiv,
+        metroPat
       });
       const part = new Tone.Part((time, ev) => {
         if (ev.kind === "strum") {
@@ -3248,7 +3356,10 @@ window.__CHORDLAB__ = function(){
           eng.playDrum(ev.drum, time, ev.vel);
           if (ev.duck) eng.duck(time, ev.vel);
         } else if (ev.kind === "click") {
-          eng.playClick(ev.accent, time);
+          eng.playClick(ev.level, time);
+          // 燈號只在面板開著時才更新——三十二分一小節有 32 個點，面板收起來
+          // 時每小節多 32 次 render 是白花的
+          if (metroOpenRef.current) getDraw().schedule(() => setMetroTick(ev.tick), time);
         } else if (ev.kind === "mark") {
           getDraw().schedule(() => setCurIdx(ev.chordIdx), time);
         }
@@ -3263,7 +3374,7 @@ window.__CHORDLAB__ = function(){
         if (partRef.current === part) partRef.current = null;
         try { part.dispose(); } catch (e) {}
       };
-    }, [booted, engineRef.current && engineRef.current.ready, progV, strumKey, drumKey, bassKey, pianoKey, capo, on, metro, fireSweep]);
+    }, [booted, engineRef.current && engineRef.current.ready, progV, strumKey, drumKey, bassKey, pianoKey, capo, on, metro, metroDiv, metroPat, fireSweep]);
     const togglePlay = useCallback(async () => {
       if (!engineRef.current || !engineRef.current.ready) return;
       const T = getTransport();
@@ -3897,14 +4008,67 @@ window.__CHORDLAB__ = function(){
       { className: "capo-key", title: "手指按的還是 " + sp.note(keyPc) + " 調的指型，實際發出的是這個調" },
       "實際 " + sp.note((keyPc + capo) % 12) + (mode === "minor" ? "m" : "")
     )), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "btn-toggle" + (metro ? " on" : ""),
-        onClick: () => setMetro((v) => !v),
-        title: "節拍器只有你自己聽得到，錄音與匯出都不會收進去"
-      },
-      /* @__PURE__ */ React.createElement("span", { className: "metro-dot" }),
-      "節拍器"
+      "div",
+      { className: "metro-wrap" },
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "btn-toggle" + (metro ? " on" : ""),
+          onClick: () => setMetro((v) => !v),
+          title: "節拍器只有你自己聽得到，錄音與匯出都不會收進去"
+        },
+        /* @__PURE__ */ React.createElement("span", { className: "metro-dot" }),
+        "節拍器"
+      ),
+      /* @__PURE__ */ React.createElement("button", {
+        className: "btn-metro-more" + (metroOpen ? " on" : ""),
+        onClick: () => setMetroOpen((v) => !v),
+        title: "節拍器設定"
+      }, "▾"),
+      metroOpen && /* @__PURE__ */ React.createElement(
+        "div",
+        { className: "metro-panel" },
+        /* @__PURE__ */ React.createElement("div", { className: "metro-row" },
+          /* @__PURE__ */ React.createElement("span", { className: "metro-lbl" }, "細分"),
+          /* @__PURE__ */ React.createElement("div", { className: "seg tiny" },
+            METRO_DIVS.map(([d, l]) => /* @__PURE__ */ React.createElement("button", {
+              key: d, className: metroDiv === d ? "on" : "",
+              onClick: () => setMetroDiv(d)
+            }, l)))),
+        /* @__PURE__ */ React.createElement("div", { className: "metro-grid" },
+          Array.from({ length: 4 }, (_, bi) => /* @__PURE__ */ React.createElement("div",
+            { className: "metro-beat", key: bi },
+            /* @__PURE__ */ React.createElement("div", { className: "metro-ticks" },
+              Array.from({ length: metroDiv }, (_, k) => {
+                const i = bi * metroDiv + k;
+                const lv = metroPat[i] == null ? 1 : metroPat[i];
+                return /* @__PURE__ */ React.createElement("button", {
+                  key: k,
+                  className: "mtick lv" + lv + (metroTick === i ? " lit" : ""),
+                  title: ["靜音", "一般", "次重音", "重音"][lv] + "（點一下換）",
+                  onClick: () => cycleTick(i)
+                });
+              })),
+            /* @__PURE__ */ React.createElement("i", null, bi + 1)))),
+        /* @__PURE__ */ React.createElement("div", { className: "metro-row" },
+          /* @__PURE__ */ React.createElement("span", { className: "metro-lbl" }, "音量"),
+          /* @__PURE__ */ React.createElement("input", {
+            className: "metro-vol", type: "range", min: -30, max: 6, step: 1,
+            value: metroVol, "aria-label": "節拍器音量",
+            onChange: (e) => setMetroVol(+e.target.value)
+          })),
+        /* @__PURE__ */ React.createElement("div", { className: "metro-row" },
+          /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: tapTempo },
+            "敲擊定速"),
+          /* @__PURE__ */ React.createElement("span", { className: "metro-hint" }, bpm + " BPM"),
+          /* @__PURE__ */ React.createElement("div", { className: "spacer" }),
+          /* @__PURE__ */ React.createElement("button", {
+            className: "btn-ghost sm",
+            onClick: () => setMetroPats((m) => { const n = { ...m }; delete n[metroDiv]; return n; })
+          }, "重設重音")),
+        /* @__PURE__ */ React.createElement("div", { className: "metro-hint" },
+          "點方塊換強弱：一般 → 次重音 → 重音 → 靜音。節拍器不進錄音與匯出。")
+      )
     ), /* @__PURE__ */ React.createElement("button", { className: "btn-rec" + (recording ? " on" : ""), onClick: toggleRec }, /* @__PURE__ */ React.createElement("span", { className: "dot" }), recording ? "停止錄音" : "錄音"), /* @__PURE__ */ React.createElement("button", { className: "btn-primary" + (playing ? " playing" : ""), onClick: togglePlay }, playing ? "■ 停止" : "▶ 播放"), /* @__PURE__ */ React.createElement("div", { className: "pick exp" + (expOpen ? " open" : "") }, /* @__PURE__ */ React.createElement("button", { className: "btn-exp" + (expOpen ? " on" : ""), onClick: () => setExpOpen((v) => !v), title: "匯出成各種音樂檔案格式" }, "匯出 ▾"), expOpen && /* @__PURE__ */ React.createElement("div", { className: "exp-menu" }, EXPORTS.map((x) => /* @__PURE__ */ React.createElement("button", { key: x.k, className: "exp-item", onClick: () => { setExpOpen(false); doExport(x.k); } }, /* @__PURE__ */ React.createElement("b", null, x.n), /* @__PURE__ */ React.createElement("i", null, x.s)))))), /* @__PURE__ */ React.createElement("main", { className: "mid" }, /* @__PURE__ */ React.createElement("section", { className: "col left" }, /* @__PURE__ */ React.createElement("div", { className: "key-row" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "調性"), /* @__PURE__ */ React.createElement(Picker, { value: keyPc, options: keyOptions, onChange: transposeTo, width: 74, cls: "key" }), /* @__PURE__ */ React.createElement(
       Picker,
       {
