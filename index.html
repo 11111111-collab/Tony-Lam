@@ -259,7 +259,9 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .mute-btn.off b{color:var(--rust)}
 .card-mute{font-family:var(--mono);font-style:normal;color:var(--rust);margin-right:5px}
 .len-row{display:flex;flex-wrap:wrap;gap:4px}
-.quals{display:flex;flex-wrap:wrap;gap:4px}
+.quals{display:grid;grid-template-columns:auto 1fr;gap:5px 7px;align-items:start}
+.qual-grp{font-size:10px;font-weight:600;color:var(--brass2);letter-spacing:.06em;line-height:24px;white-space:nowrap}
+.qual-chips{display:flex;flex-wrap:wrap;gap:4px}
 .chip.q{font-family:var(--serif);font-size:12.5px;padding:4px 7px}
 .chip.q:hover{border-color:var(--brass);color:var(--txt)}
 .chip.q.on{background:var(--brass);color:#080B12;border-color:var(--brass);font-weight:600}
@@ -772,6 +774,25 @@ window.__CHORDLAB__ = function(){
   };
   const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
   const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10];
+  /**
+   * 和弦性質按鈕的分組。照「三度與七度的性質」分——那才是決定和弦色彩的東西，
+   * 原本是照「三和弦→七和弦→延伸音」的加法順序排，找一個小調的延伸和弦要在
+   * 三個地方之間跳。
+   *
+   *   大    大三度 ＋ 大七／六／九，明亮
+   *   小    小三度
+   *   屬    大三度 ＋ 小七度，有往下解決的傾向
+   *         7sus4 雖然把三音掛留掉，功能仍是屬和弦，所以放這裡不放掛留
+   *   減    減五度，含半減七
+   *   其他  沒有三度可分大小的（掛留、強力），以及增五度的 aug
+   */
+  const QUAL_GROUPS = [
+    ["大", ["maj", "maj7", "sixth", "add9", "maj9"]],
+    ["小", ["min", "min7", "m6", "min9"]],
+    ["屬", ["dom7", "dom9", "dom13", "sus7"]],
+    ["減", ["dim", "m7b5", "dim7"]],
+    ["其他", ["sus2", "sus4", "power", "aug"]]
+  ];
   const MAJOR_TRIADS = ["maj", "min", "min", "maj", "maj", "min", "dim"];
   const MINOR_TRIADS = ["min", "dim", "maj", "min", "min", "maj", "maj"];
   const MAJOR_SEVENTHS = ["maj7", "min7", "min7", "maj7", "dom7", "min7", "m7b5"];
@@ -3968,43 +3989,27 @@ window.__CHORDLAB__ = function(){
           "\u63a5\u548c\u5f26"
         ),
         /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "和弦性質"),
-        /* @__PURE__ */ React.createElement("div", { className: "quals" }, [
-          "maj",
-          "min",
-          "dom7",
-          "min7",
-          "maj7",
-          "sixth",
-          "m6",
-          "sus2",
-          "sus4",
-          "sus7",
-          "power",
-          "add9",
-          "dom9",
-          "maj9",
-          "min9",
-          "dom13",
-          "dim",
-          "dim7",
-          "m7b5",
-          "aug"
-        ].map((q) => /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            key: q,
-            title: QUALITIES[q].full,
-            className: "chip q" + (c.quality === q ? " on" : ""),
-            onClick: () => {
-              setVoiceMap((m) => { const n = { ...m }; delete n["c" + c.id]; return n; });
-              const vs = getVoicings(c.rootPc, q, capo);
-              // 停在原本的把位附近，不要跳回最低把位
-              const idx = nearestVoicing(vs, c.voicing && c.voicing.shape);
-              setProg((p) => p.map((x) => x.id === c.id ? { ...x, quality: q, voiceIdx: idx } : x));
-              previewVoicing({ ...vs[idx], capo }, "R", { ...c, quality: q });
-            }
-          },
-          QUALITIES[q].label || "大三"
+        /* @__PURE__ */ React.createElement("div", { className: "quals" }, QUAL_GROUPS.map(([grp, keys]) => /* @__PURE__ */ React.createElement(
+          React.Fragment,
+          { key: grp },
+          /* @__PURE__ */ React.createElement("div", { className: "qual-grp" }, grp),
+          /* @__PURE__ */ React.createElement("div", { className: "qual-chips" }, keys.map((q) => /* @__PURE__ */ React.createElement(
+            "button",
+            {
+              key: q,
+              title: QUALITIES[q].full,
+              className: "chip q" + (c.quality === q ? " on" : ""),
+              onClick: () => {
+                setVoiceMap((m) => { const n = { ...m }; delete n["c" + c.id]; return n; });
+                const vs = getVoicings(c.rootPc, q, capo);
+                // 停在原本的把位附近，不要跳回最低把位
+                const idx = nearestVoicing(vs, c.voicing && c.voicing.shape);
+                setProg((p) => p.map((x) => x.id === c.id ? { ...x, quality: q, voiceIdx: idx } : x));
+                previewVoicing({ ...vs[idx], capo }, "R", { ...c, quality: q });
+              }
+            },
+            QUALITIES[q].label || "大三"
+          )))
         ))),
         /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "低音"),
         /* @__PURE__ */ React.createElement("div", { className: "cprop-row" }, /* @__PURE__ */ React.createElement(
