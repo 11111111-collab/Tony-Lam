@@ -368,47 +368,52 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 /* 右欄和弦圖 */
 .voice-name{font-family:var(--serif);font-size:26px;display:flex;align-items:baseline;gap:9px}
 .voice-name span{font-family:var(--sans);font-size:10.5px;color:var(--dim);letter-spacing:.1em}
-/* ── 和弦圖：舊式映像管電視 ──────────────────────────────────────────────
- * 整台電視都靠 .fb-wrap 這一層做出來，沒有動到 render——和弦圖本身是一張
- * SVG，把它當成螢幕上的畫面，外面包機殼、上面疊濾鏡。
+/* ── 和弦圖：Pip-Boy 風格的映像管電視 ────────────────────────────────────
+ * 白色機殼、正方形比例，螢幕裡是單色磷光綠的介面。
  *
- *   機殼    上亮下暗的漸層黑塑膠，內緣一道高光當倒角
- *   螢幕    水平圓角大於垂直圓角（12px/16px），做出映像管微鼓的弧面
- *   濾鏡    掃描線、四角暈影、中心泛光，三層疊在畫面上
- *   色散    左右各推 0.6px 的紅與青，模擬映像管的色偏
- *   品牌條  下緣的喇叭網與字
+ * 整台電視與配色都只靠 CSS——和弦圖 SVG 裡的每個顏色都取自 CSS 變數，
+ * 所以在這一層重新定義那些變數，整張圖就變成綠色，render 一行都不用動。
+ *
+ * 改成單色不會丟失資訊：圓點裡本來就有 R／3／5 的文字，音級靠字讀，
+ * 不是只靠顏色分辨。手動加的音改用更亮的綠，仍然分得出來。
+ *
+ * SVG 的 viewBox 是 268×136，塞進接近正方的螢幕時由 preserveAspectRatio
+ * 置中，上下留黑——就像舊電視播寬螢幕訊號的樣子。
  * ──────────────────────────────────────────────────────────────────── */
-.fb-wrap{position:relative;isolation:isolate;
-  background:linear-gradient(#34373D 0%, #212327 22%, #131416 68%, #0A0B0D 100%);
-  border:1px solid #000;border-radius:16px;padding:16px 16px 30px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.7),
-             0 14px 30px -14px #000, 0 2px 6px -2px #000}
-.fb{width:100%;height:auto;display:block;position:relative;z-index:1;
-  background:radial-gradient(115% 105% at 50% 40%, #131B12 0%, #0A0E0A 60%, #050705 100%);
-  border-radius:13px/18px;padding:8px 6px;
-  /* 三層內陰影＝映像管邊緣的凹陷：外圈黑邊、內圈暗角、再一道細高光當玻璃緣 */
-  box-shadow:inset 0 0 0 2px #030403, inset 0 0 0 3px rgba(255,255,255,.05),
-             inset 0 0 34px rgba(0,0,0,.9), 0 0 0 1px rgba(0,0,0,.9);
-  /* 色偏＋整體泛綠，量抓在還讀得清楚的範圍 */
-  filter:saturate(1.12) contrast(1.05) brightness(1.02)
-         drop-shadow(.6px 0 0 rgba(255,60,90,.22)) drop-shadow(-.6px 0 0 rgba(0,190,255,.22))}
-/* 疊在畫面上的濾鏡層：掃描線、暈影、中心泛光 */
-.fb-wrap::before{content:"";position:absolute;inset:16px 16px 30px;z-index:2;
-  border-radius:13px/18px;pointer-events:none;
+.fb-wrap{
+  /* 螢幕內的配色，只在這台電視裡生效 */
+  --wood:#06100A; --string:#37FF95; --fret:#1B7A45; --dot:#0D2617;
+  --brass:#37FF95; --jade:#C6FFE0; --bone:#37FF95; --rust:#1A6E40; --dim:#23B368;
+  position:relative;isolation:isolate;aspect-ratio:1;display:flex;
+  background:linear-gradient(#FBFAF7 0%, #EFEDE7 20%, #DCD9D1 62%, #C2BFB6 100%);
+  border:1px solid #A7A49B;border-radius:16px;padding:15px 15px 28px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(0,0,0,.16),
+             0 14px 30px -16px #000, 0 2px 6px -3px rgba(0,0,0,.5)}
+.fb{flex:1;width:100%;height:100%;display:block;position:relative;z-index:1;
+  background:radial-gradient(112% 108% at 50% 42%, #0C1C12 0%, #071109 58%, #040A06 100%);
+  border-radius:13px/17px;padding:8px 6px;
+  /* 邊緣凹陷：外圈黑邊、內圈細亮線當玻璃緣、再一層暗角 */
+  box-shadow:inset 0 0 0 2px #020403, inset 0 0 0 3px rgba(55,255,149,.10),
+             inset 0 0 34px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.8);
+  /* 磷光的暈開與映像管色偏 */
+  filter:saturate(1.2) contrast(1.06)
+         drop-shadow(0 0 2px rgba(55,255,149,.5))
+         drop-shadow(.5px 0 0 rgba(255,70,90,.18)) drop-shadow(-.5px 0 0 rgba(0,200,255,.18))}
+/* 圓點裡的品數字是壓在亮綠底上的，要用螢幕的底色才讀得到 */
+.fb-wrap .fb-fnum{fill:#06100A}
+/* 疊在畫面上的濾鏡層 */
+.fb-wrap::before{content:"";position:absolute;inset:15px 15px 28px;z-index:2;
+  border-radius:13px/17px;pointer-events:none;
   background:
-    /* 玻璃反光：左上一道斜向的白，很淡但很有效 */
-    linear-gradient(146deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 16%, transparent 34%),
-    /* 掃描線 */
-    repeating-linear-gradient(to bottom, rgba(0,0,0,.3) 0 1px, transparent 1px 3px),
-    /* 磷光泛綠 */
-    radial-gradient(118% 104% at 50% 40%, rgba(140,255,185,.09) 0%, transparent 48%),
-    /* 四角暈影 */
-    radial-gradient(122% 110% at 50% 46%, transparent 48%, rgba(0,0,0,.62) 100%)}
-/* 下緣的喇叭網與品牌字 */
-.fb-wrap::after{content:"CHORD LAB";position:absolute;left:16px;right:16px;bottom:8px;height:15px;
+    linear-gradient(146deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 15%, transparent 32%),
+    repeating-linear-gradient(to bottom, rgba(0,0,0,.34) 0 1px, transparent 1px 3px),
+    radial-gradient(116% 104% at 50% 40%, rgba(55,255,149,.13) 0%, transparent 50%),
+    radial-gradient(122% 112% at 50% 46%, transparent 46%, rgba(0,0,0,.66) 100%)}
+/* 下緣的喇叭網與品牌字，白機殼上要用深色字 */
+.fb-wrap::after{content:"CHORD LAB";position:absolute;left:15px;right:15px;bottom:7px;height:15px;
   display:flex;align-items:center;justify-content:center;letter-spacing:.34em;
-  font-family:var(--mono);font-size:7.5px;color:#6E737C;pointer-events:none;
-  background:repeating-linear-gradient(to right, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
+  font-family:var(--mono);font-size:7.5px;color:#8B887F;pointer-events:none;
+  background:repeating-linear-gradient(to right, rgba(0,0,0,.07) 0 1px, transparent 1px 4px);
   border-radius:2px;text-indent:.34em}
 @media (prefers-reduced-motion:reduce){.fb-wrap::before{animation:none}}
 .fb-mark{fill:var(--dim);font-size:11px;text-anchor:middle}
