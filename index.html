@@ -221,9 +221,10 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   transform:translate(var(--fx),var(--fy)) rotate(var(--rot))}
 .card.no-anim{transition:none}
 /* 空出來的位置。虛線框讓你看得到它要落在哪 */
+/* 空位不畫框線，只用一塊比板面再暗一點的區域暗示，看起來像便利貼剛撕走
+   留下的痕跡 */
 .card-gap{width:116px;min-height:108px;border-radius:2px;flex:0 0 auto;
-  border:2px dashed color-mix(in srgb,#FFFFFF 22%,transparent);
-  background:rgba(0,0,0,.14);transition:transform .18s ease}
+  background:rgba(0,0,0,.13);transition:transform .18s ease}
 /* 拿起來那張：脫離版面跟著游標，傾斜再大一點、影子拉遠，像離開板面 */
 .card.ghost{position:fixed;z-index:400;pointer-events:none;margin:0;
   --rot:-4deg;transform:rotate(var(--rot)) scale(1.06);
@@ -3593,13 +3594,28 @@ window.__CHORDLAB__ = function(){
       const g = ghostRef.current;
       if (g) { g.style.left = gx + "px"; g.style.top = gy + "px"; }
       // 跟每一張沒被拿起來的比重疊面積，超過半張才算數
+      /**
+       * 量的是版面位置（offsetLeft／offsetTop），不是 getBoundingClientRect。
+       *
+       * 兩個理由，都是實測撞到的：
+       *   補位動畫進行中，卡片正在平移，getBoundingClientRect 讀到的是動畫
+       *   中間值，判定會依據一個「還沒到位」的位置做決定。
+       *   便利貼本身有旋轉，getBoundingClientRect 回的是旋轉後的外接矩形，
+       *   比實際格子大一圈，重疊比例會偏高。
+       * offsetLeft 是版面座標，兩個影響都沒有。
+       */
+      const track = document.querySelector(".track");
+      if (!track) return;
+      const tr = track.getBoundingClientRect();
+      const ox = tr.left - track.scrollLeft, oy = tr.top - track.scrollTop;
       const half = d.w * d.h * 0.5;
-      let hit = -1, most = half, hitRect = null;
-      document.querySelectorAll(".track .card[data-oi]").forEach((el) => {
-        const r = el.getBoundingClientRect();
-        const ov = Math.max(0, Math.min(gx + d.w, r.right) - Math.max(gx, r.left)) *
-                   Math.max(0, Math.min(gy + d.h, r.bottom) - Math.max(gy, r.top));
-        if (ov > most) { most = ov; hit = +el.dataset.oi; hitRect = r; }
+      let hit = -1, most = half, hitMid = 0;
+      track.querySelectorAll(".card[data-oi]").forEach((el) => {
+        const L = ox + el.offsetLeft, T = oy + el.offsetTop;
+        const R = L + el.offsetWidth, B = T + el.offsetHeight;
+        const ov = Math.max(0, Math.min(gx + d.w, R) - Math.max(gx, L)) *
+                   Math.max(0, Math.min(gy + d.h, B) - Math.max(gy, T));
+        if (ov > most) { most = ov; hit = +el.dataset.oi; hitMid = (L + R) / 2; }
       });
       if (hit < 0) return;
       /**
@@ -3610,7 +3626,7 @@ window.__CHORDLAB__ = function(){
        * 回去，來回跳。實測過確實會抖。改成跟中線比就自己穩住了：把空位
        * 移到某張前面，那張會往右退，重疊只會更低於門檻，不會再翻回來。
        */
-      const to = (gx + d.w / 2) < (hitRect.left + hitRect.width / 2) ? hit : hit + 1;
+      const to = (gx + d.w / 2) < hitMid ? hit : hit + 1;
       if (to !== d.to) { d.to = to; setDropIdx(to); }
     };
     const dragEnd = () => {
