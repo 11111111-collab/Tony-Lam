@@ -325,11 +325,29 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .sug{border-top:1px solid var(--line);padding-top:9px}
 .sug-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
 .sug-label{font-size:10.5px;letter-spacing:.16em;color:var(--dim)}
-/* 指板總覽直接出現，不做展開動畫：撐開 max-height 會讓指板被上下拉扯 */
+/**
+ * 指板總覽的升起與降下。
+ *
+ * 原本刻意不做動畫，因為 .neck-drawer 是 flex:1——外層 max-height 一動，
+ * 它就跟著被壓扁，指板會上下拉扯。
+ *
+ * 解法是把抽屜改成固定高度、由外層負責裁切：抽屜自己從頭到尾不變形，
+ * 外層的 max-height 只決定「露出多少」。再讓抽屜同時往上位移並淡入，
+ * 看起來就是從下面升上來，而不是憑空閃出來。
+ */
 .neck-slot{max-height:0;overflow:hidden;
   display:flex;flex-direction:column;min-height:0;
-  margin-top:0;pointer-events:none}
+  margin-top:0;pointer-events:none;
+  transition:max-height .38s cubic-bezier(.2,.85,.3,1),
+             margin-top .38s cubic-bezier(.2,.85,.3,1)}
+.neck-slot > .neck-drawer{flex:0 0 auto;height:min(52vh,400px);
+  transform:translateY(18px);opacity:0;
+  transition:transform .38s cubic-bezier(.2,.85,.3,1), opacity .26s ease}
 .dock.open .neck-slot{max-height:min(52vh,400px);margin-top:9px;pointer-events:auto}
+.dock.open .neck-slot > .neck-drawer{transform:translateY(0);opacity:1}
+@media (prefers-reduced-motion:reduce){
+  .neck-slot,.neck-slot > .neck-drawer{transition:none}
+}
 .sug-row{display:flex;gap:7px;flex-wrap:wrap}
 .sug-chip{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
   background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;transition:.12s}
