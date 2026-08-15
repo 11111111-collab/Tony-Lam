@@ -368,8 +368,49 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 /* 右欄和弦圖 */
 .voice-name{font-family:var(--serif);font-size:26px;display:flex;align-items:baseline;gap:9px}
 .voice-name span{font-family:var(--sans);font-size:10.5px;color:var(--dim);letter-spacing:.1em}
-.fb-wrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px}
-.fb{width:100%;height:auto;display:block}
+/* ── 和弦圖：舊式映像管電視 ──────────────────────────────────────────────
+ * 整台電視都靠 .fb-wrap 這一層做出來，沒有動到 render——和弦圖本身是一張
+ * SVG，把它當成螢幕上的畫面，外面包機殼、上面疊濾鏡。
+ *
+ *   機殼    上亮下暗的漸層黑塑膠，內緣一道高光當倒角
+ *   螢幕    水平圓角大於垂直圓角（12px/16px），做出映像管微鼓的弧面
+ *   濾鏡    掃描線、四角暈影、中心泛光，三層疊在畫面上
+ *   色散    左右各推 0.6px 的紅與青，模擬映像管的色偏
+ *   品牌條  下緣的喇叭網與字
+ * ──────────────────────────────────────────────────────────────────── */
+.fb-wrap{position:relative;isolation:isolate;
+  background:linear-gradient(#34373D 0%, #212327 22%, #131416 68%, #0A0B0D 100%);
+  border:1px solid #000;border-radius:16px;padding:16px 16px 30px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.7),
+             0 14px 30px -14px #000, 0 2px 6px -2px #000}
+.fb{width:100%;height:auto;display:block;position:relative;z-index:1;
+  background:radial-gradient(115% 105% at 50% 40%, #131B12 0%, #0A0E0A 60%, #050705 100%);
+  border-radius:13px/18px;padding:8px 6px;
+  /* 三層內陰影＝映像管邊緣的凹陷：外圈黑邊、內圈暗角、再一道細高光當玻璃緣 */
+  box-shadow:inset 0 0 0 2px #030403, inset 0 0 0 3px rgba(255,255,255,.05),
+             inset 0 0 34px rgba(0,0,0,.9), 0 0 0 1px rgba(0,0,0,.9);
+  /* 色偏＋整體泛綠，量抓在還讀得清楚的範圍 */
+  filter:saturate(1.12) contrast(1.05) brightness(1.02)
+         drop-shadow(.6px 0 0 rgba(255,60,90,.22)) drop-shadow(-.6px 0 0 rgba(0,190,255,.22))}
+/* 疊在畫面上的濾鏡層：掃描線、暈影、中心泛光 */
+.fb-wrap::before{content:"";position:absolute;inset:16px 16px 30px;z-index:2;
+  border-radius:13px/18px;pointer-events:none;
+  background:
+    /* 玻璃反光：左上一道斜向的白，很淡但很有效 */
+    linear-gradient(146deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 16%, transparent 34%),
+    /* 掃描線 */
+    repeating-linear-gradient(to bottom, rgba(0,0,0,.3) 0 1px, transparent 1px 3px),
+    /* 磷光泛綠 */
+    radial-gradient(118% 104% at 50% 40%, rgba(140,255,185,.09) 0%, transparent 48%),
+    /* 四角暈影 */
+    radial-gradient(122% 110% at 50% 46%, transparent 48%, rgba(0,0,0,.62) 100%)}
+/* 下緣的喇叭網與品牌字 */
+.fb-wrap::after{content:"CHORD LAB";position:absolute;left:16px;right:16px;bottom:8px;height:15px;
+  display:flex;align-items:center;justify-content:center;letter-spacing:.34em;
+  font-family:var(--mono);font-size:7.5px;color:#6E737C;pointer-events:none;
+  background:repeating-linear-gradient(to right, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
+  border-radius:2px;text-indent:.34em}
+@media (prefers-reduced-motion:reduce){.fb-wrap::before{animation:none}}
 .fb-mark{fill:var(--dim);font-size:11px;text-anchor:middle}
 .fb-fnum{fill:#080B12;font-size:9.5px;text-anchor:middle;font-family:var(--mono);font-weight:700}
 .fb-pos{fill:var(--dim);font-size:9.5px;text-anchor:middle;font-family:var(--mono)}
