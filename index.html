@@ -4563,7 +4563,10 @@ window.__CHORDLAB__ = function(){
       /* @__PURE__ */ React.createElement(
         "div",
         { className: "crt-screen" },
-        /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)),
+        /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name,
+          // 「根音位置」是預設情況，寫出來沒帶資訊，只有轉位才值得標
+          viewChord.info.inv === "\u6839\u97f3\u4f4d\u7f6e" ? null
+            : /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)),
         /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack),
         /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, sp, labelMode })
       )
