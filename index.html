@@ -385,10 +385,11 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   --wood:#06100A; --string:#37FF95; --fret:#1B7A45; --dot:#0D2617;
   --brass:#37FF95; --jade:#C6FFE0; --bone:#37FF95; --rust:#1A6E40; --dim:#23B368;
   position:relative;isolation:isolate;aspect-ratio:1;display:flex;
-  background:linear-gradient(#FBFAF7 0%, #EFEDE7 20%, #DCD9D1 62%, #C2BFB6 100%);
-  border:1px solid #A7A49B;border-radius:16px;padding:15px 15px 28px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(0,0,0,.16),
-             0 14px 30px -16px #000, 0 2px 6px -3px rgba(0,0,0,.5)}
+  /* 機殼取自舊 CRT 的深灰塑膠：上緣受光、前框中階、下緣沉到暗處 */
+  background:linear-gradient(#5C5F65 0%, #4C4F55 17%, #3C3F45 58%, #2B2E33 100%);
+  border:1px solid #1D1F23;border-radius:16px;padding:15px 15px 28px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.17), inset 0 -1px 0 rgba(0,0,0,.55),
+             0 14px 30px -16px #000, 0 2px 6px -3px rgba(0,0,0,.6)}
 /* 螢幕本體。和弦圖用 margin-top:auto 壓到下半部，上方留給資訊 */
 .crt-screen{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;
   border-radius:13px/17px;padding:11px 12px 13px;overflow:hidden;
@@ -426,8 +427,8 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 /* 下緣的喇叭網與品牌字 */
 .crt::after{content:"CHORD LAB";position:absolute;left:15px;right:15px;bottom:7px;height:15px;
   display:flex;align-items:center;justify-content:center;letter-spacing:.34em;
-  font-family:var(--mono);font-size:7.5px;color:#8B887F;pointer-events:none;
-  background:repeating-linear-gradient(to right, rgba(0,0,0,.07) 0 1px, transparent 1px 4px);
+  font-family:var(--mono);font-size:7.5px;color:#9AA0A8;pointer-events:none;
+  background:repeating-linear-gradient(to right, rgba(255,255,255,.07) 0 1px, transparent 1px 4px);
   border-radius:2px;text-indent:.34em}
 .fb-mark{fill:var(--dim);font-size:11px;text-anchor:middle}
 .fb-fnum{fill:#080B12;font-size:9.5px;text-anchor:middle;font-family:var(--mono);font-weight:700}
