@@ -350,6 +350,47 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .chip.q:hover{border-color:var(--brass);color:var(--txt)}
 .chip.q.on{background:var(--brass);color:#080B12;border-color:var(--brass);font-weight:600}
 
+/* ══════════ 和弦性質：電話按鍵主題 ══════════
+ * 參考舊按鍵電話：米色面板上陷著一排深石墨色的橡膠鍵。
+ *
+ *   面板   泛黃的米色塑膠，內緣一圈凹陷
+ *   鍵帽   上亮下暗的漸層，底下墊一道實心暗色當鍵身的厚度
+ *   按下   往下位移 2px 並把那道厚度收掉，鍵就真的陷進面板
+ *   選中   換成橘鍵，取自照片裡那顆 SP-PHONE
+ *
+ * 只寫在 .theme-retro 底下，預設主題不受影響。
+ * ════════════════════════════════════════ */
+.theme-retro .quals{background:linear-gradient(#CEC7B4 0%, #C2BAA6 60%, #B3AA95 100%);
+  border:1px solid #8E8778;border-radius:5px;padding:9px 9px 10px;gap:7px 8px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.16),
+             inset 0 0 0 1px rgba(0,0,0,.07)}
+/* 分組標籤是印在面板上的字 */
+.theme-retro .qual-grp{color:#4A443A;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  line-height:28px;text-shadow:0 1px 0 rgba(255,255,255,.45)}
+.theme-retro .qual-chips{gap:5px}
+/* 鍵帽 */
+.theme-retro .chip.q{font-family:var(--mono);font-size:11.5px;font-weight:600;
+  min-width:32px;padding:6px 8px 7px;border-radius:4px;border:0;
+  color:#DCD8CC;text-shadow:0 -1px 0 rgba(0,0,0,.55);
+  background:linear-gradient(#50504C 0%, #3D3D3A 52%, #2F2F2C 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2), inset 0 -1px 0 rgba(0,0,0,.5),
+             0 2px 0 #191917, 0 3px 5px -1px rgba(0,0,0,.45);
+  transition:transform .04s ease, box-shadow .04s ease, background .12s}
+.theme-retro .chip.q:hover{background:linear-gradient(#5A5A55 0%, #454541 52%, #363633 100%);
+  color:#F0EDE3;border-color:transparent}
+/* 按下去：鍵身的厚度收掉，整顆往下陷 */
+.theme-retro .chip.q:active{transform:translateY(2px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1), inset 0 2px 5px rgba(0,0,0,.55),
+             0 0 0 #191917, 0 1px 2px rgba(0,0,0,.4)}
+/* 選中＝橘鍵 */
+.theme-retro .chip.q.on{color:#2A1C08;font-weight:700;text-shadow:0 1px 0 rgba(255,255,255,.3);
+  background:linear-gradient(#F5AE4E 0%, #E5922F 52%, #CE7A1C 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(0,0,0,.3),
+             0 2px 0 #8A4E0C, 0 3px 5px -1px rgba(0,0,0,.45)}
+.theme-retro .chip.q.on:active{transform:translateY(2px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25), inset 0 2px 5px rgba(0,0,0,.35),
+             0 0 0 #8A4E0C, 0 1px 2px rgba(0,0,0,.4)}
+
 /* 推薦 */
 .dock{display:flex;flex-direction:column;min-height:0;flex-shrink:0}
 .sug{border-top:1px solid var(--line);padding-top:9px}
@@ -4716,7 +4757,10 @@ window.__CHORDLAB__ = function(){
                 previewVoicing({ ...vs[idx], capo }, "R", { ...c, quality: q });
               }
             },
-            QUALITIES[q].label || "大三"
+            // 大三的 label 是空字串，因為 chordLabel 直接把它接在音名後面
+            // （C + "" = C）。改動那裡會讓所有大三和弦變成「CM」，所以只在
+            // 按鈕這一處給它一個顯示用的字。
+            QUALITIES[q].label || "M"
           )))
         ))),
         /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "低音"),

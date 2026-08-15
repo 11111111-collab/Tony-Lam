@@ -110,10 +110,14 @@ const WITH_AUDIO = process.env.REGRESS_AUDIO === "1";
   // 指板：音階盒的十個圖形。
   // 前面的性質迴圈會停在最後一個（aug），它配全音音階只有六個音，
   // 本來就排不出一弦三音的圖形——先切回大三，量到的才是圖形本身。
-  await page.evaluate(() => {
-    const n = [...document.querySelectorAll("button.chip.q")].find((x) => x.textContent.trim() === "大三");
-    if (n) n.click();
+  // 用「第一群的第一顆」而不是比對文字。之前寫死「大三」，按鈕改名成 M
+  // 之後就找不到，於是停在 aug，量到的圖形全是空的——看起來像 app 壞了，
+  // 其實是這支腳本過期。位置比文字穩。
+  const reset = await page.evaluate(() => {
+    const n = document.querySelector(".qual-chips button");
+    if (!n) return null; n.click(); return n.textContent.trim();
   });
+  if (!reset) throw new Error("找不到和弦性質按鈕，無法重設音階");
   await page.waitForTimeout(400);
   for (const btn of await page.$$("button")) {
     const t = ((await btn.textContent()) || "").trim();
