@@ -369,18 +369,18 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .voice-name{font-family:var(--serif);font-size:26px;display:flex;align-items:baseline;gap:9px}
 .voice-name span{font-family:var(--sans);font-size:10.5px;color:var(--dim);letter-spacing:.1em}
 /* ── 和弦圖：Pip-Boy 風格的映像管電視 ────────────────────────────────────
- * 白色機殼、正方形比例，螢幕裡是單色磷光綠的介面。
+ * 白色正方機殼，螢幕裡由上而下是：和弦名與轉位、音程堆疊、和弦按法圖。
  *
- * 整台電視與配色都只靠 CSS——和弦圖 SVG 裡的每個顏色都取自 CSS 變數，
- * 所以在這一層重新定義那些變數，整張圖就變成綠色，render 一行都不用動。
+ * 機殼包在 .crt 這一層而不是 Fretboard 內部，因為要同時裝下和弦資訊與
+ * 和弦圖——資訊本來在電視外面，畫面上下空掉一大塊，看起來不平衡。
  *
- * 改成單色不會丟失資訊：圓點裡本來就有 R／3／5 的文字，音級靠字讀，
- * 不是只靠顏色分辨。手動加的音改用更亮的綠，仍然分得出來。
+ * 螢幕內的配色靠就地覆寫 CSS 變數達成：和弦圖 SVG 裡每個顏色都取自變數，
+ * 沒有一個寫死，所以在這一層重新定義就整張變綠，render 不用動。變數只在
+ * 這台電視裡生效，App 其他地方不受影響。
  *
- * SVG 的 viewBox 是 268×136，塞進接近正方的螢幕時由 preserveAspectRatio
- * 置中，上下留黑——就像舊電視播寬螢幕訊號的樣子。
+ * 改成單色不會丟失資訊：圓點裡本來就有 R／3／5 的文字，音級靠字讀。
  * ──────────────────────────────────────────────────────────────────── */
-.fb-wrap{
+.crt{
   /* 螢幕內的配色，只在這台電視裡生效 */
   --wood:#06100A; --string:#37FF95; --fret:#1B7A45; --dot:#0D2617;
   --brass:#37FF95; --jade:#C6FFE0; --bone:#37FF95; --rust:#1A6E40; --dim:#23B368;
@@ -389,33 +389,46 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   border:1px solid #A7A49B;border-radius:16px;padding:15px 15px 28px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(0,0,0,.16),
              0 14px 30px -16px #000, 0 2px 6px -3px rgba(0,0,0,.5)}
-.fb{flex:1;width:100%;height:100%;display:block;position:relative;z-index:1;
+/* 螢幕本體。和弦圖用 margin-top:auto 壓到下半部，上方留給資訊 */
+.crt-screen{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;
+  border-radius:13px/17px;padding:11px 12px 13px;overflow:hidden;
   background:radial-gradient(112% 108% at 50% 42%, #0C1C12 0%, #071109 58%, #040A06 100%);
-  border-radius:13px/17px;padding:8px 6px;
-  /* 邊緣凹陷：外圈黑邊、內圈細亮線當玻璃緣、再一層暗角 */
   box-shadow:inset 0 0 0 2px #020403, inset 0 0 0 3px rgba(55,255,149,.10),
-             inset 0 0 34px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.8);
-  /* 磷光的暈開與映像管色偏 */
-  filter:saturate(1.2) contrast(1.06)
-         drop-shadow(0 0 2px rgba(55,255,149,.5))
-         drop-shadow(.5px 0 0 rgba(255,70,90,.18)) drop-shadow(-.5px 0 0 rgba(0,200,255,.18))}
-/* 圓點裡的品數字是壓在亮綠底上的，要用螢幕的底色才讀得到 */
-.fb-wrap .fb-fnum{fill:#06100A}
+             inset 0 0 34px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.8)}
 /* 疊在畫面上的濾鏡層 */
-.fb-wrap::before{content:"";position:absolute;inset:15px 15px 28px;z-index:2;
-  border-radius:13px/17px;pointer-events:none;
+.crt-screen::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  border-radius:13px/17px;
   background:
     linear-gradient(146deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 15%, transparent 32%),
     repeating-linear-gradient(to bottom, rgba(0,0,0,.34) 0 1px, transparent 1px 3px),
     radial-gradient(116% 104% at 50% 40%, rgba(55,255,149,.13) 0%, transparent 50%),
     radial-gradient(122% 112% at 50% 46%, transparent 46%, rgba(0,0,0,.66) 100%)}
-/* 下緣的喇叭網與品牌字，白機殼上要用深色字 */
-.fb-wrap::after{content:"CHORD LAB";position:absolute;left:15px;right:15px;bottom:7px;height:15px;
+/* 螢幕裡的和弦資訊 */
+.crt-screen .voice-name{position:relative;z-index:1;display:flex;align-items:baseline;gap:9px;
+  font-family:var(--serif);font-size:30px;line-height:1;color:#37FF95;
+  text-shadow:0 0 7px rgba(55,255,149,.55);margin:0}
+.crt-screen .voice-name span{font-family:var(--mono);font-size:9px;letter-spacing:.15em;
+  color:#23B368;text-shadow:0 0 5px rgba(55,255,149,.35);white-space:nowrap}
+.crt-screen .voice-stack{position:relative;z-index:1;font-family:var(--mono);font-size:11px;
+  letter-spacing:.13em;color:#23B368;text-shadow:0 0 5px rgba(55,255,149,.3);
+  margin:5px 0 0;padding-bottom:8px;
+  border-bottom:1px solid rgba(55,255,149,.22)}
+/* 和弦圖擺在剩餘空間的正中間——直接 margin-top:auto 會把它壓到最底，
+   中間反而空一大塊，上下留白平均才是平衡的 */
+.crt-screen .fb-wrap{position:relative;z-index:1;margin:auto 0;padding:0;
+  background:none;border:0;box-shadow:none;aspect-ratio:auto}
+.fb{width:100%;height:auto;display:block;
+  filter:saturate(1.2) contrast(1.06)
+         drop-shadow(0 0 2px rgba(55,255,149,.5))
+         drop-shadow(.5px 0 0 rgba(255,70,90,.18)) drop-shadow(-.5px 0 0 rgba(0,200,255,.18))}
+/* 圓點裡的品數字壓在亮綠底上，要用螢幕底色才讀得到 */
+.crt .fb-fnum{fill:#06100A}
+/* 下緣的喇叭網與品牌字 */
+.crt::after{content:"CHORD LAB";position:absolute;left:15px;right:15px;bottom:7px;height:15px;
   display:flex;align-items:center;justify-content:center;letter-spacing:.34em;
   font-family:var(--mono);font-size:7.5px;color:#8B887F;pointer-events:none;
   background:repeating-linear-gradient(to right, rgba(0,0,0,.07) 0 1px, transparent 1px 4px);
   border-radius:2px;text-indent:.34em}
-@media (prefers-reduced-motion:reduce){.fb-wrap::before{animation:none}}
 .fb-mark{fill:var(--dim);font-size:11px;text-anchor:middle}
 .fb-fnum{fill:#080B12;font-size:9.5px;text-anchor:middle;font-family:var(--mono);font-weight:700}
 .fb-pos{fill:var(--dim);font-size:9.5px;text-anchor:middle;font-family:var(--mono)}
@@ -4544,7 +4557,17 @@ window.__CHORDLAB__ = function(){
           previewVoicing({ ...viewChord.allVoicings[idx], capo }, "R", viewChord);
         }
       }
-    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["movable", "首調"], ["fixed", "固定調"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)), /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack), /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, sp, labelMode }), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, (function () {
+    ))))), /* @__PURE__ */ React.createElement("section", { className: "col right" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "指板把位"), liveChord && /* @__PURE__ */ React.createElement("span", { className: "live-tag" }, "跟著播放"), /* @__PURE__ */ React.createElement("div", { className: "seg tiny" }, [["deg", "級數"], ["movable", "首調"], ["fixed", "固定調"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, className: labelMode === v ? "on" : "", onClick: () => setLabelMode(v) }, l)))), viewChord ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+      "div",
+      { className: "crt" },
+      /* @__PURE__ */ React.createElement(
+        "div",
+        { className: "crt-screen" },
+        /* @__PURE__ */ React.createElement("div", { className: "voice-name" }, viewChord.info.name, /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)),
+        /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack),
+        /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, sp, labelMode })
+      )
+    ), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, (function () {
       const fr = viewChord.voicing.shape.frets;
       const iv3 = QUALITIES[viewChord.quality].iv.slice(0, 3).map((x) => ((x % 12) + 12) % 12);
       const maskOf = (w) => w ? fr.map((f, si) => si >= w[0] && si <= w[1] ? f : -1) : fr.slice();
