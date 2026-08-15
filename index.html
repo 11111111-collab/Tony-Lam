@@ -534,7 +534,6 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .mod{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
 .mod.add{border-color:var(--jade);color:var(--jade)}
 .mod.drop{border-color:var(--rust);color:var(--rust)}
-.mod.reset{margin-left:auto;border-style:dashed}
 .voice-nav{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--dim)}
 .voice-nav button{width:26px;height:24px;border:1px solid var(--line);border-radius:5px}
 .voice-nav button:hover{color:var(--brass);border-color:var(--brass2)}
@@ -3692,11 +3691,6 @@ window.__CHORDLAB__ = function(){
       const resets = "shapeIdx" in patch || "win" in patch;
       setVoiceMap((m) => ({ ...m, [k]: { shapeIdx: 0, win: null, ov: {}, ...(m[k] || { shapeIdx: ch.voiceIdx || 0 }), ...patch, ...(resets ? { ov: {} } : {}) } }));
     };
-    const resetVoice = (ch) => setVoiceMap((m) => {
-      const n = { ...m };
-      delete n[VKEY(ch)];
-      return n;
-    });
     const toggleNote = (ch, stringIdx, relFret) => {
       const ov = { ...((ch.cfg && ch.cfg.ov) || {}) };
       ov[stringIdx] = ch.voicing.frets[stringIdx] === relFret ? -1 : relFret;
@@ -4702,13 +4696,14 @@ window.__CHORDLAB__ = function(){
           /* @__PURE__ */ React.createElement("i", null, semis.map((sm) => ivLabel(sm, viewChord.quality)).join("-")));
       });
     })()), (function(){ const ov = (viewChord.cfg && viewChord.cfg.ov) || {}; const ks = Object.keys(ov);
-      const cfg = viewChord.cfg || {};
-      if (!ks.length && !cfg.win && !cfg.shapeIdx) return null;
+      // 這一列現在只剩「取消某條弦的手動設定」。原本還有一顆「還原」，條件
+      // 才包含換過把位或弦組；還原拿掉之後那兩種情況沒有東西可畫，條件不收
+      // 的話會留下一個空的 div，還多佔一份 gap。
+      if (!ks.length) return null;
       return /* @__PURE__ */ React.createElement("div", { className: "mods" },
         ks.map((k) => /* @__PURE__ */ React.createElement("button", { key: k, className: "mod " + (ov[k] < 0 ? "drop" : "add"), title: "取消這條弦的手動設定",
           onClick: () => clearOne(viewChord, +k) },
-          (6 - k) + "弦 " + (ov[k] < 0 ? "消音" : ov[k] === 0 ? "空弦" : ov[k] + capo + "格") + " ✕")),
-        /* @__PURE__ */ React.createElement("button", { className: "mod reset", onClick: () => resetVoice(viewChord) }, "還原"));
+          (6 - k) + "弦 " + (ov[k] < 0 ? "消音" : ov[k] === 0 ? "空弦" : ov[k] + capo + "格") + " ✕")));
     })(), React.createElement("div", { className: "notes" }, voicingToMidi(viewChord.voicing.frets, capo).map((m, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "note-pill" }, sp.fromRoot((viewChord.rootPc + capo) % 12, m % 12), /* @__PURE__ */ React.createElement("em", null, Math.floor(m / 12) - 1))))) : /* @__PURE__ */ React.createElement("div", { className: "empty tall" }, "點進行軌上的任一個和弦，這裡會顯示真實按法、組成音，以及刷弦時每條弦亮起的順序。"), editChord && (() => {
       const c = editChord;
       const ci = progV.findIndex((x) => x.id === c.id);
