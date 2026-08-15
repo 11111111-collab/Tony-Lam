@@ -47,6 +47,22 @@ const WITH_AUDIO = process.env.REGRESS_AUDIO === "1";
   if (cta) await cta.click();
   await page.waitForTimeout(WITH_AUDIO ? 22000 : 3000);
 
+  /**
+   * 可以指定要在哪個主題下量——兩套外觀的行為必須一致。
+   * 主題按鈕在 App 的頂欄，首頁上還不存在，所以一定要等進了 App 才切，
+   * 不然這段是無聲的 no-op，測起來會像過了其實根本沒切過去。
+   */
+  if (process.env.REGRESS_THEME) {
+    const ok = await page.evaluate((t) => {
+      const b = [...document.querySelectorAll(".theme-seg button")].find((x) => x.textContent.trim() === t);
+      if (!b) return false; b.click(); return true;
+    }, process.env.REGRESS_THEME);
+    if (!ok) throw new Error("找不到主題按鈕：" + process.env.REGRESS_THEME);
+    await page.waitForTimeout(600);
+    // 只印出來不放進指紋——放進去的話每個主題輪次都會多一筆差異，那是噪訊
+    console.log("  （本輪主題：" + (await page.$eval(".cl-root", (e) => e.className)) + "）");
+  }
+
   // 範本清單（名稱＋速度），順序也要一樣
   fp.templates = await page.$$eval(".tmpl-row", (ns) =>
     ns.map((n) => n.textContent.trim().replace(/\s+/g, " ").slice(0, 70)));
