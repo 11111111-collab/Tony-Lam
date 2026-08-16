@@ -671,6 +671,45 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   padding:8px 12px;font-size:12px;color:var(--dim);background:var(--panel2)}
 .btn-toggle:hover{border-color:var(--brass2);color:var(--txt)}
 .metro-dot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+/* ── 設定表單 ──────────────────────────────────────────────────────────
+ * 齒輪鈕開啟，裡面放介面風格與快捷鍵一覽。快捷鍵原本印在和弦性質上方，
+ * 那裡是編輯區，放參考資訊會擠掉真正要操作的東西。
+ * ──────────────────────────────────────────────────────────────────── */
+.cl-root .btn-gear{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--dim);font-size:15px;line-height:1;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;transition:.14s}
+.cl-root .btn-gear:hover{color:var(--txt);border-color:var(--brass2)}
+.cl-root .btn-gear.on{color:var(--brass);border-color:var(--brass)}
+.setup-mask{position:fixed;inset:0;z-index:500;background:rgba(6,7,9,.68);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:popIn .14s ease-out}
+.setup{width:min(380px,100%);max-height:min(80vh,560px);overflow-y:auto;
+  background:#181B22;border:1px solid var(--brass2);border-radius:12px;
+  padding:16px 18px 18px;box-shadow:0 24px 60px -20px #000;
+  display:flex;flex-direction:column;gap:9px;text-align:left}
+.setup-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.setup-head b{font-family:var(--serif);font-size:19px;font-weight:400}
+.cl-root .setup-x{width:26px;height:26px;border-radius:7px;color:var(--dim);font-size:12px;
+  display:flex;align-items:center;justify-content:center;border:1px solid transparent;transition:.12s}
+.cl-root .setup-x:hover{color:var(--rust);border-color:var(--rust)}
+.setup-sec{font-size:9.5px;letter-spacing:.16em;color:var(--dim);margin-top:6px}
+.setup-themes{display:flex;flex-direction:column;gap:5px}
+.cl-root .setup-theme{display:flex;align-items:baseline;gap:9px;width:100%;text-align:left;
+  border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--panel2);
+  transition:.14s}
+.cl-root .setup-theme:hover{border-color:var(--brass2)}
+.cl-root .setup-theme.on{border-color:var(--brass);background:#1D2030}
+.setup-theme b{font-size:13.5px;font-weight:600;color:var(--txt)}
+.setup-theme span{font-size:11px;color:var(--dim)}
+.setup-dot{width:9px;height:9px;border-radius:50%;border:1px solid var(--line);flex-shrink:0;
+  align-self:center;transition:.14s}
+.setup-theme.on .setup-dot{border-color:var(--brass);background:var(--brass);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 22%,transparent)}
+.setup-keys{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;align-items:center;
+  font-size:12px;color:var(--dim)}
+.setup-kbd{display:flex;gap:4px}
+.setup-keys kbd{font-family:var(--mono);font-size:10px;color:var(--txt);background:var(--panel2);
+  border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px;line-height:1.4}
 .theme-seg{margin-right:2px;flex-shrink:0}
 .metro-wrap{position:relative;display:flex;align-items:stretch}
 /* .cl-root button 有 background:none;border:none（特異度 0,1,1），單一 class
@@ -3221,6 +3260,14 @@ window.__CHORDLAB__ = function(){
    * 介面主題。每一區的外觀都可以分主題寫：預設主題不加前綴，其餘主題的
    * 樣式加 .theme-<id> 前綴。還沒分主題的區域兩邊長得一樣。
    */
+  // 快捷鍵一覽。原本寫死在和弦性質上方，現在改成資料，設定表單裡排成兩欄
+  const SHORTCUTS = [
+    [["\u2190", "\u2192"], "\u63db\u548c\u5f26"],
+    [["Del"], "\u522a\u9664"],
+    [["Space"], "\u64ad\u653e"],
+    [["Ctrl+Z"], "\u5fa9\u539f"],
+    [["1-9"], "\u63a5\u548c\u5f26"]
+  ];
   const THEMES = [
     { id: "classic", n: "原始", s: "深色面板" },
     { id: "retro", n: "復古", s: "便利貼與映像管" }
@@ -3322,6 +3369,7 @@ window.__CHORDLAB__ = function(){
     const [sweep, setSweep] = useState({ id: 0, dir: "D", spread: 0.02, strings: [] });
     const [toast, setToast] = useState("");
     // 便利貼拖曳：dragId 是被拿起來那張，dropIdx 是空位現在停在哪
+    const [setupOpen, setSetupOpen] = useState(false);
     const [dragId, setDragId] = useState(null);
     const [dropIdx, setDropIdx] = useState(-1);
     const [strumKey, setStrumKey] = useState("roll");
@@ -3625,6 +3673,9 @@ window.__CHORDLAB__ = function(){
     }, []);
     useEffect(() => {
       const onKey = (e) => {
+        // 設定表單開著時，Esc 關掉它，其餘快捷鍵一律不作用——不然在表單上
+        // 按空白鍵會直接開始播放
+        if (setupOpen) { if (e.key === "Escape") setSetupOpen(false); return; }
         if (e.target && ["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
         if (e.target && e.target.isContentEditable) return;
         if ((e.metaKey || e.ctrlKey) && e.key && e.key.toLowerCase() === "z") {
@@ -3672,7 +3723,7 @@ window.__CHORDLAB__ = function(){
       };
       window.addEventListener("keydown", onKey);
       return () => window.removeEventListener("keydown", onKey);
-    }, [togglePlay, progV, selId, undo, redo, suggestions]);
+    }, [togglePlay, progV, selId, undo, redo, suggestions, setupOpen]);
     useEffect(() => {
       if (selId == null) return;
       const el = document.querySelector('.card[data-cid="' + selId + '"]');
@@ -4395,14 +4446,11 @@ window.__CHORDLAB__ = function(){
       "span",
       { className: "capo-key", title: "手指按的還是 " + sp.note(keyPc) + " 調的指型，實際發出的是這個調" },
       "實際 " + sp.note((keyPc + capo) % 12) + (mode === "minor" ? "m" : "")
-    )), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement(
-      "div",
-      { className: "seg tiny theme-seg", title: "換介面主題" },
-      THEMES.map((t) => /* @__PURE__ */ React.createElement("button", {
-        key: t.id, className: theme === t.id ? "on" : "", title: t.n + "：" + t.s,
-        onClick: () => setTheme(t.id)
-      }, t.n))
-    ), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "spacer" }), /* @__PURE__ */ React.createElement("button", {
+      className: "btn-gear" + (setupOpen ? " on" : ""),
+      title: "設定", "aria-label": "設定",
+      onClick: () => setSetupOpen(true)
+    }, "\u2699"), /* @__PURE__ */ React.createElement(
       "div",
       { className: "metro-wrap" },
       /* @__PURE__ */ React.createElement(
@@ -4720,22 +4768,7 @@ window.__CHORDLAB__ = function(){
           /* @__PURE__ */ React.createElement("span", { className: "cprop-deg" }, degreeLabel(c.rootPc, c.quality, keyPc, mode)),
           !selected && liveChord ? /* @__PURE__ */ React.createElement("span", { className: "cprop-live" }, "播放中") : null
         ),
-        /* @__PURE__ */ React.createElement(
-          "div",
-          { className: "cprop-keys" },
-          /* @__PURE__ */ React.createElement("kbd", null, "\u2190"),
-          /* @__PURE__ */ React.createElement("kbd", null, "\u2192"),
-          "\u63db\u548c\u5f26\u3000",
-          /* @__PURE__ */ React.createElement("kbd", null, "Del"),
-          "\u522a\u9664\u3000",
-          /* @__PURE__ */ React.createElement("kbd", null, "Space"),
-          "\u64ad\u653e\u3000",
-          /* @__PURE__ */ React.createElement("kbd", null, "Ctrl+Z"),
-          "\u5fa9\u539f\u3000",
-          /* @__PURE__ */ React.createElement("kbd", null, "1-9"),
-          "\u63a5\u548c\u5f26"
-        ),
-        /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "和弦性質"),
+                /* @__PURE__ */ React.createElement("div", { className: "cprop-label" }, "和弦性質"),
         /* @__PURE__ */ React.createElement("div", { className: "quals" }, QUAL_GROUPS.map(([grp, keys]) => /* @__PURE__ */ React.createElement(
           React.Fragment,
           { key: grp },
@@ -4872,7 +4905,35 @@ window.__CHORDLAB__ = function(){
       "aria-label": "總音量",
       value: master,
       onChange: (e) => setMaster(+e.target.value)
-    })))))), dragId != null && (function () {
+    })))))), setupOpen && /* @__PURE__ */ React.createElement(
+      "div",
+      { className: "setup-mask", onClick: () => setSetupOpen(false) },
+      /* @__PURE__ */ React.createElement(
+        "div",
+        { className: "setup", role: "dialog", "aria-label": "設定", onClick: (e) => e.stopPropagation() },
+        /* @__PURE__ */ React.createElement("div", { className: "setup-head" },
+          /* @__PURE__ */ React.createElement("b", null, "設定"),
+          /* @__PURE__ */ React.createElement("button", {
+            className: "setup-x", "aria-label": "關閉", onClick: () => setSetupOpen(false)
+          }, "\u2715")),
+        /* @__PURE__ */ React.createElement("div", { className: "setup-sec" }, "介面風格"),
+        /* @__PURE__ */ React.createElement("div", { className: "setup-themes" },
+          THEMES.map((t) => /* @__PURE__ */ React.createElement("button", {
+            key: t.id, className: "setup-theme" + (theme === t.id ? " on" : ""),
+            onClick: () => setTheme(t.id)
+          },
+            /* @__PURE__ */ React.createElement("i", { className: "setup-dot" }),
+            /* @__PURE__ */ React.createElement("b", null, t.n),
+            /* @__PURE__ */ React.createElement("span", null, t.s)))),
+        /* @__PURE__ */ React.createElement("div", { className: "setup-sec" }, "快捷鍵"),
+        /* @__PURE__ */ React.createElement("div", { className: "setup-keys" },
+          SHORTCUTS.map(([keys, what]) => /* @__PURE__ */ React.createElement(
+            React.Fragment, { key: what },
+            /* @__PURE__ */ React.createElement("div", { className: "setup-kbd" },
+              keys.map((k) => /* @__PURE__ */ React.createElement("kbd", { key: k }, k))),
+            /* @__PURE__ */ React.createElement("div", null, what))))
+      )
+    ), dragId != null && (function () {
       const k = progV.findIndex((c) => c.id === dragId);
       return k < 0 ? null : renderCard(progV[k], k, -1, true);
     })(), toast && /* @__PURE__ */ React.createElement("div", { className: "toast" }, toast));

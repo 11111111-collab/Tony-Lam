@@ -53,12 +53,19 @@ const WITH_AUDIO = process.env.REGRESS_AUDIO === "1";
    * 不然這段是無聲的 no-op，測起來會像過了其實根本沒切過去。
    */
   if (process.env.REGRESS_THEME) {
+    // 主題選擇在齒輪的設定表單裡，要先打開才點得到
+    const gear = await page.$(".btn-gear");
+    if (!gear) throw new Error("找不到齒輪按鈕");
+    await gear.click();
+    await page.waitForTimeout(400);
     const ok = await page.evaluate((t) => {
-      const b = [...document.querySelectorAll(".theme-seg button")].find((x) => x.textContent.trim() === t);
+      const b = [...document.querySelectorAll(".setup-theme")].find((x) => x.textContent.includes(t));
       if (!b) return false; b.click(); return true;
     }, process.env.REGRESS_THEME);
-    if (!ok) throw new Error("找不到主題按鈕：" + process.env.REGRESS_THEME);
-    await page.waitForTimeout(600);
+    if (!ok) throw new Error("設定表單裡找不到主題：" + process.env.REGRESS_THEME);
+    await page.waitForTimeout(400);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
     // 只印出來不放進指紋——放進去的話每個主題輪次都會多一筆差異，那是噪訊
     console.log("  （本輪主題：" + (await page.$eval(".cl-root", (e) => e.className)) + "）");
   }
