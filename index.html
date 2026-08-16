@@ -350,6 +350,53 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .chip.q:hover{border-color:var(--brass);color:var(--txt)}
 .chip.q.on{background:var(--brass);color:#080B12;border-color:var(--brass);font-weight:600}
 
+/* ══════════ 進行範本：收據主題 ══════════
+ * 一張很長的熱感紙收據，往下滑就是繼續看下面的品項。
+ *
+ * 紙從「進行範本」那行標題開始、一路延伸到清單底部：標題與清單本來是兩
+ * 個相鄰的元素，中間隔著 .col 的 9px gap，所以標題那側用負的下邊距把縫
+ * 補起來，看起來才是同一張紙。
+ *
+ * 上下的撕邊不是用 mask，是用一排「背景色的半圓」蓋在紙的邊緣上——mask
+ * 會連同捲動內容一起裁掉，而且這樣還能疊在捲動層之上，紙緣不會被內容穿過。
+ *
+ * 品項編號用 CSS counter 產生，不用改 render。
+ * ════════════════════════════════════════ */
+.theme-retro .tmpl-head{position:relative;margin-bottom:-9px;padding:15px 13px 8px;
+  background:#F2EFE6;color:#4A443A;font-family:var(--mono);font-size:11px;letter-spacing:.3em;
+  flex-wrap:wrap;justify-content:center;gap:0 8px;border-radius:3px 3px 0 0;text-indent:.3em;
+  box-shadow:0 -1px 0 rgba(0,0,0,.06) inset}
+/* 店名就是網頁名稱；只有收據要它，其他主題不顯示 */
+.rcpt-brand{display:none}
+.theme-retro .rcpt-brand{display:block;font-size:15px;font-weight:700;color:#22201C;
+  letter-spacing:.34em;padding-bottom:9px;margin-bottom:7px;flex:0 0 100%;text-align:center;
+  border-bottom:1px dashed rgba(0,0,0,.28)}
+.theme-retro .tmpl-head::before{content:"";position:absolute;left:0;right:0;top:0;height:7px;
+  background:radial-gradient(circle 5px at 5px 0, var(--bg) 0 5px, transparent 5.5px) repeat-x top/10px 7px;
+  pointer-events:none}
+.theme-retro .genre-count{color:#8A8375;letter-spacing:0}
+.theme-retro .tmpl-wrap{border:0;border-radius:0 0 3px 3px;background:#F2EFE6;
+  box-shadow:0 10px 22px -14px rgba(0,0,0,.7)}
+/* 撕邊蓋在捲動層之上，紙緣不會被內容穿過 */
+.theme-retro .tmpl-wrap::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;z-index:3;
+  background:radial-gradient(circle 5px at 5px 100%, var(--bg) 0 5px, transparent 5.5px) repeat-x bottom/10px 7px;
+  pointer-events:none}
+.theme-retro .tmpl-list{counter-reset:rcpt;gap:0;padding:2px 13px 12px}
+/* 品項：編號在左，名稱與說明在右，之間一條虛線分隔 */
+.theme-retro .tmpl-row{counter-increment:rcpt;
+  display:grid;grid-template-columns:auto 1fr;gap:0 9px;align-items:baseline;
+  padding:7px 0 8px;border-radius:0;border-bottom:1px dashed rgba(0,0,0,.22);
+  color:#22201C;font-family:var(--mono);transition:background .12s}
+.theme-retro .tmpl-row:last-child{border-bottom:0}
+.theme-retro .tmpl-row::before{content:counter(rcpt,decimal-leading-zero);grid-row:1/4;
+  font-size:10.5px;color:#8A8375;padding-top:1px}
+.theme-retro .tmpl-row:hover{background:rgba(0,0,0,.05)}
+.theme-retro .tmpl-name{grid-column:2;font-family:var(--mono);font-size:12px;font-weight:700;
+  letter-spacing:.02em;color:#22201C}
+.theme-retro .tmpl-sub{grid-column:2;font-size:10px;color:#5C564A;letter-spacing:.01em;line-height:1.5}
+.theme-retro .tmpl-meta{grid-column:2;font-size:9.5px;color:#8A8375;opacity:1;letter-spacing:.04em}
+.theme-retro .tmpl-mode{border-color:rgba(0,0,0,.3);color:#5C564A;background:transparent}
+
 /* ══════════ 和弦性質：電話按鍵主題 ══════════
  * 參考舊按鍵電話：米色面板上陷著一排深石墨色的橡膠鍵。
  *
@@ -4557,7 +4604,7 @@ window.__CHORDLAB__ = function(){
         chordLabel(rootPc, s.q, null, sp),
         /* @__PURE__ */ React.createElement("em", null, s.tag.split("・")[0])
       );
-    })), /* @__PURE__ */ React.createElement("div", { className: "sub-head" }, "進行範本", /* @__PURE__ */ React.createElement("span", { className: "genre-count" }, TEMPLATES.length)), /* @__PURE__ */ React.createElement("div", { className: "tmpl-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "tmpl-list" }, TEMPLATES.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, className: "tmpl-row", onClick: () => applyTemplate(t) }, /* @__PURE__ */ React.createElement("span", { className: "tmpl-name" }, t.name, t.mode === "minor" ? /* @__PURE__ */ React.createElement("i", { className: "tmpl-mode" }, "小調") : null), /* @__PURE__ */ React.createElement("span", { className: "tmpl-sub" }, t.sub), /* @__PURE__ */ React.createElement("span", { className: "tmpl-meta" }, t.style + " ・ " + t.bpm + " BPM")))))), /* @__PURE__ */ React.createElement("section", { className: "col center" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "和弦進行", /* @__PURE__ */ React.createElement("span", { className: "bars-badge" }, totalBars, " 小節")), /* @__PURE__ */ React.createElement("div", { className: "head-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: addSevenths }, "全部加七度"), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => {
+    })), /* @__PURE__ */ React.createElement("div", { className: "sub-head tmpl-head" }, /* @__PURE__ */ React.createElement("span", { className: "rcpt-brand", "aria-hidden": "true" }, "CHORD LAB"), "進行範本", /* @__PURE__ */ React.createElement("span", { className: "genre-count" }, TEMPLATES.length)), /* @__PURE__ */ React.createElement("div", { className: "tmpl-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "tmpl-list" }, TEMPLATES.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, className: "tmpl-row", onClick: () => applyTemplate(t) }, /* @__PURE__ */ React.createElement("span", { className: "tmpl-name" }, t.name, t.mode === "minor" ? /* @__PURE__ */ React.createElement("i", { className: "tmpl-mode" }, "小調") : null), /* @__PURE__ */ React.createElement("span", { className: "tmpl-sub" }, t.sub), /* @__PURE__ */ React.createElement("span", { className: "tmpl-meta" }, t.style + " ・ " + t.bpm + " BPM")))))), /* @__PURE__ */ React.createElement("section", { className: "col center" }, /* @__PURE__ */ React.createElement("div", { className: "col-head" }, /* @__PURE__ */ React.createElement("h2", null, "和弦進行", /* @__PURE__ */ React.createElement("span", { className: "bars-badge" }, totalBars, " 小節")), /* @__PURE__ */ React.createElement("div", { className: "head-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: addSevenths }, "全部加七度"), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm", onClick: () => {
       setProg([]);
       setSelId(null);
     } }, "清空"), /* @__PURE__ */ React.createElement("button", {
