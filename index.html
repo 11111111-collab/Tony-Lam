@@ -486,6 +486,119 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .sug-tag{font-size:9.5px;color:var(--dim)}
 .sug-chip.spice .sug-tag{color:var(--jade);opacity:.85}
 
+/* ══════════ 樂器音色：卡帶櫃主題 ══════════
+ * 右欄的樂器機架在復古主題變成一個木框櫃子：一個樂器是一格層板，層板左緣
+ * 插一張寫著樂器名的分隔卡（像唱片行的字母隔板），格子裡的每一個選單是一張
+ * 卡帶，點下去展開的是專輯曲目表。DOM 就是共用的分區結構，全部靠重上皮：
+ *
+ *   .rack       → 木櫃
+ *   .inst       → 一格層板（凹進去的暗色內壁）
+ *   .inst-head  → 分隔卡
+ *   .ctl-group  → 一張卡帶（.lbl 是側標廠牌，.pick-btn 是專輯名）
+ *   .pick-menu  → 曲目表（紙、SIDE A 抬頭、01/02 曲序）
+ *
+ * 卡帶貼紙顏色綁在 .inst 的樂器 class 上（g/p/b/d），不是 nth-child——
+ * 之後調順序顏色不會跟著跑掉。
+ *
+ * .pick-menu 雖然是 position:fixed，DOM 上仍是 .pick 的子孫，所以
+ * `.theme-retro .rack .pick-menu` 選得到，不必為它另開一個 class。
+ * ════════════════════════════════════════ */
+.theme-retro .rack{gap:7px;margin-top:12px;padding:11px 10px 12px;border:0;border-radius:5px;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.3),rgba(0,0,0,0) 7%,rgba(0,0,0,0) 93%,rgba(0,0,0,.3)),
+    repeating-linear-gradient(93deg,rgba(0,0,0,.055) 0 3px,rgba(255,226,190,.03) 3px 8px),
+    linear-gradient(162deg,#7C4429 0%,#5C3220 55%,#472515 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,214,170,.17),inset 0 2px 10px rgba(0,0,0,.35),
+    0 14px 30px -16px #000}
+/* 一格層板：凹進木頭裡，卡帶插在裡面 */
+.theme-retro .rack .inst{gap:0;padding:5px 6px 6px;border-radius:3px;background:#2B1509;
+  box-shadow:inset 0 2px 7px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.5),
+    0 1px 0 rgba(255,205,160,.12)}
+.theme-retro .rack .inst-pair{gap:7px}
+/* 分隔卡：層板前緣那張寫著樂器名的小卡 */
+.theme-retro .rack .inst-head{align-self:flex-start;margin-bottom:5px;padding:2px 9px 3px;
+  border-radius:2px 2px 0 0;font-family:var(--mono);font-size:9px;letter-spacing:.26em;
+  color:#3B3226;background:linear-gradient(180deg,#E6DCC4,#CFC2A4);
+  box-shadow:0 1px 2px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.6)}
+.theme-retro .rack .inst-head::after{display:none}
+.theme-retro .rack .inst-row{gap:5px}
+/* 一張卡帶就是 .pick-btn 本身。.lbl 照預設主題那樣留在卡帶上方當層板標籤，
+ * 不塞進卡帶裡——右欄只有 ~300px 寬，兩欄並排時擠進去名字一定會被截掉。
+ *
+ * 卡帶左右兩端是黑色塑膠殼，中間那條是貼紙。貼紙顏色只由 --lbl 一個變數
+ * 決定，亮面與暗面用 color-mix 推出來，換色只要改一行。 */
+.theme-retro .rack .ctl-group{gap:3px}
+.theme-retro .rack .lbl{font-family:var(--mono);font-size:8px;letter-spacing:.16em;
+  color:#B9A48E;padding-left:1px}
+.theme-retro .rack .pick{--lbl:#E9E2D4;transition:transform .11s}
+.theme-retro .rack .pick .pick-btn{height:28px;padding:0 6px 0 8px;border:0;border-radius:2px;
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.01em;color:#24211B;
+  background:
+    linear-gradient(90deg,#141416 0 6px,rgba(0,0,0,0) 6px calc(100% - 6px),#141416 calc(100% - 6px)),
+    linear-gradient(180deg,color-mix(in srgb,var(--lbl) 86%,#FFFFFF) 0%,
+      var(--lbl) 54%,color-mix(in srgb,var(--lbl) 84%,#000000) 100%);
+  box-shadow:0 1px 0 rgba(0,0,0,.6),0 2px 5px -2px rgba(0,0,0,.65),
+    inset 0 0 0 1px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.3)}
+/* 抽出來一點點，像要把卡帶拿起來 */
+.theme-retro .rack .pick:hover{transform:translateY(-2px)}
+.theme-retro .rack .pick .pick-btn:hover,
+.theme-retro .rack .pick .pick-btn.open{border:0}
+.theme-retro .rack .pick-caret{color:rgba(0,0,0,.45)}
+/* 貼紙配色：一整櫃看起來像不同年代收集來的，不是同一批。
+ * 深色貼紙那幾張換成淺色油墨，不然讀不到。 */
+.theme-retro .rack .inst.g .pick{--lbl:#E8B133}
+.theme-retro .rack .inst.g .ctl-group + .ctl-group .pick{--lbl:#C9C0A9}
+.theme-retro .rack .inst.p .pick{--lbl:#2C2C2E}
+.theme-retro .rack .inst.p .ctl-group + .ctl-group .pick{--lbl:#6E6A62}
+.theme-retro .rack .inst.b .pick{--lbl:#325E90}
+.theme-retro .rack .inst.d .pick{--lbl:#AC372F}
+.theme-retro .rack .inst.p .pick .pick-btn,
+.theme-retro .rack .inst.b .pick .pick-btn,
+.theme-retro .rack .inst.d .pick .pick-btn{color:#F4F0E8}
+.theme-retro .rack .inst.p .pick-caret,
+.theme-retro .rack .inst.b .pick-caret,
+.theme-retro .rack .inst.d .pick-caret{color:rgba(255,255,255,.5)}
+/* 混音鈕：釘在櫃子木頭上的一塊小銘牌 */
+.theme-retro .rack > .btn-ghost.sm{margin-top:2px;border-radius:2px;font-family:var(--mono);
+  font-size:9.5px;letter-spacing:.14em;padding:4px 10px;
+  background:linear-gradient(180deg,#C9A24E,#9E7B33);border:1px solid rgba(0,0,0,.45);
+  color:#2A1F0A;box-shadow:0 1px 2px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+.theme-retro .rack > .btn-ghost.sm:hover{color:#2A1F0A;border-color:rgba(0,0,0,.6)}
+.theme-retro .rack > .btn-ghost.sm.on{
+  background:linear-gradient(180deg,#7FD8A6,#4BA477);border-color:rgba(0,0,0,.5);color:#0E2E1D}
+
+/* 試聽與混音也在 .rack 裡（它們是層板的兄弟節點），直接壓在木頭上會看不清楚，
+ * 所以把這兩塊做成嵌在櫃子下半部的一片深色機板。 */
+.theme-retro .rack .prev-row{margin-top:3px;padding:8px 10px 7px;border-top:0;
+  border-radius:3px 3px 0 0;background:#26120A;
+  box-shadow:inset 0 1px 7px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.5)}
+.theme-retro .rack .mixer{margin-top:-7px;padding:9px 10px 10px;
+  border-top:1px solid rgba(255,190,140,.11);border-radius:0 0 3px 3px;background:#26120A;
+  box-shadow:inset 0 -1px 7px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.5)}
+.theme-retro .rack .mixer .ch.master{border-top-color:rgba(255,190,140,.13)}
+
+/* 曲目表：卡帶紙套翻開的那一面 */
+.theme-retro .rack .pick-menu{counter-reset:trk;padding:0 0 9px;border-radius:2px;
+  border:1px solid rgba(0,0,0,.5);background:#F2EFE6;font-family:var(--mono);
+  box-shadow:0 20px 44px -18px #000,inset 0 0 0 1px rgba(255,255,255,.55)}
+/* 抬頭黏在頂端，捲動時不會跟著跑掉 */
+.theme-retro .rack .pick-menu::before{content:"SIDE  A";position:sticky;top:0;z-index:1;
+  display:block;padding:7px 12px 6px;font-size:8.5px;letter-spacing:.34em;color:#6B6458;
+  background:#F2EFE6;border-bottom:1px solid rgba(0,0,0,.25)}
+.theme-retro .rack .pick-item{counter-increment:trk;
+  display:grid;grid-template-columns:auto 1fr;gap:0 9px;align-items:baseline;
+  padding:5px 12px 6px;border-radius:0;color:#24211B;
+  border-bottom:1px dashed rgba(0,0,0,.16)}
+.theme-retro .rack .pick-item:last-child{border-bottom:0}
+.theme-retro .rack .pick-item::before{content:counter(trk,decimal-leading-zero);grid-row:1/3;
+  font-size:9.5px;color:#8A8375}
+.theme-retro .rack .pick-item:hover{background:rgba(0,0,0,.055)}
+.theme-retro .rack .pick-item.on{background:rgba(0,0,0,.09);color:#24211B}
+.theme-retro .rack .pi-l{grid-column:2;font-size:11.5px;color:#24211B}
+.theme-retro .rack .pick-item.on .pi-l{font-weight:700}
+.theme-retro .rack .pi-s{grid-column:2;font-size:9.5px;color:#5C564A}
+.theme-retro .rack .pick-item.on .pi-s{color:#5C564A}
+
 /* 右欄和弦圖 */
 .voice-name{font-family:var(--serif);font-size:26px;display:flex;align-items:baseline;gap:9px}
 .voice-name span{font-family:var(--sans);font-size:10.5px;color:var(--dim);letter-spacing:.1em}
@@ -651,13 +764,22 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .lg.sc{padding-left:0}
 
 /* 混音 */
-.rack{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;
+/* 樂器機架：一個樂器一區，區名在上，音色在左、節奏在右，同一個樂器的
+ * 東西永遠在同一排。貝斯與鼓各只有節奏一項，兩區並排湊成一列，不必各佔
+ * 一整排。這個分區是結構不是外觀，兩套主題共用，只是長相各自定義。 */
+.rack{display:flex;flex-direction:column;gap:9px;margin-top:10px;padding-top:10px;
   border-top:1px solid var(--line)}
+.inst{display:flex;flex-direction:column;gap:5px;min-width:0}
+.inst-head{font-size:9.5px;letter-spacing:.2em;color:var(--dim);display:flex;align-items:center;gap:7px}
+.inst-head::after{content:"";flex:1;height:1px;background:var(--line)}
+.inst-row{display:flex;gap:7px;min-width:0}
+.inst-pair{display:flex;gap:9px;min-width:0}
+.inst-pair > .inst{flex:1;min-width:0}
 .rack .ctl-group{flex-direction:column;align-items:stretch;gap:4px;min-width:0}
-.rack .ctl-group.grow{flex:none}
+.rack .ctl-group.grow{flex:1}
 .rack .lbl{font-size:9.5px;letter-spacing:.16em}
 .rack .pick{width:100%}
-.rack .pick .pick-btn{width:100%;height:30px}
+.rack .pick .pick-btn{width:100%;height:30px;padding:0 7px;font-size:11px}
 .rack > .btn-ghost.sm{align-self:flex-start}
 .prev-row{display:flex;align-items:center;gap:8px;padding-top:9px;margin-top:2px;
   border-top:1px solid var(--line)}
@@ -4867,7 +4989,16 @@ window.__CHORDLAB__ = function(){
           /* @__PURE__ */ React.createElement("button", { className: "btn-ghost sm danger", onClick: () => removeChordAt(ci) }, "刪除")
         )
       );
-    })(), /* @__PURE__ */ React.createElement("div", { className: "rack" }, /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "刷弦節奏"), /* @__PURE__ */ React.createElement(
+    })(), /* @__PURE__ */ React.createElement("div", { className: "rack" }, /* @__PURE__ */ React.createElement("div", { className: "inst g" }, /* @__PURE__ */ React.createElement("div", { className: "inst-head" }, "吉他"), /* @__PURE__ */ React.createElement("div", { className: "inst-row" }, /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "音色"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: gtone,
+        up: true,
+        grow: true,
+        onChange: applyTone,
+        options: Object.entries(TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "節奏"), /* @__PURE__ */ React.createElement(
       Picker,
       {
         value: strumKey,
@@ -4876,52 +5007,43 @@ window.__CHORDLAB__ = function(){
         onChange: setStrumKey,
         options: Object.entries(STRUM_PATTERNS).map(([k, v]) => ({ v: k, l: v.name, s: v.hint }))
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "音色"), /* @__PURE__ */ React.createElement(
-      Picker,
-      {
-        value: gtone,
-        up: true,
-        width: 138,
-        onChange: applyTone,
-        options: Object.entries(TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
-      }
-    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鋼琴音色"), /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("div", { className: "inst p" }, /* @__PURE__ */ React.createElement("div", { className: "inst-head" }, "鋼琴"), /* @__PURE__ */ React.createElement("div", { className: "inst-row" }, /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "音色"), /* @__PURE__ */ React.createElement(
       Picker,
       {
         value: ptone,
         up: true,
-        width: 138,
+        grow: true,
         onChange: applyPianoTone,
         options: Object.entries(PIANO_TONES).map(([k, v]) => ({ v: k, l: v.n, s: v.s }))
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鼓組"), /* @__PURE__ */ React.createElement(
-      Picker,
-      {
-        value: drumKey,
-        up: true,
-        width: 128,
-        onChange: setDrumKey,
-        options: Object.entries(DRUM_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
-      }
-    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "貝斯"), /* @__PURE__ */ React.createElement(
-      Picker,
-      {
-        value: bassKey,
-        up: true,
-        width: 118,
-        onChange: setBassKey,
-        options: Object.entries(BASS_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
-      }
-    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "鋼琴節奏"), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "節奏"), /* @__PURE__ */ React.createElement(
       Picker,
       {
         value: pianoKey,
         up: true,
-        width: 128,
+        grow: true,
         onChange: setPianoKey,
         options: Object.entries(PIANO_PATTERNS).map(([k, v]) => ({ v: k, l: v.name, s: v.hint }))
       }
-    )), /* @__PURE__ */ React.createElement("button", {
+    )))), /* @__PURE__ */ React.createElement("div", { className: "inst-pair" }, /* @__PURE__ */ React.createElement("div", { className: "inst b" }, /* @__PURE__ */ React.createElement("div", { className: "inst-head" }, "貝斯"), /* @__PURE__ */ React.createElement("div", { className: "inst-row" }, /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "節奏"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: bassKey,
+        up: true,
+        grow: true,
+        onChange: setBassKey,
+        options: Object.entries(BASS_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
+      }
+    )))), /* @__PURE__ */ React.createElement("div", { className: "inst d" }, /* @__PURE__ */ React.createElement("div", { className: "inst-head" }, "鼓"), /* @__PURE__ */ React.createElement("div", { className: "inst-row" }, /* @__PURE__ */ React.createElement("div", { className: "ctl-group grow" }, /* @__PURE__ */ React.createElement("label", { className: "lbl" }, "節奏"), /* @__PURE__ */ React.createElement(
+      Picker,
+      {
+        value: drumKey,
+        up: true,
+        grow: true,
+        onChange: setDrumKey,
+        options: Object.entries(DRUM_PATTERNS).map(([k, v]) => ({ v: k, l: v.name }))
+      }
+    ))))), /* @__PURE__ */ React.createElement("button", {
       className: "btn-ghost sm" + (autoMix ? " on" : ""),
       title: "自動混音：高低頻分工、左右分離、底鼓閃避、總線限幅",
       onClick: () => setAutoMix((v) => !v)
