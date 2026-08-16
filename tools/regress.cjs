@@ -107,7 +107,10 @@ const WITH_AUDIO = process.env.REGRESS_AUDIO === "1";
         .map((b) => b.textContent.trim().replace(/\s+/g, " "));
       return {
         name: nm ? nm.textContent.trim().replace(/\s+/g, " ") : null,
-        stack: st ? st.textContent.trim() : null,
+        stack: st ? ([...st.querySelectorAll(".vs-col b")].length
+          ? [...st.querySelectorAll(".vs-col b")].map((x) => x.textContent.trim()).join("-")
+          : st.textContent.trim()) : null,
+        notes: st ? [...st.querySelectorAll(".vs-col i")].map((x) => x.textContent.trim()).join(" ") : null,
         nav: nav ? nav.textContent.trim().replace(/\s+/g, " ") : null,
         wins, brk,
       };

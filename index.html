@@ -505,6 +505,84 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   background:linear-gradient(178deg,#B9C0C4 0%,#A7AFB4 55%,#98A1A6 100%);
   box-shadow:inset 0 1px 4px rgba(0,0,0,.45),0 0 0 #737A7E}
 
+/* ══════════ 把位與弦組：沿用公用電話的鍍鉻鍵 ══════════
+ * 跟左欄調內和弦同一套鍵：外圈鉻色鍵座、拉絲鍵帽、刻上去的字。
+ * 藍色漆板從標題（把位切換那一列）一路包到弦組按鈕，中間不斷。
+ * ════════════════════════════════════════ */
+.theme-retro .voice-nav{position:relative;z-index:3;margin-top:2px;margin-bottom:-9px;
+  padding:8px 10px 7px;border-radius:4px 4px 0 0;color:#DCE9F0;
+  background:var(--grain),
+    radial-gradient(150% 300% at 50% 0%,rgba(255,255,255,.14),rgba(0,0,0,0) 60%),
+    linear-gradient(#3B7796,#3B7796);
+  background-blend-mode:overlay,normal,normal;
+  box-shadow:inset 0 1px 0 var(--lit),
+    inset 1px 0 0 rgba(0,0,0,.22),inset -1px 0 0 rgba(0,0,0,.22)}
+.theme-retro .voice-nav span{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+  color:#EAF3F8;text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.theme-retro .voice-nav em{font-size:9px;letter-spacing:.1em;color:#BBD6E4;opacity:1}
+/* 左右箭頭也是鍵，只是小一號 */
+.theme-retro .voice-nav button{width:28px;height:22px;border:0;border-radius:2px;color:#22282B;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.028) 0 1px,transparent 1px 7px),
+    linear-gradient(178deg,#F2F4F5 0%,#DDE1E4 42%,#BFC5C9 72%,#A9B0B5 100%);
+  text-shadow:-1px -1px 0 rgba(0,0,0,.28),1px 1px 0 rgba(255,255,255,.95);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 0 2px #9AA1A6,0 0 0 3px #4E5559,
+    0 3px 0 #6B7276,0 5px 6px -3px rgba(0,0,0,.5);
+  transition:transform .04s ease,box-shadow .04s ease}
+.theme-retro .voice-nav button:hover{color:#22282B;border:0}
+.theme-retro .voice-nav button:active{transform:translateY(2px);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.4),0 0 0 2px #9AA1A6,0 0 0 3px #4E5559,
+    0 1px 0 #6B7276,0 2px 3px -1px rgba(0,0,0,.5)}
+/* 「弦組｜決定轉位」是印在漆板上的字 */
+.theme-retro .win-label{position:relative;z-index:2;margin-top:0;margin-bottom:-9px;
+  padding:9px 11px 2px;color:#D3E6F0;
+  font-family:var(--mono);font-size:9px;letter-spacing:.2em;
+  background:var(--grain),linear-gradient(#3B7796,#3B7796);background-blend-mode:overlay,normal;
+  box-shadow:inset 1px 0 0 rgba(0,0,0,.22),inset -1px 0 0 rgba(0,0,0,.22)}
+.theme-retro .win-row{gap:8px;padding:8px 10px 12px;border-radius:0 0 4px 4px;
+  background:var(--grain),
+    radial-gradient(120% 150% at 50% -22%,rgba(255,255,255,.10),rgba(0,0,0,0) 55%,rgba(0,0,0,.24) 100%),
+    linear-gradient(#3B7796,#3B7796);
+  background-blend-mode:overlay,normal,normal;
+  box-shadow:inset 1px 0 0 rgba(0,0,0,.22),inset -1px 0 0 rgba(0,0,0,.22),
+    inset 0 -1px 0 rgba(0,0,0,.2),var(--drop)}
+.theme-retro .win-btn{border:0;border-radius:3px;padding:6px 2px 7px;gap:0;min-width:0;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.028) 0 1px,transparent 1px 7px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 13px),
+    linear-gradient(178deg,#F2F4F5 0%,#DDE1E4 42%,#BFC5C9 72%,#A9B0B5 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(0,0,0,.22),
+    0 0 0 2px #9AA1A6,0 0 0 3px #4E5559,
+    0 4px 0 #6B7276,0 6px 8px -3px rgba(0,0,0,.55);
+  transition:transform .04s ease,box-shadow .04s ease,background .12s}
+.theme-retro .win-btn:hover{border:0;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.028) 0 1px,transparent 1px 7px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 13px),
+    linear-gradient(178deg,#FAFBFB 0%,#E7EAEC 42%,#C9CFD3 72%,#B3BABE 100%)}
+.theme-retro .win-btn:active{transform:translateY(3px);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.4),inset 0 -1px 0 rgba(255,255,255,.35),
+    0 0 0 2px #9AA1A6,0 0 0 3px #4E5559,
+    0 1px 0 #6B7276,0 2px 3px -1px rgba(0,0,0,.5)}
+/* 刻上去的字，跟調內和弦的鍵一致 */
+.theme-retro .win-btn b{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#171D20;
+  text-shadow:-1px -1px 0 rgba(0,0,0,.32),1px 1px 0 rgba(255,255,255,1)}
+.theme-retro .win-btn i{font-size:8px;letter-spacing:.02em;color:#4E565B;
+  text-shadow:-1px -1px 0 rgba(0,0,0,.28),1px 1px 0 rgba(255,255,255,.95)}
+/* 選中＝橘鍵，跟和弦性質那組同一個語彙 */
+.theme-retro .win-btn.on{
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.028) 0 1px,transparent 1px 7px),
+    linear-gradient(178deg,#F7C070 0%,#EDA845 42%,#D98B26 72%,#C57C1B 100%)}
+.theme-retro .win-btn.on b{color:#2A1C08}
+.theme-retro .win-btn.on i{color:#6B4A12;text-shadow:-1px -1px 0 rgba(0,0,0,.2),1px 1px 0 rgba(255,255,255,.6)}
+.theme-retro .win-btn.weak{opacity:.5}
+
 /* ══════════ 和弦性質：電話按鍵主題 ══════════
  * 參考舊按鍵電話：米色面板上陷著一排深石墨色的橡膠鍵。
  *
@@ -771,9 +849,13 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   color:#37FF95;text-shadow:0 0 7px rgba(55,255,149,.55);margin:0}
 .theme-retro .crt-screen .voice-name span{font-family:var(--mono);font-size:9px;letter-spacing:.15em;
   color:#23B368;text-shadow:0 0 5px rgba(55,255,149,.35);white-space:nowrap}
-.theme-retro .crt-screen .voice-stack{position:relative;z-index:1;color:#23B368;letter-spacing:.13em;
-  text-shadow:0 0 5px rgba(55,255,149,.3);margin:5px 0 0;padding-bottom:8px;
-  border-bottom:1px solid rgba(55,255,149,.22)}
+.theme-retro .crt-screen .voice-stack{position:relative;z-index:1;gap:3px 11px;
+  margin:6px 0 0;padding-bottom:8px;border-bottom:1px solid rgba(55,255,149,.22)}
+.theme-retro .crt-screen .vs-col b{color:#37FF95;letter-spacing:.1em;
+  text-shadow:0 0 5px rgba(55,255,149,.35)}
+.theme-retro .crt-screen .vs-col i{font-family:var(--mono);font-size:10px;color:#26A96A;
+  letter-spacing:.06em;text-shadow:0 0 4px rgba(55,255,149,.25)}
+.theme-retro .crt-screen .vs-col em{color:#1B7F4C}
 /* 和弦圖擺在剩餘空間的正中間——直接 margin-top:auto 會把它壓到最底，
    中間反而空一大塊，上下留白平均才是平衡的 */
 .theme-retro .crt-screen .fb-wrap{position:relative;z-index:1;margin:auto 0;padding:0;
@@ -795,7 +877,12 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .fb-pos{fill:var(--dim);font-size:9.5px;text-anchor:middle;font-family:var(--mono)}
 .fb-glow{opacity:0;animation:strumGlow .5s ease-out forwards}
 @keyframes strumGlow{0%{opacity:0;stroke-width:1}10%{opacity:.95;stroke-width:5}100%{opacity:0;stroke-width:2}}
-.voice-stack{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;margin-top:-2px}
+/* 級數與音名配成一欄一欄：兩者都從同一份排序過的音高來，索引對得起來 */
+.voice-stack{display:flex;flex-wrap:wrap;gap:2px 9px;margin-top:-2px}
+.vs-col{display:flex;flex-direction:column;align-items:center;line-height:1.25}
+.vs-col b{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--txt);letter-spacing:.06em}
+.vs-col i{font-family:var(--serif);font-size:12px;font-style:normal;color:var(--dim)}
+.vs-col em{font-style:normal;font-family:var(--mono);font-size:8.5px;opacity:.7;margin-left:1px}
 .win-label{font-size:9.5px;color:var(--dim);letter-spacing:.16em;margin-top:2px}
 .win-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 .win-btn{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border-radius:6px;
@@ -3356,7 +3443,7 @@ window.__CHORDLAB__ = function(){
   }
   function voiceInfo(rootPc, quality, frets, capo, sp) {
     const midis = voicingToMidi(frets, capo).slice().sort((a, b) => a - b);
-    const blank = { name: chordLabel(rootPc, quality, null, sp), inv: "", stack: "", extra: [], missing: [] };
+    const blank = { name: chordLabel(rootPc, quality, null, sp), inv: "", stack: "", notes: [], extra: [], missing: [] };
     if (!midis.length) return blank;
     const semis = midis.map((m) => semiOf(m % 12, rootPc));
     const set = new Set(semis);
@@ -3374,7 +3461,16 @@ window.__CHORDLAB__ = function(){
     if (missing.includes(7)) name += "no5";
     if (bass !== 0) name += "/" + sp.note((rootPc + bass) % 12);
     const inv = bass === 0 ? "\u6839\u97f3\u4f4d\u7f6e" : bass === 3 || bass === 4 ? "\u7b2c\u4e00\u8f49\u4f4d" : bass === 6 || bass === 7 || bass === 8 ? "\u7b2c\u4e8c\u8f49\u4f4d" : bass === 10 || bass === 11 || isDimSeventh(bass, quality) ? "\u7b2c\u4e09\u8f49\u4f4d" : "\u4f4e\u97f3 " + ivLabel(bass, quality);
-    return { name, inv, stack: semis.map((sm) => ivLabel(sm, quality)).join("-"), extra: ex, missing };
+    return {
+      name, inv,
+      stack: semis.map((sm) => ivLabel(sm, quality)).join("-"),
+      notes: midis.map((m, i) => ({
+        d: ivLabel(semis[i], quality),
+        n: sp.fromRoot((rootPc + capo) % 12, m % 12),
+        o: Math.floor(m / 12) - 1
+      })),
+      extra: ex, missing
+    };
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -5001,7 +5097,7 @@ window.__CHORDLAB__ = function(){
           // 「根音位置」是預設情況，寫出來沒帶資訊，只有轉位才值得標
           viewChord.info.inv === "\u6839\u97f3\u4f4d\u7f6e" ? null
             : /* @__PURE__ */ React.createElement("span", null, viewChord.info.inv || QUALITIES[viewChord.quality].full)),
-        /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.stack),
+        /* @__PURE__ */ React.createElement("div", { className: "voice-stack" }, viewChord.info.notes.map((x, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "vs-col" }, /* @__PURE__ */ React.createElement("b", null, x.d), /* @__PURE__ */ React.createElement("i", null, x.n, /* @__PURE__ */ React.createElement("em", null, x.o))))),
         /* @__PURE__ */ React.createElement(Fretboard, { voicing: viewChord.voicing, sweep, capo, ovMap: (viewChord.cfg && viewChord.cfg.ov) || {}, rootPc: viewChord.rootPc, keyPc, sp, labelMode })
       )
     ), /* @__PURE__ */ React.createElement("div", { className: "voice-nav" }, /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + viewChord.allVoicings.length - 1) % viewChord.allVoicings.length }) }, "◀"), /* @__PURE__ */ React.createElement("span", null, viewChord.voicing.tag, /* @__PURE__ */ React.createElement("em", null, viewChord.voiceIdx % viewChord.allVoicings.length + 1, " / ", viewChord.allVoicings.length)), /* @__PURE__ */ React.createElement("button", { onClick: () => patchVoice(viewChord, { shapeIdx: (viewChord.voiceIdx + 1) % viewChord.allVoicings.length }) }, "▶")), /* @__PURE__ */ React.createElement("div", { className: "win-label" }, "弦組 ｜ 決定轉位"), /* @__PURE__ */ React.createElement("div", { className: "win-row" }, (function () {
@@ -5047,7 +5143,7 @@ window.__CHORDLAB__ = function(){
         ks.map((k) => /* @__PURE__ */ React.createElement("button", { key: k, className: "mod " + (ov[k] < 0 ? "drop" : "add"), title: "取消這條弦的手動設定",
           onClick: () => clearOne(viewChord, +k) },
           (6 - k) + "弦 " + (ov[k] < 0 ? "消音" : ov[k] === 0 ? "空弦" : ov[k] + capo + "格") + " ✕")));
-    })(), React.createElement("div", { className: "notes" }, voicingToMidi(viewChord.voicing.frets, capo).map((m, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "note-pill" }, sp.fromRoot((viewChord.rootPc + capo) % 12, m % 12), /* @__PURE__ */ React.createElement("em", null, Math.floor(m / 12) - 1))))) : /* @__PURE__ */ React.createElement("div", { className: "empty tall" }, "點進行軌上的任一個和弦，這裡會顯示真實按法、組成音，以及刷弦時每條弦亮起的順序。"), editChord && (() => {
+    })()) : /* @__PURE__ */ React.createElement("div", { className: "empty tall" }, "點進行軌上的任一個和弦，這裡會顯示真實按法、組成音，以及刷弦時每條弦亮起的順序。"), editChord && (() => {
       const c = editChord;
       const ci = progV.findIndex((x) => x.id === c.id);
       return /* @__PURE__ */ React.createElement(
