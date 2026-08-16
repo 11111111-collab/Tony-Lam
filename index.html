@@ -39,9 +39,36 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   --string:#B6BCC7; --dot:#2A2E38;
   --fret:#7D828C;
   /* 和弦進行區：綠板與便利貼。這一區刻意跳出深色系，是實體物件的隱喻 */
-  --board:#2E4A3E; --board2:#274136; --board-edge:#1B2E26; --board-rule:#3A5A4C;
+  --board:#31503F; --board2:#274136; --board-edge:#18302A; --board-rule:#3A5A4C;
   --note:#F5E17F; --note2:#EFD86A; --ink:#2E2A1E; --ink-dim:#6B6248;
   --hand:"Caveat","LXGW WenKai TC","Klee One",var(--serif);
+  /* ── 復古主題的材質與光線 ───────────────────────────────────────────
+   * 顆粒：feTurbulence 的 fractalNoise 是沒有方向性的，這正是紙、漆面、
+   * 木頭該有的表面。原本各處用的斜條紋有方向，眼睛會讀成「印上去的花紋」。
+   *
+   * 用法是把它當成 background 的第一層，配 background-blend-mode，
+   * 不用偽元素——好幾個表面的 ::before/::after 已經被撕邊、折角、掃描線
+   * 佔走了，而且偽元素加 mix-blend-mode 會多開一個堆疊脈絡。
+   *
+   * 混色模式要分兩套（實測，見 PR）：
+   *   中／暗色表面  overlay      顆粒強度夠
+   *   接近白的表面  multiply     overlay 在亮底上幾乎不動（實測 0.4）
+   *                              而且底色要提亮回來補償
+   *
+   * 光線：整個介面只有一顆太陽，在正上方。凸起的東西高光在上緣、暗邊在
+   * 下緣；凹陷的東西反過來。所有表面共用這三個變數，不要各寫各的 rgba。 */
+  /* background-blend-mode 沒有 per-layer opacity，所以衰減要做進雜訊本身：
+   * feComponentTransfer 把雜訊的動態範圍壓窄，slope 就是唯一的旋鈕。
+   *   overlay 用的壓向 0.5（[.25,.75]）——離中間越近，影響越小
+   *   multiply 用的壓向 1.0（[.84,1]）——最多只把底色壓暗 16%
+   * 不壓的話 multiply 會把收據紙弄得像髒掉，overlay 會把漆面弄成雜訊圖。 */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3CfeComponentTransfer%3E%3CfeFuncR type=%27linear%27 slope=%270.5%27 intercept=%270.25%27/%3E%3CfeFuncG type=%27linear%27 slope=%270.5%27 intercept=%270.25%27/%3E%3CfeFuncB type=%27linear%27 slope=%270.5%27 intercept=%270.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27/%3E%3C/svg%3E");
+  --grain-p:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.85%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3CfeComponentTransfer%3E%3CfeFuncR type=%27linear%27 slope=%270.26%27 intercept=%270.74%27/%3E%3CfeFuncG type=%27linear%27 slope=%270.26%27 intercept=%270.74%27/%3E%3CfeFuncB type=%27linear%27 slope=%270.26%27 intercept=%270.74%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27/%3E%3C/svg%3E");
+  --grain-w:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.55%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3CfeComponentTransfer%3E%3CfeFuncR type=%27linear%27 slope=%270.62%27 intercept=%270.19%27/%3E%3CfeFuncG type=%27linear%27 slope=%270.62%27 intercept=%270.19%27/%3E%3CfeFuncB type=%27linear%27 slope=%270.62%27 intercept=%270.19%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27200%27 height=%27200%27 filter=%27url(%23n)%27/%3E%3C/svg%3E");
+  --lit:rgba(255,255,255,.28);   /* 凸起物的上緣高光 */
+  --lit-s:rgba(255,255,255,.14); /* 同上，弱的一階 */
+  --shade:rgba(0,0,0,.26);       /* 凸起物的下緣暗邊 */
+  --drop:0 10px 20px -14px rgba(0,0,0,.8);  /* 往下的投影 */
   --display:"Syne","Space Grotesk",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
   --sans:"Space Grotesk",system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
   --serif:"Instrument Serif","Songti TC",Georgia,"Times New Roman",serif;
@@ -235,7 +262,9 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
  * 當板框；淡橫線讓平面不要太空。
  * ════════════════════════════════════════ */
 .theme-retro .track{gap:13px;min-height:150px;padding:18px 16px;border-radius:8px;
-  background:radial-gradient(120% 90% at 50% 0%, var(--board) 0%, var(--board2) 70%, var(--board-edge) 100%);
+  background:var(--grain),
+    radial-gradient(120% 90% at 50% 0%, var(--board) 0%, var(--board2) 70%, var(--board-edge) 100%);
+  background-blend-mode:overlay,normal;
   box-shadow:inset 0 0 0 1px var(--board-edge), inset 0 2px 14px rgba(0,0,0,.35)}
 .theme-retro .track::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:8px;
   background:repeating-linear-gradient(to bottom, transparent 0 33px,
@@ -245,7 +274,8 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
    在變，靠位置決定的話便利貼會在補位途中忽然換角度換顏色。
    平移量也走變數，FLIP 才不會把旋轉覆寫掉。 */
 .theme-retro .card{width:116px;min-height:108px;border:0;border-radius:2px;padding:9px 10px 11px;
-  background:var(--paper,var(--note));color:var(--ink);font-family:var(--hand);
+  background:var(--grain-p),var(--paper,var(--note));background-blend-mode:multiply,normal;
+  color:var(--ink);font-family:var(--hand);
   transform:translate(var(--fx),var(--fy)) rotate(var(--rot));transform-origin:50% 8%;
   transition:transform .18s ease,box-shadow .14s,filter .14s;
   box-shadow:0 1px 1px rgba(0,0,0,.28), 0 6px 12px -6px rgba(0,0,0,.5)}
@@ -364,7 +394,8 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
  * 品項編號用 CSS counter 產生，不用改 render。
  * ════════════════════════════════════════ */
 .theme-retro .tmpl-head{position:relative;margin-bottom:-9px;padding:15px 13px 8px;
-  background:#F2EFE6;color:#4A443A;font-family:var(--mono);font-size:11px;letter-spacing:.3em;
+  background:var(--grain-p),linear-gradient(#F6F3EA,#F6F3EA);background-blend-mode:multiply,normal;
+  color:#4A443A;font-family:var(--mono);font-size:11px;letter-spacing:.3em;
   flex-wrap:wrap;justify-content:center;gap:0 8px;border-radius:3px 3px 0 0;text-indent:.3em;
   box-shadow:0 -1px 0 rgba(0,0,0,.06) inset}
 /* 店名就是網頁名稱；只有收據要它，其他主題不顯示 */
@@ -376,7 +407,8 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   background:radial-gradient(circle 5px at 5px 0, var(--bg) 0 5px, transparent 5.5px) repeat-x top/10px 7px;
   pointer-events:none}
 .theme-retro .genre-count{color:#8A8375;letter-spacing:0}
-.theme-retro .tmpl-wrap{border:0;border-radius:0 0 3px 3px;background:#F2EFE6;
+.theme-retro .tmpl-wrap{border:0;border-radius:0 0 3px 3px;
+  background:var(--grain-p),linear-gradient(#F6F3EA,#F6F3EA);background-blend-mode:multiply,normal;
   box-shadow:0 10px 22px -14px rgba(0,0,0,.7)}
 /* 撕邊蓋在捲動層之上，紙緣不會被內容穿過 */
 .theme-retro .tmpl-wrap::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;z-index:3;
@@ -414,24 +446,29 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
  * ════════════════════════════════════════ */
 .theme-retro .left .col-head{position:relative;z-index:1;margin-bottom:-9px;
   padding:10px 11px 9px;border-radius:4px 4px 0 0;
-  background:
-    repeating-linear-gradient(41deg,rgba(255,255,255,.04) 0 2px,rgba(0,0,0,.04) 2px 4px),
+  background:var(--grain),
+    radial-gradient(150% 300% at 50% 0%,rgba(255,255,255,.14),rgba(0,0,0,0) 60%),
     linear-gradient(#3B7796,#3B7796);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),
+  background-blend-mode:overlay,normal,normal;
+  box-shadow:inset 0 1px 0 var(--lit),
     inset 1px 0 0 rgba(0,0,0,.22),inset -1px 0 0 rgba(0,0,0,.22)}
 .theme-retro .left .col-head h2{font-family:var(--mono);font-size:10px;letter-spacing:.24em;
   color:#EAF3F8;text-shadow:0 1px 1px rgba(0,0,0,.4)}
 /* 鍵盤面板：跟標題同一塊漆面，往下收邊 */
 .theme-retro .palette{gap:8px;padding:12px 10px 14px;border-radius:0 0 4px 4px;
-  background:
-    repeating-linear-gradient(41deg,rgba(255,255,255,.04) 0 2px,rgba(0,0,0,.04) 2px 4px),
+  background:var(--grain),
+    radial-gradient(120% 150% at 50% -22%,rgba(255,255,255,.10),rgba(0,0,0,0) 55%,rgba(0,0,0,.24) 100%),
     linear-gradient(#3B7796,#3B7796);
-  box-shadow:inset 0 -1px 0 rgba(255,255,255,.14),
-    inset 1px 0 0 rgba(0,0,0,.22),inset -1px 0 0 rgba(0,0,0,.22),
-    0 10px 20px -14px rgba(0,0,0,.8)}
+  background-blend-mode:overlay,normal,normal;
+  box-shadow:inset 1px 0 0 rgba(0,0,0,.22),inset -1px 0 0 rgba(0,0,0,.22),
+    inset 0 -1px 0 rgba(0,0,0,.2),var(--drop)}
 /* 鍍鉻鍵：外面那圈是鍵座，裡面是拉絲鍵帽 */
 .theme-retro .pad{border:0;border-radius:3px;padding:6px 2px 7px;gap:0;min-width:0;
-  background:linear-gradient(178deg,#F2F4F5 0%,#DDE1E4 42%,#BFC5C9 72%,#A9B0B5 100%);
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.028) 0 1px,transparent 1px 7px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 13px),
+    linear-gradient(178deg,#F2F4F5 0%,#DDE1E4 42%,#BFC5C9 72%,#A9B0B5 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(0,0,0,.22),
     0 0 0 2px #9AA1A6,0 0 0 3px #4E5559,
@@ -447,11 +484,12 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
     0 0 0 2px #9AA1A6,0 0 0 3px #4E5559,
     0 1px 0 #6B7276,0 2px 3px -1px rgba(0,0,0,.5)}
 /* 級數＝數字上方那排刻上去的小字 */
+/* 刻進去的字：左上暗、右下亮（浮雕是反過來的），字色再暗一階 */
 .theme-retro .pad-deg{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;
-  color:#5C6469;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  color:#4E565B;text-shadow:-1px -1px 0 rgba(0,0,0,.28),1px 1px 0 rgba(255,255,255,.95)}
 /* 和弦名＝鍵面上那個大字 */
 .theme-retro .pad-name{font-family:var(--mono);font-size:12px;font-weight:700;line-height:1.15;
-  color:#22282B;text-shadow:0 1px 0 rgba(255,255,255,.65)}
+  color:#171D20;text-shadow:-1px -1px 0 rgba(0,0,0,.32),1px 1px 0 rgba(255,255,255,1)}
 /* 三和弦／七和弦：面板右上那顆金屬搖桿鍵 */
 .theme-retro .left .col-head .seg{border:0;border-radius:3px;overflow:visible;gap:2px;
   padding:2px;background:#3A4247;
@@ -477,7 +515,10 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
  *
  * 只寫在 .theme-retro 底下，預設主題不受影響。
  * ════════════════════════════════════════ */
-.theme-retro .quals{background:linear-gradient(#CEC7B4 0%, #C2BAA6 60%, #B3AA95 100%);
+.theme-retro .quals{background:var(--grain-p),
+    radial-gradient(120% 130% at 50% -8%,rgba(255,255,255,.5),rgba(0,0,0,0) 58%,rgba(0,0,0,.14) 100%),
+    linear-gradient(#D6CFBC 0%, #C9C1AD 60%, #BAB19C 100%);
+  background-blend-mode:multiply,normal,normal;
   border:1px solid #8E8778;border-radius:5px;padding:9px 9px 10px;gap:7px 8px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.16),
              inset 0 0 0 1px rgba(0,0,0,.07)}
@@ -491,7 +532,7 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 .theme-retro .chip.q{font-family:var(--mono);font-size:11.5px;font-weight:600;
   min-width:0;padding:6px 4px 7px;border-radius:4px;border:0;
   display:flex;align-items:center;justify-content:center;
-  color:#DCD8CC;text-shadow:0 -1px 0 rgba(0,0,0,.55);
+  color:#D2CEC2;text-shadow:-1px -1px 0 rgba(0,0,0,.6),1px 1px 0 rgba(255,255,255,.16);
   background:linear-gradient(#50504C 0%, #3D3D3A 52%, #2F2F2C 100%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.2), inset 0 -1px 0 rgba(0,0,0,.5),
              0 2px 0 #191917, 0 3px 5px -1px rgba(0,0,0,.45);
@@ -574,14 +615,16 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
  * `.theme-retro .rack .pick-menu` 選得到，不必為它另開一個 class。
  * ════════════════════════════════════════ */
 .theme-retro .rack{gap:7px;margin-top:12px;padding:11px 10px 12px;border:0;border-radius:5px;
-  background:
+  background:var(--grain-w),
     linear-gradient(90deg,rgba(0,0,0,.3),rgba(0,0,0,0) 7%,rgba(0,0,0,0) 93%,rgba(0,0,0,.3)),
-    repeating-linear-gradient(93deg,rgba(0,0,0,.055) 0 3px,rgba(255,226,190,.03) 3px 8px),
-    linear-gradient(162deg,#7C4429 0%,#5C3220 55%,#472515 100%);
-  box-shadow:inset 0 0 0 1px rgba(255,214,170,.17),inset 0 2px 10px rgba(0,0,0,.35),
+    radial-gradient(120% 130% at 50% -6%,rgba(255,255,255,.10),rgba(0,0,0,0) 52%,rgba(0,0,0,.22) 100%),
+    linear-gradient(162deg,#845132 0%,#61371F 55%,#472515 100%);
+  background-blend-mode:overlay,normal,normal,normal;
+  box-shadow:inset 0 1px 0 rgba(255,214,170,.2),inset 0 2px 10px rgba(0,0,0,.35),
     0 14px 30px -16px #000}
 /* 一格層板：凹進木頭裡，卡帶插在裡面 */
-.theme-retro .rack .inst{gap:0;padding:5px 6px 6px;border-radius:3px;background:#2B1509;
+.theme-retro .rack .inst{gap:0;padding:5px 6px 6px;border-radius:3px;
+  background:var(--grain-w),linear-gradient(#2F180B,#2F180B);background-blend-mode:overlay,normal;
   box-shadow:inset 0 2px 7px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.5),
     0 1px 0 rgba(255,205,160,.12)}
 .theme-retro .rack .inst-pair{gap:7px}
@@ -631,7 +674,10 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 /* 混音鈕：釘在櫃子木頭上的一塊小銘牌 */
 .theme-retro .rack > .btn-ghost.sm{margin-top:2px;border-radius:2px;font-family:var(--mono);
   font-size:9.5px;letter-spacing:.14em;padding:4px 10px;
-  background:linear-gradient(180deg,#C9A24E,#9E7B33);border:1px solid rgba(0,0,0,.45);
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.03) 0 1px,transparent 1px 7px),
+    linear-gradient(180deg,#C9A24E,#9E7B33);border:1px solid rgba(0,0,0,.45);
   color:#2A1F0A;box-shadow:0 1px 2px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.4)}
 .theme-retro .rack > .btn-ghost.sm:hover{color:#2A1F0A;border-color:rgba(0,0,0,.6)}
 .theme-retro .rack > .btn-ghost.sm.on{
@@ -640,10 +686,12 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
 /* 試聽與混音也在 .rack 裡（它們是層板的兄弟節點），直接壓在木頭上會看不清楚，
  * 所以把這兩塊做成嵌在櫃子下半部的一片深色機板。 */
 .theme-retro .rack .prev-row{margin-top:3px;padding:8px 10px 7px;border-top:0;
-  border-radius:3px 3px 0 0;background:#26120A;
+  border-radius:3px 3px 0 0;
+  background:var(--grain),linear-gradient(#2A140B,#2A140B);background-blend-mode:overlay,normal;
   box-shadow:inset 0 1px 7px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.5)}
 .theme-retro .rack .mixer{margin-top:-7px;padding:9px 10px 10px;
-  border-top:1px solid rgba(255,190,140,.11);border-radius:0 0 3px 3px;background:#26120A;
+  border-top:1px solid rgba(255,190,140,.11);border-radius:0 0 3px 3px;
+  background:var(--grain),linear-gradient(#2A140B,#2A140B);background-blend-mode:overlay,normal;
   box-shadow:inset 0 -1px 7px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.5)}
 .theme-retro .rack .mixer .ch.master{border-top-color:rgba(255,190,140,.13)}
 
@@ -697,13 +745,18 @@ html,body{margin:0;padding:0;height:100%;background:#0B0C0E}
   --brass:#37FF95; --jade:#C6FFE0; --bone:#37FF95; --rust:#1A6E40; --dim:#23B368;
   position:relative;isolation:isolate;aspect-ratio:1;display:flex;
   /* 機殼取自舊 CRT 的深灰塑膠：上緣受光、前框中階、下緣沉到暗處 */
-  background:linear-gradient(#5C5F65 0%, #4C4F55 17%, #3C3F45 58%, #2B2E33 100%);
+  background:var(--grain),
+    radial-gradient(120% 120% at 50% -6%,rgba(255,255,255,.09),rgba(0,0,0,0) 55%,rgba(0,0,0,.2) 100%),
+    linear-gradient(#5C5F65 0%, #4C4F55 17%, #3C3F45 58%, #2B2E33 100%);
+  background-blend-mode:overlay,normal,normal;
   border:1px solid #1D1F23;border-radius:16px;padding:15px 15px 28px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.17), inset 0 -1px 0 rgba(0,0,0,.55),
              0 14px 30px -16px #000, 0 2px 6px -3px rgba(0,0,0,.6)}
 .theme-retro .crt-screen{position:relative;flex:1;min-width:0;gap:0;
   border-radius:13px/17px;padding:11px 12px 13px;overflow:hidden;
-  background:radial-gradient(112% 108% at 50% 42%, #0C1C12 0%, #071109 58%, #040A06 100%);
+  background:
+    linear-gradient(148deg,rgba(255,255,255,.055) 0 22%,rgba(255,255,255,0) 46%),
+    radial-gradient(112% 108% at 50% 42%, #0C1C12 0%, #071109 58%, #040A06 100%);
   box-shadow:inset 0 0 0 2px #020403, inset 0 0 0 3px rgba(55,255,149,.10),
              inset 0 0 34px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.8)}
 /* 疊在畫面上的濾鏡層：玻璃反光、掃描線、磷光泛綠、四角暈影 */
