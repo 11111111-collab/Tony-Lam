@@ -1,0 +1,85 @@
+/* ---------------------------------------------------------------
+   基礎樣式
+   Wix 用一種等比縮放單位 spx：1spx = 視窗內容寬 / 基準寬。
+   基準寬每個斷點不同（桌機 1265、平板 753、手機 375），
+   都是設計畫布寬減去 15px 捲軸。
+   --vw 是視窗內容寬（不含捲軸），用 cqw 取得。
+--------------------------------------------------------------- */
+:root {
+  --vw: 100cqw;
+  --spx: calc(var(--vw) / 1265);
+  --paper: #fff;
+  --ink: #000;
+  --sans: aether, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --sans-alt: alfabet, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Wix 佈景的 Madefor 系列是專有字體，這裡用中性的無襯線堆疊代替 */
+  --ui: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --cjk: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Hiragino Sans", sans-serif;
+}
+
+/* Wix 原站使用的字體，直接引用其 CDN，不轉散布字型檔 */
+@font-face {
+  font-family: aether; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("https://static.parastorage.com/fonts/v2/d1f4aaca-ba32-45fe-a717-4dff34a09bca/v1/aether.latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: aether; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("https://static.parastorage.com/fonts/v2/b7cac872-10e6-48a7-aacc-39212836977c/v1/aether.latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: alfabet; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("https://static.parastorage.com/fonts/v2/81cf67b7-ef0b-438b-b097-ba36f6380000/v1/alfabet.latin.woff2") format("woff2");
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  container-type: inline-size;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans), var(--cjk);
+  overflow-x: clip;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+
+/* 整站骨架：頁首 / 內容 / 頁尾 三列 */
+.site {
+  display: grid;
+  grid-template-columns: 100%;
+  grid-template-rows: max-content max-content max-content;
+  min-height: 100vh;
+}
+.site-header, .site-footer, .section { display: grid; }
+
+/* 區塊內的元件全部落在同一個格子裡，靠 margin 與對齊定位——與原站相同 */
+.site-header > *, .section > *, .work-card > * { grid-area: 1/1/2/2; }
+.work-card { display: grid; grid-template-rows: 1fr; grid-template-columns: minmax(0, 1fr); }
+
+/* 文字：只重設 margin，實際定位一律由 layout.css 決定，不要在這裡加 margin */
+h1, h2, p { margin: 0; }
+.nav-bio, .nav-works, .nav-contact, .nav-home { text-decoration: underline; }
+.brand { text-decoration: none; }
+
+/* 字體與字重逐項對應原站：原站在哪個元件指定 aether／alfabet，這裡就跟著指定，
+   其餘沿用佈景字體（--ui）。中文一律由 --cjk 的系統字體承接。 */
+.brand,
+.work-title,
+.contact-title                { font-family: var(--sans), var(--cjk); font-weight: 700; }
+.bio-text strong,
+.s-work-detail .wd-title      { font-family: var(--sans), var(--cjk); font-weight: 700; }
+.nav-bio, .nav-works, .nav-contact,
+.wd-exhibition, .wd-year, .wd-link,
+.s-work-detail--b .wd-medium,
+.contact-mail, .contact-ig    { font-family: var(--sans), var(--cjk); font-weight: 400; }
+.nav-home                     { font-family: var(--sans-alt), var(--cjk); font-weight: 400; }
+.bio-text, .bio-cv, .bio-credit,
+.work-meta, .wd-statement,
+.s-work-detail .wd-medium,
+.s-work-detail--b .wd-title,
+.site-footer .copyright       { font-family: var(--ui), var(--cjk); font-weight: 400; }
+
+/* 圖片填滿自己的框，比例由 --aspect-ratio 決定 */
+.section img { width: 100%; height: 100%; object-fit: cover; }
+.bio-portrait img { object-position: 52% 32%; }

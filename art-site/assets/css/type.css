@@ -1,0 +1,340 @@
+/* 字級／行高／對齊：取自原 Wix 站在 1280 / 768 / 390 三種寬度下的實際算繪結果。
+   寫成 px 的是原站的固定字級；寫成 calc(係數 * var(--vw)) 的會隨寬度等比縮放。 */
+
+
+
+.brand {
+  font-size: 28.9868px;
+  line-height: normal;
+}
+.nav-bio {
+  font-size: calc(0.0148865 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-works {
+  font-size: calc(0.0148865 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-contact {
+  font-size: calc(0.0140462 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-home {
+  font-size: calc(0.0147904 * var(--vw));
+  line-height: 1.3000;
+}
+.site-footer .copyright {
+  font-size: 14px;
+  line-height: normal;
+  text-align: center;
+}
+.bio-text {
+  font-size: calc(0.0125000 * var(--vw));
+  line-height: 1.6000;
+  text-align: justify;
+}
+.bio-cv {
+  font-size: calc(0.0157831 * var(--vw));
+  line-height: 1.2000;
+}
+.bio-credit {
+  font-size: 14px;
+  line-height: normal;
+  text-align: center;
+}
+.work-card--a .work-title {
+  font-size: calc(0.0166286 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--a .work-meta {
+  font-size: calc(0.0110484 * var(--vw));
+  line-height: 1.5000;
+}
+.work-card--b .work-title {
+  font-size: calc(0.0166285 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--b .work-meta {
+  font-size: calc(0.0106994 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-exhibition {
+  font-size: calc(0.0175126 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail .wd-title {
+  font-size: calc(0.0198692 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail .wd-year {
+  font-size: calc(0.0159352 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-medium {
+  font-size: calc(0.0138577 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-statement {
+  font-size: calc(0.0137586 * var(--vw));
+  line-height: 1.2000;
+  text-align: justify;
+}
+.s-work-detail .wd-link {
+  font-size: calc(0.0180379 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-exhibition {
+  font-size: calc(0.0174926 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-title {
+  font-size: calc(0.0166286 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-year {
+  font-size: calc(0.0167926 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-medium {
+  font-size: calc(0.0115005 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail--b .wd-statement {
+  font-size: calc(0.0149130 * var(--vw));
+  line-height: 1.3000;
+  text-align: justify;
+}
+.s-work-detail--b .wd-link {
+  font-size: calc(0.0197051 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-title {
+  font-size: calc(0.0165958 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-mail {
+  font-size: calc(0.0148082 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-ig {
+  font-size: calc(0.0148082 * var(--vw));
+  line-height: 1.2000;
+}
+
+
+@media (max-width: 1000px) {
+.nav-bio {
+  font-size: calc(0.0148865 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-works {
+  font-size: calc(0.0148865 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-contact {
+  font-size: calc(0.0140462 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-home {
+  font-size: calc(0.0147904 * var(--vw));
+  line-height: 1.3000;
+}
+.bio-text {
+  font-size: calc(0.0125000 * var(--vw));
+  line-height: 1.6000;
+  text-align: justify;
+}
+.bio-cv {
+  font-size: calc(0.0157831 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--a .work-title {
+  font-size: calc(0.0166286 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--a .work-meta {
+  font-size: calc(0.0110484 * var(--vw));
+  line-height: 1.5000;
+}
+.work-card--b .work-title {
+  font-size: calc(0.0166285 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--b .work-meta {
+  font-size: calc(0.0106994 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-exhibition {
+  font-size: calc(0.0175126 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail .wd-title {
+  font-size: calc(0.0198691 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail .wd-year {
+  font-size: calc(0.0159352 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-medium {
+  font-size: calc(0.0138577 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-statement {
+  font-size: calc(0.0137586 * var(--vw));
+  line-height: 1.2000;
+  text-align: justify;
+}
+.s-work-detail .wd-link {
+  font-size: calc(0.0180379 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-exhibition {
+  font-size: calc(0.0174926 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-title {
+  font-size: calc(0.0166286 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-year {
+  font-size: calc(0.0167926 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-medium {
+  font-size: calc(0.0115005 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail--b .wd-statement {
+  font-size: calc(0.0149130 * var(--vw));
+  line-height: 1.3000;
+  text-align: justify;
+}
+.s-work-detail--b .wd-link {
+  font-size: calc(0.0197051 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-title {
+  font-size: calc(0.0165958 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-mail {
+  font-size: calc(0.0148082 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-ig {
+  font-size: calc(0.0148082 * var(--vw));
+  line-height: 1.2000;
+}
+}
+
+
+@media (max-width: 750px) {
+.brand {
+  font-size: 24.723px;
+  line-height: normal;
+}
+.nav-bio {
+  font-size: calc(0.0377641 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-works {
+  font-size: calc(0.0388300 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-contact {
+  font-size: calc(0.0419326 * var(--vw));
+  line-height: 1.3000;
+}
+.nav-home {
+  font-size: calc(0.0409882 * var(--vw));
+  line-height: 1.3000;
+}
+.bio-text {
+  font-size: calc(0.0270123 * var(--vw));
+  line-height: 1.6000;
+  text-align: justify;
+}
+.bio-cv {
+  font-size: calc(0.0362090 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--a .work-title {
+  font-size: calc(0.0166286 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--a .work-meta {
+  font-size: calc(0.0110484 * var(--vw));
+  line-height: 1.5000;
+}
+.work-card--b .work-title {
+  font-size: calc(0.0166285 * var(--vw));
+  line-height: 1.2000;
+}
+.work-card--b .work-meta {
+  font-size: calc(0.0106994 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-exhibition {
+  font-size: calc(0.0244687 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail .wd-title {
+  font-size: calc(0.0549608 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail .wd-year {
+  font-size: calc(0.0518223 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-medium {
+  font-size: calc(0.0303726 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail .wd-statement {
+  font-size: calc(0.0276387 * var(--vw));
+  line-height: 1.2000;
+  text-align: justify;
+}
+.s-work-detail .wd-link {
+  font-size: calc(0.0263113 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-exhibition {
+  font-size: calc(0.0236614 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-title {
+  font-size: calc(0.0503969 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-year {
+  font-size: calc(0.0504164 * var(--vw));
+  line-height: 1.2000;
+}
+.s-work-detail--b .wd-medium {
+  font-size: calc(0.0279472 * var(--vw));
+  line-height: 1.5000;
+}
+.s-work-detail--b .wd-statement {
+  font-size: calc(0.0259236 * var(--vw));
+  line-height: 1.3000;
+  text-align: justify;
+}
+.s-work-detail--b .wd-link {
+  font-size: calc(0.0270741 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-title {
+  font-size: calc(0.0543759 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-mail {
+  font-size: calc(0.0442128 * var(--vw));
+  line-height: 1.2000;
+}
+.contact-ig {
+  font-size: calc(0.0538703 * var(--vw));
+  line-height: 1.2000;
+}
+}

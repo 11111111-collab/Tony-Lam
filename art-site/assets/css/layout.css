@@ -1,0 +1,842 @@
+/* 版面幾何（寬度、外距、對齊、格線）直接取自原 Wix 站的計算結果，未經目測調整。
+   字級與行高不在這裡，見 type.css。 */
+
+
+
+/* 頁首 */
+.site-header {
+  align-self: stretch;
+  grid-area: 1/1/2/2;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  justify-self: stretch;
+  min-height: 101px;
+}
+
+/* 站名 */
+.brand {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.0168182 * var(--vw));
+  min-height: 43.80228348657893px;
+  width: 235.11519153168632px;
+}
+
+/* 選單 Biography */
+.nav-bio {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.3144911 * var(--vw));
+  margin-top: calc(0.0312352 * var(--vw));
+  width: 7.324280578980033%;
+}
+
+/* 選單 Works */
+.nav-works {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.2255089 * var(--vw));
+  margin-top: calc(0.0312352 * var(--vw));
+  width: 4.636558273174414%;
+}
+
+/* 選單 Contact */
+.nav-contact {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.1270257 * var(--vw));
+  margin-top: calc(0.0317811 * var(--vw));
+  width: 5.649146690057973%;
+}
+
+/* 選單 Home */
+.nav-home {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.0389279 * var(--vw));
+  margin-top: calc(0.0312969 * var(--vw));
+  width: 4.578100554352678%;
+}
+
+/* 頁尾 */
+.site-footer {
+  align-self: stretch;
+  grid-area: 3/1/4/2;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  justify-self: stretch;
+  min-height: 93px;
+}
+
+/* 頁尾版權 */
+.site-footer .copyright {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: 0.000048828125045474735px;
+  margin-right: 0px;
+  margin-top: 15.70001220703125px;
+  width: 62.5%;
+}
+
+/* 首頁區塊 */
+.s-home {
+  align-self: stretch;
+  grid-area: 2/1/3/2;
+  grid-template-columns: minmax(0px,1fr);
+  grid-template-rows: minmax(calc(0.6222435 * var(--vw)),auto);
+  justify-self: stretch;
+  min-height: 0px;
+  width: 100%;
+}
+
+/* 首頁主視覺 */
+.home-hero {
+  --aspect-ratio: 0.6666493883475014;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: calc(0.0096047 * var(--vw));
+  margin-right: 0px;
+  margin-top: 0px;
+  width: 93.28775534657747%;
+}
+
+/* Biography 區塊 */
+.s-bio {
+  align-self: stretch;
+  column-gap: 0px;
+  grid-area: 2/1/3/2;
+  grid-template-columns: minmax(0px,1fr);
+  grid-template-rows: minmax(calc(0.470351 * var(--vw)),auto);
+  justify-self: stretch;
+  min-height: 0px;
+  row-gap: 0px;
+  width: 100%;
+}
+
+/* 人像 */
+.bio-portrait {
+  --aspect-ratio: 1.5037328130245382;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: 0px;
+  width: 17.84431533676228%;
+}
+
+/* © 署名 */
+.bio-credit {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0371393 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.2730287 * var(--vw));
+  width: 9.41650902146708%;
+}
+
+/* 下載簡歷 */
+.bio-cv {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.3019812 * var(--vw));
+  width: 6.838541409680196%;
+}
+
+/* 簡介本文 */
+.bio-text {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.1207905 * var(--vw));
+  margin-top: calc(0.0659091 * var(--vw));
+  width: 60.53131219331861%;
+}
+
+/* Works 區塊 */
+.s-works {
+  align-self: stretch;
+  grid-area: 2/1/3/2;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: minmax(calc(0.3906253 * var(--vw)),auto);
+  justify-self: stretch;
+  margin-bottom: 0px;
+  margin-right: 0px;
+  margin-top: 0px;
+  min-height: 0px;
+  width: 100%;
+}
+
+/* 作品卡 左 */
+.work-card--a {
+  align-self: stretch;
+  grid-area: 1/1/2/2;
+  justify-self: stretch;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: 0px;
+  min-height: 0px;
+  width: auto;
+}
+
+.work-card--a .work-cover {
+  --aspect-ratio: 0.6666472791462942;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.0033943 * var(--vw));
+  margin-top: calc(0.0380237 * var(--vw));
+  width: 83.92828886562667%;
+}
+
+.work-card--a .work-title {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.0033992 * var(--vw));
+  margin-top: calc(0.3302026 * var(--vw));
+  width: 21.68030470402312%;
+}
+
+.work-card--a .work-meta {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.0033992 * var(--vw));
+  margin-top: calc(0.3606621 * var(--vw));
+  width: 40.93433889235823%;
+}
+
+/* 作品卡 右 */
+.work-card--b {
+  align-self: stretch;
+  grid-area: 1/2/2/3;
+  justify-self: stretch;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: 0px;
+  min-height: 0px;
+  width: auto;
+}
+
+.work-card--b .work-cover {
+  --aspect-ratio: 0.6666666495940159;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: calc(0.0025493 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.0380237 * var(--vw));
+  width: 83.92753216192666%;
+}
+
+.work-card--b .work-title {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: calc(0.3305188 * var(--vw));
+  width: 24.507827807045828%;
+}
+
+.work-card--b .work-meta {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: calc(0.0025493 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.3611808 * var(--vw));
+  width: 61.665876992965785%;
+}
+
+/* 作品內頁 區塊 */
+.s-work-detail {
+  align-self: stretch;
+  column-gap: 0px;
+  grid-area: 2/1/3/2;
+  grid-template-columns: minmax(0px,1fr);
+  grid-template-rows: minmax(calc(0.7960474 * var(--vw)),auto);
+  justify-self: stretch;
+  min-height: 0px;
+  row-gap: 0px;
+  width: 100%;
+}
+
+/* 主圖 */
+.wd-img-main {
+  --aspect-ratio: 1.5;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: 0px;
+  width: 31.62555344718532%;
+}
+
+/* 右上圖 */
+.wd-img-top {
+  --aspect-ratio: 0.6666623948492132;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.2879099 * var(--vw));
+  margin-top: 0px;
+  width: 34.81968731650534%;
+}
+
+/* 右下圖 */
+.wd-img-bottom {
+  --aspect-ratio: 0.6666566912410911;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.2879099 * var(--vw));
+  margin-top: calc(0.2422237 * var(--vw));
+  width: 34.81932548415768%;
+}
+
+/* 展覽場次 */
+.wd-exhibition {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0379447 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.4785573 * var(--vw));
+  width: 33.36268268372695%;
+}
+
+/* 作品名 */
+.wd-title {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0379549 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.5455289 * var(--vw));
+  width: 13.223072419299763%;
+}
+
+/* 年份 */
+.wd-year {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.1878508 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.5455287 * var(--vw));
+  width: 4.4617401913751475%;
+}
+
+/* 媒材 */
+.wd-medium {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0379447 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.5834142 * var(--vw));
+  width: 14.281914795382646%;
+}
+
+/* 論述 */
+.wd-statement {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.6708251 * var(--vw));
+  width: 67.4093730234029%;
+}
+
+/* 展覽資訊連結 */
+.wd-link {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.2875 * var(--vw));
+  margin-top: calc(0.4785573 * var(--vw));
+  width: 7.5110689437065155%;
+}
+
+/* 作品內頁 B */
+.s-work-detail--b {
+  align-self: stretch;
+  column-gap: 0px;
+  grid-area: 2/1/3/2;
+  grid-template-columns: minmax(0px,1fr);
+  grid-template-rows: minmax(calc(0.7992095 * var(--vw)),auto);
+  justify-self: stretch;
+  min-height: 0px;
+  row-gap: 0px;
+  width: 100%;
+}
+
+.s-work-detail--b .wd-img-main {
+  --aspect-ratio: 1.5;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: 0px;
+  width: 31.62555344718532%;
+}
+
+.s-work-detail--b .wd-img-top {
+  --aspect-ratio: 0.6666666666666666;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.28917 * var(--vw));
+  margin-top: 0px;
+  width: 34.62998102466792%;
+}
+
+.s-work-detail--b .wd-img-bottom {
+  --aspect-ratio: 0.6666510188288145;
+  align-self: start;
+  aspect-ratio: 1/var(--aspect-ratio);
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.28917 * var(--vw));
+  margin-top: calc(0.2434877 * var(--vw));
+  width: 34.6302311228691%;
+}
+
+.s-work-detail--b .wd-exhibition {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0383597 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.4804198 * var(--vw));
+  width: 34.18537664769962%;
+}
+
+.s-work-detail--b .wd-title {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0375692 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.5455881 * var(--vw));
+  width: 13.203668564199875%;
+}
+
+.s-work-detail--b .wd-year {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.1885128 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.545588 * var(--vw));
+  width: 4.377276486027123%;
+}
+
+.s-work-detail--b .wd-medium {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0375692 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.5837352 * var(--vw));
+  width: 23.40290955091714%;
+}
+
+.s-work-detail--b .wd-statement {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: start;
+  margin-bottom: 0px;
+  margin-left: calc(0.0312451 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.683755 * var(--vw));
+  width: 67.4414927261227%;
+}
+
+.s-work-detail--b .wd-link {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: end;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: calc(0.2871788 * var(--vw));
+  margin-top: calc(0.480415 * var(--vw));
+  width: 8.167300625438557%;
+}
+
+/* Contact 區塊 */
+.s-contact {
+  align-self: stretch;
+  column-gap: 0px;
+  grid-area: 2/1/3/2;
+  grid-template-columns: minmax(0px,1fr);
+  grid-template-rows: minmax(calc(0.3952569 * var(--vw)),auto);
+  justify-self: stretch;
+  min-height: 0px;
+  row-gap: 0px;
+  width: 100%;
+}
+
+.contact-title {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: calc(0 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.1164377 * var(--vw));
+  width: 11.878682672795275%;
+}
+
+.contact-mail {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: calc(0 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.1726631 * var(--vw));
+  width: 19.130080812532704%;
+}
+
+.contact-ig {
+  align-self: start;
+  grid-area: 1/1/2/2;
+  justify-self: center;
+  margin-bottom: 0px;
+  margin-left: calc(0 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.2023715 * var(--vw));
+  width: 7.055463555641826%;
+}
+
+
+@media (max-width: 1000px) {
+  :root { --spx: calc(var(--vw) / 753); }
+}
+
+@media (max-width: 1000px) {
+.brand {
+  margin-left: calc(0.0383549 * var(--vw));
+  margin-top: calc(0.0168119 * var(--vw));
+}
+.nav-bio {
+  justify-self: end;
+  margin-left: 0px;
+  margin-right: calc(0.3144837 * var(--vw));
+  margin-top: calc(0.037251 * var(--vw));
+}
+.nav-works {
+  margin-right: calc(0.2255063 * var(--vw));
+  margin-top: calc(0.037251 * var(--vw));
+}
+.nav-contact {
+  margin-right: calc(0.1309761 * var(--vw));
+  margin-top: calc(0.037251 * var(--vw));
+}
+.nav-home {
+  margin-right: calc(0.0389276 * var(--vw));
+  margin-top: calc(0.036284 * var(--vw));
+}
+.bio-credit {
+  justify-self: start;
+  margin-left: calc(0.0383466 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.2704598 * var(--vw));
+  width: 16.781516080201623%;
+}
+}
+
+
+@media (max-width: 750px) {
+  :root { --spx: calc(var(--vw) / 375); }
+}
+
+@media (max-width: 750px) {
+.brand {
+  margin-left: calc(0.03835 * var(--vw));
+  margin-top: calc(0.0362667 * var(--vw));
+  min-height: 39.10229606481217px;
+  width: 209.92716003553326px;
+}
+.nav-bio {
+  justify-self: start;
+  margin-left: calc(0.03835 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.2106833 * var(--vw));
+  width: 21.71911680461153%;
+}
+.nav-works {
+  margin-right: calc(0.4125 * var(--vw));
+  margin-top: calc(0.2099833 * var(--vw));
+  width: 14.093133627495328%;
+}
+.nav-contact {
+  margin-right: calc(0.02875 * var(--vw));
+  margin-top: calc(0.2079667 * var(--vw));
+  width: 18.607024927479316%;
+}
+.nav-home {
+  margin-right: calc(0.02875 * var(--vw));
+  margin-top: calc(0.0617583 * var(--vw));
+  width: 14.071622009060535%;
+}
+.site-footer .copyright {
+  align-self: center;
+  margin-left: 12.600009155273426px;
+  margin-top: 0.0000247955322265625px;
+  width: 60.098719316969046%;
+}
+.s-home {
+  grid-template-rows: minmax(calc(1.326232 * var(--vw)),auto);
+}
+.home-hero {
+  align-self: center;
+  margin-bottom: calc(0.0213167 * var(--vw));
+  margin-left: calc(0.0096 * var(--vw));
+  width: 93.28775534657748%;
+}
+.s-bio {
+  grid-template-rows: minmax(calc(1.502349 * var(--vw)),auto);
+}
+.bio-portrait {
+  --aspect-ratio: 1.5036448826299647;
+  justify-self: center;
+  margin-left: calc(0.0013333 * var(--vw));
+  margin-top: calc(0.0453333 * var(--vw));
+  width: 34.17288794655186%;
+}
+.bio-credit {
+  justify-self: center;
+  margin-left: 0px;
+  margin-right: calc(0.0018333 * var(--vw));
+  margin-top: calc(0.55885 * var(--vw));
+  width: 33.85638987114742%;
+}
+.bio-cv {
+  justify-self: center;
+  margin-left: calc(0.0013333 * var(--vw));
+  margin-top: calc(0.6485167 * var(--vw));
+  width: 18.567035845923876%;
+}
+.bio-text {
+  justify-self: center;
+  margin-left: calc(0.0013333 * var(--vw));
+  margin-right: 0px;
+  margin-top: calc(0.7257333 * var(--vw));
+  width: 83.4178212103747%;
+}
+.s-works {
+  grid-template-rows: minmax(calc(1.275949 * var(--vw)),auto);
+}
+.work-card--b .work-cover {
+  margin-left: calc(0.0025333 * var(--vw));
+  margin-top: calc(0.1100167 * var(--vw));
+}
+.work-card--b .work-title {
+  margin-left: calc(0 * var(--vw));
+  margin-top: calc(0.4025167 * var(--vw));
+}
+.work-card--b .work-meta {
+  margin-left: calc(0.0025333 * var(--vw));
+  margin-top: calc(0.43265 * var(--vw));
+}
+.s-work-detail {
+  grid-template-rows: minmax(calc(1.278701 * var(--vw)),auto);
+}
+.wd-img-main {
+  --aspect-ratio: 1.499941848710534;
+  margin-left: calc(0.03835 * var(--vw));
+  margin-top: calc(0.0613333 * var(--vw));
+  width: 44.59318156446612%;
+}
+.wd-img-top {
+  --aspect-ratio: 0.6665477888730383;
+  margin-right: calc(0.0389 * var(--vw));
+  margin-top: calc(0.0613333 * var(--vw));
+  width: 46.05588798802008%;
+}
+.wd-img-bottom {
+  --aspect-ratio: 0.6665411376103282;
+  margin-right: calc(0.0389 * var(--vw));
+  margin-top: calc(0.4224167 * var(--vw));
+  width: 46.14581190901573%;
+}
+.wd-exhibition {
+  margin-left: calc(0.0379167 * var(--vw));
+  margin-top: calc(0.7452167 * var(--vw));
+  width: 51.00230043615824%;
+}
+.wd-title {
+  margin-left: calc(0.03795 * var(--vw));
+  margin-top: calc(0.8495 * var(--vw));
+  width: 38.92997293172163%;
+}
+.wd-year {
+  justify-self: center;
+  margin-left: calc(0.0081 * var(--vw));
+  margin-top: calc(0.84415 * var(--vw));
+  width: 17.7177598476216%;
+}
+.wd-medium {
+  margin-left: calc(0.0379167 * var(--vw));
+  margin-top: calc(0.9407167 * var(--vw));
+  width: 24.497189786973372%;
+}
+.wd-statement {
+  justify-self: center;
+  margin-left: calc(0.0045 * var(--vw));
+  margin-top: calc(1.0788 * var(--vw));
+  width: 92.06243818317685%;
+}
+.wd-link {
+  margin-right: calc(0.0367666 * var(--vw));
+  margin-top: calc(0.7430167 * var(--vw));
+  width: 44.5921174235634%;
+}
+.s-work-detail--b {
+  grid-template-rows: minmax(calc(1.2792 * var(--vw)),auto);
+}
+.s-work-detail--b .wd-img-main {
+  --aspect-ratio: 1.4999617597598887;
+  margin-left: calc(0.03835 * var(--vw));
+  margin-top: calc(0.072 * var(--vw));
+  width: 43.32156268957299%;
+}
+.s-work-detail--b .wd-img-top {
+  --aspect-ratio: 0.6666396432553574;
+  margin-right: calc(0.0389 * var(--vw));
+  margin-top: calc(0.072 * var(--vw));
+  width: 47.17475658388807%;
+}
+.s-work-detail--b .wd-img-bottom {
+  --aspect-ratio: 0.6665484377104465;
+  margin-right: calc(0.0389 * var(--vw));
+  margin-top: calc(0.4062 * var(--vw));
+  width: 47.32442740758324%;
+}
+.s-work-detail--b .wd-exhibition {
+  margin-left: calc(0.0373667 * var(--vw));
+  margin-top: calc(0.7363834 * var(--vw));
+  width: 50.55398423704986%;
+}
+.s-work-detail--b .wd-title {
+  margin-left: calc(0.0373667 * var(--vw));
+  margin-top: calc(0.8417167 * var(--vw));
+  width: 41.58375123362023%;
+}
+.s-work-detail--b .wd-year {
+  margin-left: calc(0.3822334 * var(--vw));
+  margin-top: calc(0.8417167 * var(--vw));
+  width: 14.154239574898432%;
+}
+.s-work-detail--b .wd-medium {
+  margin-left: calc(0.03835 * var(--vw));
+  margin-top: calc(0.92565 * var(--vw));
+  width: 68.03096627253343%;
+}
+.s-work-detail--b .wd-statement {
+  justify-self: center;
+  margin-left: calc(0.0013167 * var(--vw));
+  margin-top: calc(1.0543 * var(--vw));
+  width: 91.71391245904066%;
+}
+.s-work-detail--b .wd-link {
+  margin-right: calc(0.03815 * var(--vw));
+  margin-top: calc(0.7323 * var(--vw));
+  width: 47.3250129529612%;
+}
+.s-contact {
+  grid-template-rows: minmax(calc(1.251251 * var(--vw)),auto);
+}
+.contact-title {
+  margin-left: calc(0.0013333 * var(--vw));
+  margin-top: calc(0.2282667 * var(--vw));
+  width: 33.96311284638265%;
+}
+.contact-mail {
+  margin-left: calc(0.0114334 * var(--vw));
+  margin-top: calc(0.5033167 * var(--vw));
+  width: 62.3181570812561%;
+}
+.contact-ig {
+  margin-left: calc(0.0013333 * var(--vw));
+  margin-top: calc(0.6557 * var(--vw));
+  width: 28.50585580406351%;
+}
+}
